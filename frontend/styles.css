@@ -528,19 +528,32 @@ select.pxk-input {
   z-index: 10;
 }
 
+/* Cột size & tổng trên web grid: co khít tối đa theo độ dài con số */
+.excel-table th.th-size-col {
+  width: 1%;
+  min-width: 28px;
+  padding: 2px 1px;
+}
+
+.excel-table th.th-total-col {
+  width: 1%;
+  min-width: 48px;
+  padding: 2px 2px;
+}
+
 /* Ô nhập sửa trực tiếp tiêu đề Size trên dòng Header */
 .size-header-input {
   width: 100%;
-  min-width: 28px;
-  max-width: 42px;
+  min-width: 22px;
+  max-width: 32px;
   text-align: center;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
   color: #1d4ed8;
   background: #ffffff;
   border: 1px dashed #3b82f6;
-  border-radius: 3px;
-  padding: 2px 1px;
+  border-radius: 2px;
+  padding: 1px 1px;
   outline: none;
   cursor: text;
   box-sizing: border-box;
@@ -587,9 +600,10 @@ select.pxk-input {
 .excel-cell.cell-center { text-align: center; }
 .excel-cell.cell-right { text-align: right; }
 .excel-cell.size-val-cell {
-  padding: 4px 2px;
+  padding: 4px 1px;
   text-align: center;
   font-weight: 500;
+  min-width: 24px;
 }
 .excel-cell.textarea {
   resize: vertical;

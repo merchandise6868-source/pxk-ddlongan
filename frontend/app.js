@@ -502,20 +502,20 @@ function renderTableStructure() {
     `;
   } else if (mau === 3) {
     thHtml += `
-      <th style="min-width: 110px;">PO</th>
-      <th style="min-width: 80px;">Mã hàng</th>
-      <th style="width: 50px;">ĐVT</th>
+      <th style="min-width: 100px;">PO</th>
+      <th style="min-width: 75px;">Mã hàng</th>
+      <th style="width: 45px;">ĐVT</th>
     `;
     AppState.selectedSizes.forEach((s, sIdx) => {
       thHtml += `
-        <th style="min-width: 36px; padding: 2px;">
+        <th class="th-size-col">
           <input type="text" class="size-header-input" data-size-idx="${sIdx}" value="${escapeHtml(s)}" title="Nhấp vào để đổi tên/số size này">
         </th>
       `;
     });
     thHtml += `
-      <th style="min-width: 65px;">Tổng</th>
-      <th style="min-width: 100px;">Ghi chú</th>
+      <th class="th-total-col">Tổng</th>
+      <th style="min-width: 90px;">Ghi chú</th>
     `;
   }
   thHtml += '</tr>';
@@ -1118,9 +1118,9 @@ function printCurrentSlip() {
         <th style="width: 24px; white-space: nowrap;">STT</th>
         <th style="white-space: nowrap; padding: 2px 4px;">PO</th>
         <th style="white-space: nowrap; padding: 2px 4px;">Mã hàng</th>
-        <th style="width: 30px; white-space: nowrap; text-align: center;">ĐVT</th>
-        ${activeSizes.map(s => `<th style="padding: 2px 2px; text-align: center; white-space: nowrap;">${s}</th>`).join('')}
-        <th style="white-space: nowrap; padding: 2px 4px; text-align: center;">Tổng</th>
+        <th style="width: 28px; white-space: nowrap; text-align: center;">ĐVT</th>
+        ${activeSizes.map(s => `<th class="p-cell-size">${s}</th>`).join('')}
+        <th class="p-cell-total">Tổng</th>
       </tr>
     `;
   }
@@ -1177,9 +1177,9 @@ function printCurrentSlip() {
           <td class="text-center nowrap">${escapeHtml(r.dvt)}</td>
           ${activeSizes.map(s => {
             const val = parseVnNumber(r.sizes[s]);
-            return `<td class="text-center nowrap" style="padding: 2px 2px;">${val > 0 ? formatNum(val) : ''}</td>`;
+            return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
           }).join('')}
-          <td class="text-center nowrap" style="font-weight: bold; padding: 2px 4px;">${formatNum(slCt)}</td>
+          <td class="p-cell-total" style="font-weight: bold;">${formatNum(slCt)}</td>
         </tr>
       `;
     }
@@ -1211,9 +1211,9 @@ function printCurrentSlip() {
         <td colspan="4" class="text-center nowrap">CỘNG:</td>
         ${activeSizes.map(s => {
           const val = sizeTotals[s];
-          return `<td class="text-center nowrap" style="padding: 2px 2px;">${val > 0 ? formatNum(val) : ''}</td>`;
+          return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
         }).join('')}
-        <td class="text-center nowrap" style="font-weight: bold; padding: 2px 4px;">${formatNum(totalSlCt)}</td>
+        <td class="p-cell-total" style="font-weight: bold;">${formatNum(totalSlCt)}</td>
       </tr>
     `;
   }
