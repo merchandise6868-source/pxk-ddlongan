@@ -67,7 +67,7 @@
     max-width: 100% !important;
     box-sizing: border-box !important;
     margin: 0 !important;
-    padding: 3mm 16mm 2mm 16mm !important; /* Lề an toàn 16mm hai bên chừa khoảng cách rộng rãi tránh đè vào lỗ đục */
+    padding: 7mm 16mm 2mm 16mm !important; /* Lề trên 7mm (hạ xuống thêm 4mm) chống khuất chữ khi in kim; lề 2 bên 16mm tránh lỗ đục */
     page-break-inside: avoid;
     font-family: "Times New Roman", Times, serif !important;
   }
