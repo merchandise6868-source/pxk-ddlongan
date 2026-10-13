@@ -1,0 +1,18 @@
+name = "pxk-ddlongan"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# 1. Phục vụ giao diện tĩnh từ thư mục frontend/
+[assets]
+directory = "frontend"
+binding = "ASSETS"
+
+# 2. Cơ sở dữ liệu Cloudflare D1
+[[d1_databases]]
+binding = "DB"
+database_name = "pxk-database"
+database_id = "0f35ddcb-33d1-4357-9c1a-5bbe85a18204"
+
+[vars]
+APP_NAME = "Phiếu Xuất Kho - D&D Long An"

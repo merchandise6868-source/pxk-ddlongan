@@ -1,0 +1,16 @@
+{
+  "name": "pxk-ddlongan",
+  "version": "1.0.0",
+  "description": "Hệ thống Web Phiếu Xuất Kho - D&D Long An (Hỗ trợ Localhost & Cloudflare Worker)",
+  "type": "module",
+  "scripts": {
+    "start": "node local-dev-server.js",
+    "dev": "node local-dev-server.js",
+    "worker:dev": "wrangler dev",
+    "db:init": "wrangler d1 execute DB --file=./schema.sql --local",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.111.0"
+  }
+}

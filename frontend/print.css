@@ -1,0 +1,270 @@
+/* ============================================================
+   PRINT CSS: ĐỊNH DẠNG IN KHỔ A5 NGANG TRÊN MÁY IN KIM
+   CÔNG TY TNHH GIA CÔNG THƯƠNG MẠI D&D LONG AN
+   Sử dụng font Times New Roman chuẩn hành chính kế toán Việt Nam,
+   không lỗi font chữ dấu tiếng Việt, bám sát góc trên bên trái
+   ============================================================ */
+
+@page {
+  size: auto;             /* Tự động nhả ra ô chọn "Dọc / Ngang" trong hộp thoại in để bạn chỉnh bằng tay */
+  margin: 0mm !important; /* Xóa lề để triệt tiêu header & footer của trình duyệt */
+}
+
+/* Ẩn vùng in trên màn hình web */
+#print-section {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: auto;           /* Nhả ra lựa chọn "Dọc / Ngang" trong hộp thoại in của trình duyệt */
+    margin: 0mm !important;
+  }
+  /* Reset toàn bộ trang để không bị căn giữa hay đẩy lề thừa */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    display: block !important;
+  }
+
+  /* Ẩn toàn bộ giao diện phần mềm web */
+  body * {
+    visibility: hidden;
+  }
+  
+  .no-print, .app-header, .main-container, .modal-overlay, #toast-container {
+    display: none !important;
+  }
+
+  /* Chỉ hiển thị khu vực phiếu in */
+  #print-section, #print-section * {
+    visibility: visible;
+  }
+
+  #print-section {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: "Times New Roman", Times, serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Tận dụng tối đa diện tích giấy in kim khổ A5 ngang, lùi xuống 3mm so với mép trên */
+  .print-page {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 3mm 2mm 0mm 1mm !important; /* Dời xuống 3mm so với lề trên theo yêu cầu */
+    page-break-inside: avoid;
+    font-family: "Times New Roman", Times, serif !important;
+  }
+
+  /* 1. ĐẦU PHIẾU: TÊN CÔNG TY VÀ ĐỊA CHỈ CĂN GIỮA */
+  .p-header {
+    display: block !important;
+    text-align: center !important;
+    margin: 0 0 3px 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .p-company {
+    text-align: center !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .p-company-name {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 11pt !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    line-height: 1.25 !important;
+    color: #000000 !important;
+    text-align: center !important;
+  }
+
+  .p-company-address {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 9pt !important;
+    font-weight: normal !important;
+    text-transform: none !important;
+    line-height: 1.3 !important;
+    color: #000000 !important;
+    margin-top: 1px !important;
+    text-align: center !important;
+  }
+
+  .p-factory-info {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 9.5pt !important;
+    line-height: 1.35 !important;
+    color: #000000 !important;
+    margin-top: 2px !important;
+    display: inline-block !important;
+    text-align: left !important;
+  }
+
+  .p-factory-line {
+    display: flex !important;
+    align-items: baseline !important;
+    white-space: nowrap !important;
+  }
+
+  .p-factory-label {
+    min-width: 175px !important;
+    font-weight: normal !important;
+  }
+
+  .p-factory-colon {
+    margin: 0 6px 0 2px !important;
+  }
+
+  .p-factory-val {
+    font-weight: normal !important;
+  }
+
+  /* 2. TIÊU ĐỀ PHIẾU XUẤT KHO: CHỮ TO ĐẬM CHUẨN TIMES NEW ROMAN */
+  .p-title-box {
+    text-align: center !important;
+    margin: 3px 0 5px 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .p-title {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 20pt !important; /* To, rõ ràng, uy nghiêm chuẩn biểu mẫu */
+    font-weight: bold !important; /* Dùng bold chuẩn (700) */
+    letter-spacing: normal !important;
+    text-transform: uppercase !important;
+    margin: 0 0 2px 0 !important;
+    line-height: 1.2 !important;
+    color: #000000 !important;
+  }
+
+  .p-sub-info {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin: 2px 0 !important;
+    font-family: "Times New Roman", Times, serif !important;
+    color: #000000 !important;
+  }
+
+  .p-sub-left {
+    visibility: hidden !important;
+  }
+
+  .p-date {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 10.5pt !important;
+    font-style: italic !important;
+    color: #000000 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  .p-slip-no {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 10.5pt !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  /* 3. THÔNG TIN ĐƠN VỊ, LÝ DO XUẤT, ĐƠN HÀNG & BỘ PHẬN XUẤT KHO */
+  .p-meta {
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 10.5pt !important;
+    margin: 5px 0 14px 0 !important; /* Khoảng cách thông thoáng với bảng số lượng */
+    display: grid !important;
+    grid-template-columns: 1.15fr 0.85fr !important;
+    column-gap: 15px !important;
+    row-gap: 6px !important;
+    line-height: 1.35 !important;
+    width: 100% !important;
+  }
+
+  /* 4. BẢNG HÀNG HÓA IN KIM: RỘNG 100%, NÉT ĐƠN 1PX ĐEN TRẮNG */
+  table.p-table {
+    font-family: "Times New Roman", Times, serif !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 0 0 8px 0 !important;
+    font-size: 10pt !important;
+    line-height: 1.3 !important;
+  }
+
+  table.p-table th,
+  table.p-table td {
+    font-family: "Times New Roman", Times, serif !important;
+    border: 1px solid #000000 !important;
+    padding: 4px 6px !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  table.p-table th {
+    font-weight: bold !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 5px 4px !important;
+  }
+
+  table.p-table td.text-center { text-align: center !important; }
+  table.p-table td.text-right { text-align: right !important; }
+  table.p-table td.text-left { text-align: left !important; }
+  table.p-table tr { page-break-inside: avoid !important; }
+
+  .p-total-row td {
+    font-weight: bold !important;
+    padding: 5px 6px !important;
+  }
+
+  /* 5. KHUNG CHỮ KÝ 3 CỘT: Giám đốc - Người giao - Người nhận */
+  .p-signatures {
+    font-family: "Times New Roman", Times, serif !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    text-align: center !important;
+    margin-top: 14px !important;
+    font-size: 10.5pt !important;
+    page-break-inside: avoid !important;
+    width: 100% !important;
+  }
+
+  .p-sig-col {
+    text-align: center !important;
+    padding: 0 4px !important;
+  }
+
+  .p-sig-title {
+    font-family: "Times New Roman", Times, serif !important;
+    font-weight: bold !important;
+    margin-bottom: 30px !important; /* Chừa khoảng trống ký tên vừa vặn */
+    font-size: 10pt !important;
+  }
+
+  .p-sig-name {
+    font-family: "Times New Roman", Times, serif !important;
+    font-style: italic !important;
+    font-size: 9.5pt !important;
+  }
+}
