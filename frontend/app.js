@@ -1062,38 +1062,49 @@ function printCurrentSlip() {
   const printArea = document.getElementById('print-section');
   const mau = AppState.currentMau;
 
+  // Lấy danh sách size thực sự cần in cho mẫu 3 (chỉ in size có số lượng thực tế để vừa khít giấy)
+  let activeSizes = AppState.selectedSizes;
+  if (mau === 3) {
+    const sizesWithData = AppState.selectedSizes.filter(s => {
+      return AppState.rows.some(r => parseVnNumber(r.sizes[s]) > 0);
+    });
+    if (sizesWithData.length > 0) {
+      activeSizes = sizesWithData;
+    }
+  }
+
   let tableHeaderHtml = '';
   if (mau === 1) {
     tableHeaderHtml = `
       <tr>
-        <th style="width: 32px;">STT</th>
-        <th>Tên hàng, quy cách</th>
-        <th style="width: 50px;">ĐVT</th>
-        <th style="width: 80px;">SL CT</th>
-        <th style="width: 80px;">SL TX</th>
-        <th style="width: 90px;">Đơn giá</th>
-        <th style="width: 105px;">Thành tiền</th>
+        <th style="width: 26px; white-space: nowrap;">STT</th>
+        <th style="white-space: normal; padding: 2px 4px;">Tên hàng, quy cách</th>
+        <th style="width: 35px; white-space: nowrap; text-align: center;">ĐVT</th>
+        <th style="width: 65px; white-space: nowrap; text-align: right;">SL CT</th>
+        <th style="width: 65px; white-space: nowrap; text-align: right;">SL TX</th>
+        <th style="width: 75px; white-space: nowrap; text-align: right;">Đơn giá</th>
+        <th style="width: 85px; white-space: nowrap; text-align: right;">Thành tiền</th>
       </tr>
     `;
   } else if (mau === 2) {
     tableHeaderHtml = `
       <tr>
-        <th style="width: 35px;">STT</th>
-        <th>Tên hàng, quy cách</th>
-        <th style="width: 60px;">ĐVT</th>
-        <th style="width: 110px;">SL Chứng từ</th>
-        <th style="width: 110px;">SL Thực xuất</th>
+        <th style="width: 26px; white-space: nowrap;">STT</th>
+        <th style="white-space: normal; padding: 2px 4px;">Tên hàng, quy cách</th>
+        <th style="width: 35px; white-space: nowrap; text-align: center;">ĐVT</th>
+        <th style="width: 85px; white-space: nowrap; text-align: right;">SL Chứng từ</th>
+        <th style="width: 85px; white-space: nowrap; text-align: right;">SL Thực xuất</th>
       </tr>
     `;
   } else if (mau === 3) {
     tableHeaderHtml = `
       <tr>
-        <th style="width: 32px;">STT</th>
-        <th>PO</th>
-        <th style="width: 75px;">Mã hàng</th>
-        <th style="width: 45px;">ĐVT</th>
-        ${AppState.selectedSizes.map(s => `<th style="min-width: 36px;">${s}</th>`).join('')}
-        <th style="width: 75px;">Tổng</th>
+        <th style="width: 26px; white-space: nowrap;">STT</th>
+        <th style="white-space: nowrap; padding: 2px 4px;">PO</th>
+        <th style="white-space: nowrap; padding: 2px 4px;">Mã hàng</th>
+        <th style="width: 32px; white-space: nowrap; text-align: center;">ĐVT</th>
+        ${activeSizes.map(s => `<th style="padding: 2px 2px; text-align: center; white-space: nowrap;">${s}</th>`).join('')}
+        <th style="white-space: nowrap; padding: 2px 4px; text-align: right;">Tổng</th>
       </tr>
     `;
   }
@@ -1103,7 +1114,7 @@ function printCurrentSlip() {
   let totalSlTx = 0;
   let totalThanhTien = 0;
   const sizeTotals = {};
-  AppState.selectedSizes.forEach(s => sizeTotals[s] = 0);
+  activeSizes.forEach(s => sizeTotals[s] = 0);
 
   let sttCount = 0;
   AppState.rows.forEach(r => {
@@ -1119,37 +1130,40 @@ function printCurrentSlip() {
     if (mau === 1) {
       tableBodyHtml += `
         <tr>
-          <td class="text-center">${sttCount}</td>
-          <td class="text-left" style="white-space: pre-wrap;">${escapeHtml(r.ten_hang)}</td>
-          <td class="text-center">${escapeHtml(r.dvt)}</td>
-          <td class="text-right">${formatNum(slCt)}</td>
-          <td class="text-right">${formatNum(slTx)}</td>
-          <td class="text-right">${formatNum(r.don_gia)}</td>
-          <td class="text-right">${formatNum(r.thanh_tien)}</td>
+          <td class="text-center nowrap">${sttCount}</td>
+          <td class="text-left" style="white-space: pre-wrap; padding: 2px 4px;">${escapeHtml(r.ten_hang)}</td>
+          <td class="text-center nowrap">${escapeHtml(r.dvt)}</td>
+          <td class="text-right nowrap">${formatNum(slCt)}</td>
+          <td class="text-right nowrap">${formatNum(slTx)}</td>
+          <td class="text-right nowrap">${formatNum(r.don_gia)}</td>
+          <td class="text-right nowrap">${formatNum(r.thanh_tien)}</td>
         </tr>
       `;
     } else if (mau === 2) {
       tableBodyHtml += `
         <tr>
-          <td class="text-center">${sttCount}</td>
-          <td class="text-left" style="white-space: pre-wrap;">${escapeHtml(r.ten_hang)}</td>
-          <td class="text-center">${escapeHtml(r.dvt)}</td>
-          <td class="text-right">${formatNum(slCt)}</td>
-          <td class="text-right">${formatNum(slTx)}</td>
+          <td class="text-center nowrap">${sttCount}</td>
+          <td class="text-left" style="white-space: pre-wrap; padding: 2px 4px;">${escapeHtml(r.ten_hang)}</td>
+          <td class="text-center nowrap">${escapeHtml(r.dvt)}</td>
+          <td class="text-right nowrap">${formatNum(slCt)}</td>
+          <td class="text-right nowrap">${formatNum(slTx)}</td>
         </tr>
       `;
     } else if (mau === 3) {
-      AppState.selectedSizes.forEach(s => {
+      activeSizes.forEach(s => {
         sizeTotals[s] += parseVnNumber(r.sizes[s]);
       });
       tableBodyHtml += `
         <tr>
-          <td class="text-center">${sttCount}</td>
-          <td class="text-left">${escapeHtml(r.ma_hang)}</td>
-          <td class="text-center">${escapeHtml(r.mau)}</td>
-          <td class="text-center">${escapeHtml(r.dvt)}</td>
-          ${AppState.selectedSizes.map(s => `<td class="text-right">${formatNum(r.sizes[s])}</td>`).join('')}
-          <td class="text-right" style="font-weight: bold;">${formatNum(slCt)}</td>
+          <td class="text-center nowrap">${sttCount}</td>
+          <td class="text-left nowrap" style="padding: 2px 4px;">${escapeHtml(r.ma_hang)}</td>
+          <td class="text-center nowrap" style="padding: 2px 4px;">${escapeHtml(r.mau)}</td>
+          <td class="text-center nowrap">${escapeHtml(r.dvt)}</td>
+          ${activeSizes.map(s => {
+            const val = parseVnNumber(r.sizes[s]);
+            return `<td class="text-right nowrap" style="padding: 2px 2px;">${val > 0 ? formatNum(val) : ''}</td>`;
+          }).join('')}
+          <td class="text-right nowrap" style="font-weight: bold; padding: 2px 4px;">${formatNum(slCt)}</td>
         </tr>
       `;
     }
@@ -1160,27 +1174,30 @@ function printCurrentSlip() {
   if (mau === 1) {
     tableFootHtml = `
       <tr class="p-total-row">
-        <td colspan="3" class="text-center">CỘNG:</td>
-        <td class="text-right">${formatNum(totalSlCt)}</td>
-        <td class="text-right">${formatNum(totalSlTx)}</td>
+        <td colspan="3" class="text-center nowrap">CỘNG:</td>
+        <td class="text-right nowrap">${formatNum(totalSlCt)}</td>
+        <td class="text-right nowrap">${formatNum(totalSlTx)}</td>
         <td></td>
-        <td class="text-right">${formatNum(totalThanhTien)}</td>
+        <td class="text-right nowrap">${formatNum(totalThanhTien)}</td>
       </tr>
     `;
   } else if (mau === 2) {
     tableFootHtml = `
       <tr class="p-total-row">
-        <td colspan="3" class="text-center">CỘNG:</td>
-        <td class="text-right">${formatNum(totalSlCt)}</td>
-        <td class="text-right">${formatNum(totalSlTx)}</td>
+        <td colspan="3" class="text-center nowrap">CỘNG:</td>
+        <td class="text-right nowrap">${formatNum(totalSlCt)}</td>
+        <td class="text-right nowrap">${formatNum(totalSlTx)}</td>
       </tr>
     `;
   } else if (mau === 3) {
     tableFootHtml = `
       <tr class="p-total-row">
-        <td colspan="4" class="text-center">CỘNG:</td>
-        ${AppState.selectedSizes.map(s => `<td class="text-right">${formatNum(sizeTotals[s])}</td>`).join('')}
-        <td class="text-right">${formatNum(totalSlCt)}</td>
+        <td colspan="4" class="text-center nowrap">CỘNG:</td>
+        ${activeSizes.map(s => {
+          const val = sizeTotals[s];
+          return `<td class="text-right nowrap" style="padding: 2px 2px;">${val > 0 ? formatNum(val) : ''}</td>`;
+        }).join('')}
+        <td class="text-right nowrap" style="padding: 2px 4px;">${formatNum(totalSlCt)}</td>
       </tr>
     `;
   }
@@ -1359,11 +1376,17 @@ window.reprintSlip = async function(id) {
       slip.lines.forEach(l => {
         if (l.sizes) {
           l.sizes.forEach(s => {
-            if (!slipSizes.includes(s.size)) slipSizes.push(s.size);
+            if (s.so_luong > 0 && !slipSizes.includes(s.size)) slipSizes.push(s.size);
           });
         }
       });
       if (slipSizes.length > 0) {
+        slipSizes.sort((a, b) => {
+          const numA = parseFloat(a);
+          const numB = parseFloat(b);
+          if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+          return a.localeCompare(b);
+        });
         AppState.selectedSizes = slipSizes;
       }
     }
@@ -1429,6 +1452,12 @@ window.editSlip = async function(id) {
         }
       });
       if (slipSizes.length > 0) {
+        slipSizes.sort((a, b) => {
+          const numA = parseFloat(a);
+          const numB = parseFloat(b);
+          if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+          return a.localeCompare(b);
+        });
         AppState.selectedSizes = slipSizes;
         updateCustomSizeInputText();
       }
