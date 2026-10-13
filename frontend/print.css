@@ -109,33 +109,33 @@
     text-align: center !important;
   }
 
-  .p-factory-info {
+  .p-factory-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    margin-top: 3px !important;
     font-family: "Times New Roman", Times, serif !important;
     font-size: 9.5pt !important;
-    line-height: 1.35 !important;
+    line-height: 1.3 !important;
     color: #000000 !important;
-    margin-top: 2px !important;
-    display: inline-block !important;
+  }
+
+  .p-factory-addr {
     text-align: left !important;
+    max-width: 65% !important;
+    white-space: normal !important;
+    word-break: normal !important;
   }
 
-  .p-factory-line {
-    display: flex !important;
-    align-items: baseline !important;
+  .p-factory-mst {
+    text-align: right !important;
     white-space: nowrap !important;
+    margin-left: 10px !important;
   }
 
-  .p-factory-label {
-    min-width: 175px !important;
-    font-weight: normal !important;
-  }
-
-  .p-factory-colon {
-    margin: 0 6px 0 2px !important;
-  }
-
-  .p-factory-val {
-    font-weight: normal !important;
+  .p-info-lbl {
+    font-weight: bold !important;
   }
 
   /* 2. TIÊU ĐỀ PHIẾU XUẤT KHO: CHỮ TO ĐẬM CHUẨN TIMES NEW ROMAN */

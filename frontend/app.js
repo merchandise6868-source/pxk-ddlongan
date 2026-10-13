@@ -1220,16 +1220,12 @@ function printCurrentSlip() {
     companyHeaderHtml = `
       <div class="p-company p-company-mau3">
         <div class="p-company-name">CÔNG TY TNHH GIA CÔNG THƯƠNG MẠI D&D LONG AN</div>
-        <div class="p-factory-info">
-          <div class="p-factory-line">
-            <span class="p-factory-label">Địa chỉ nhà máy sản xuất</span>
-            <span class="p-factory-colon">:</span>
-            <span class="p-factory-val">A8/21C Bông Văn Dĩa, Xã Tân Nhựt, Tp. Hồ Chí Minh, Việt Nam</span>
+        <div class="p-factory-row">
+          <div class="p-factory-addr">
+            <span class="p-info-lbl">Địa chỉ:</span> A8/21C Bông Văn Dĩa, Xã Tân Nhựt, Tp. Hồ Chí Minh, Việt Nam
           </div>
-          <div class="p-factory-line">
-            <span class="p-factory-label">MST Chi nhánh - Nhà máy SX</span>
-            <span class="p-factory-colon">:</span>
-            <span class="p-factory-val">1102116809 - 00001</span>
+          <div class="p-factory-mst">
+            <span class="p-info-lbl">Mã số thuế:</span> 1102116809 - 00001
           </div>
         </div>
       </div>
