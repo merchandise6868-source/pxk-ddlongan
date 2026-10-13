@@ -539,24 +539,24 @@ select.pxk-input {
 }
 
 .excel-table th.th-po-col {
-  width: 1%;
-  min-width: 60px;
+  width: 140px;
+  min-width: 120px;
   white-space: nowrap;
-  padding: 6px 4px;
+  padding: 6px 6px;
 }
 
 .excel-table th.th-ma-col {
-  width: 1%;
-  min-width: 60px;
+  width: 90px;
+  min-width: 80px;
   white-space: nowrap;
-  padding: 6px 4px;
+  padding: 6px 6px;
 }
 
 .excel-table th.th-chitiet-col {
-  width: 1%;
-  min-width: 65px;
+  width: 110px;
+  min-width: 100px;
   white-space: nowrap;
-  padding: 6px 4px;
+  padding: 6px 6px;
 }
 
 .excel-table th.th-dvt-col {
