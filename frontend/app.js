@@ -764,6 +764,11 @@ function parseExcelClipboard(text) {
  * Điều hướng bằng phím: Mũi tên, Enter, Tab
  */
 function handleCellKeyDown(e) {
+  // Khi người dùng đang gõ tiếng Việt Telex (Unikey, EVKey hoặc IME trình duyệt), KHÔNG chặn phím
+  if (e.isComposing || e.keyCode === 229) {
+    return;
+  }
+
   const cell = e.target;
   const tr = cell.closest('tr');
   const rIdx = parseInt(tr.dataset.rowIndex, 10);
