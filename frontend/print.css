@@ -61,13 +61,13 @@
     print-color-adjust: exact !important;
   }
 
-  /* Tận dụng diện tích giấy in kim khổ A5 ngang, chừa lề an toàn 16mm hai bên tránh hàng lỗ đục / bấm lỗ */
+  /* Tận dụng diện tích giấy in kim khổ A5 ngang, dời sang trái 0.5cm (lề trái 11mm, lề phải 21mm) tránh in đè lỗ bên phải */
   .print-page {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
     margin: 0 !important;
-    padding: 7mm 16mm 2mm 16mm !important; /* Lề trên 7mm (hạ xuống thêm 4mm) chống khuất chữ khi in kim; lề 2 bên 16mm tránh lỗ đục */
+    padding: 7mm 21mm 2mm 11mm !important; /* Dời nội dung sang trái 0.5cm (5mm): lề trái 11mm, lề phải 21mm để tránh in đè lên hàng lỗ bên phải */
     page-break-inside: avoid;
     font-family: "Times New Roman", Times, serif !important;
   }

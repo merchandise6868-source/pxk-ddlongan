@@ -251,7 +251,7 @@ function switchMau(mau) {
     } else if (mau === 2) {
       descEl.textContent = 'Cột: STT, Tên hàng, ĐVT, SL CT, SL Thực xuất, Ghi chú • Tự động bóc tách size từ text';
     } else if (mau === 3) {
-      descEl.textContent = 'Cột: STT, PO, Mã hàng, Chi tiết, ĐVT, dải size, Tổng • Cộng ngang theo size, cộng dọc chân cột';
+      descEl.textContent = 'Cột: STT, PO, Mã hàng, Diễn giải, ĐVT, dải size, Tổng • Cộng ngang theo size, cộng dọc chân cột';
     }
   }
 
@@ -512,7 +512,7 @@ function renderTableStructure() {
     thHtml += `
       <th class="th-po-col">PO</th>
       <th class="th-ma-col">Mã hàng</th>
-      <th class="th-chitiet-col">Chi tiết</th>
+      <th class="th-chitiet-col">Diễn giải</th>
       <th class="th-dvt-col">ĐVT</th>
     `;
     AppState.selectedSizes.forEach((s, sIdx) => {
@@ -989,7 +989,8 @@ async function saveSlip() {
       sl_thuc_xuat: slTx,
       don_gia: parseVnNumber(r.don_gia),
       thanh_tien: parseVnNumber(r.thanh_tien),
-      ghi_chu: r.ghi_chu,
+      ghi_chu: AppState.currentMau === 3 ? (r.chi_tiet || r.ghi_chu || '') : (r.ghi_chu || ''),
+      chi_tiet: r.chi_tiet || '',
       sizes,
       hasMismatch: r.hasMismatch,
     });
@@ -1118,7 +1119,7 @@ function printCurrentSlip() {
         <th class="p-cell-stt">STT</th>
         <th class="p-cell-po">PO</th>
         <th class="p-cell-ma">Mã hàng</th>
-        <th class="p-cell-chitiet">Chi tiết</th>
+        <th class="p-cell-chitiet">Diễn giải</th>
         <th class="p-cell-dvt">ĐVT</th>
         ${activeSizes.map(s => `<th class="p-cell-size">${s}</th>`).join('')}
         <th class="p-cell-total">Tổng</th>
@@ -1260,9 +1261,9 @@ function printCurrentSlip() {
 
       <div class="p-meta">
         <div><strong>Đơn vị nhận:</strong> ${donViNhan || '................................................................'}</div>
-        <div><strong>Lý do xuất:</strong> ${lyDoXuat || '................................................................'}</div>
-        <div><strong>Đơn hàng:</strong> ${donHang || '................................................................'}</div>
         <div><strong>Bộ phận xuất kho:</strong> ${boPhanXuat || '................................................................'}</div>
+        <div><strong>Đơn hàng:</strong> ${donHang || '................................................................'}</div>
+        <div><strong>Lý do xuất:</strong> ${lyDoXuat || '................................................................'}</div>
       </div>
 
       <table class="p-table">
@@ -1420,6 +1421,7 @@ window.reprintSlip = async function(id) {
         don_gia: l.don_gia,
         thanh_tien: l.thanh_tien,
         ghi_chu: l.ghi_chu,
+        chi_tiet: l.chi_tiet || l.ghi_chu || '',
         sizes: sizesMap,
       };
     });
@@ -1504,6 +1506,7 @@ window.editSlip = async function(id) {
         don_gia: l.don_gia,
         thanh_tien: l.thanh_tien,
         ghi_chu: l.ghi_chu,
+        chi_tiet: l.chi_tiet || l.ghi_chu || '',
         sizes: sizesMap,
       };
     });
