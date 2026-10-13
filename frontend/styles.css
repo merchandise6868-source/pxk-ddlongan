@@ -531,7 +531,8 @@ select.pxk-input {
 /* Ô nhập sửa trực tiếp tiêu đề Size trên dòng Header */
 .size-header-input {
   width: 100%;
-  max-width: 48px;
+  min-width: 28px;
+  max-width: 42px;
   text-align: center;
   font-weight: 700;
   font-size: 12px;
@@ -539,7 +540,7 @@ select.pxk-input {
   background: #ffffff;
   border: 1px dashed #3b82f6;
   border-radius: 3px;
-  padding: 2px 2px;
+  padding: 2px 1px;
   outline: none;
   cursor: text;
   box-sizing: border-box;
@@ -585,6 +586,11 @@ select.pxk-input {
 
 .excel-cell.cell-center { text-align: center; }
 .excel-cell.cell-right { text-align: right; }
+.excel-cell.size-val-cell {
+  padding: 4px 2px;
+  text-align: center;
+  font-weight: 500;
+}
 .excel-cell.textarea {
   resize: vertical;
   min-height: 38px;
