@@ -1274,15 +1274,19 @@ function printCurrentSlip() {
 
       <div class="p-signatures">
         <div class="p-sig-col">
-          <div class="p-sig-title">Giám đốc</div>
-          <div class="p-sig-name"></div>
-        </div>
-        <div class="p-sig-col">
-          <div class="p-sig-title">Người giao</div>
+          <div class="p-sig-title">Người lập phiếu</div>
           <div class="p-sig-name">${nguoiLap || ''}</div>
         </div>
         <div class="p-sig-col">
+          <div class="p-sig-title">Người giao</div>
+          <div class="p-sig-name"></div>
+        </div>
+        <div class="p-sig-col">
           <div class="p-sig-title">Người nhận</div>
+          <div class="p-sig-name"></div>
+        </div>
+        <div class="p-sig-col">
+          <div class="p-sig-title">Giám đốc</div>
           <div class="p-sig-name"></div>
         </div>
       </div>

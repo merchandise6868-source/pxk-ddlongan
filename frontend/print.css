@@ -313,11 +313,11 @@
     padding: 3px 2px !important;
   }
 
-  /* 5. KHUNG CHỮ KÝ 3 CỘT: Giám đốc - Người giao - Người nhận */
+  /* 5. KHUNG CHỮ KÝ 4 CỘT: Người lập phiếu - Người giao - Người nhận - Giám đốc */
   .p-signatures {
     font-family: "Times New Roman", Times, serif !important;
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(4, 1fr) !important;
     text-align: center !important;
     margin-top: 14px !important;
     font-size: 10.5pt !important;
@@ -333,6 +333,7 @@
   .p-sig-title {
     font-family: "Times New Roman", Times, serif !important;
     font-weight: bold !important;
+    white-space: nowrap !important;
     margin-bottom: 30px !important; /* Chừa khoảng trống ký tên vừa vặn */
     font-size: 10pt !important;
   }
