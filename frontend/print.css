@@ -61,13 +61,13 @@
     print-color-adjust: exact !important;
   }
 
-  /* Tận dụng tối đa diện tích giấy in kim khổ A5 ngang, lề 8mm an toàn tránh hàng lỗ đục */
+  /* Tận dụng diện tích giấy in kim khổ A5 ngang, chừa lề an toàn 16mm hai bên tránh hàng lỗ đục / bấm lỗ */
   .print-page {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
     margin: 0 !important;
-    padding: 3mm 8mm 2mm 8mm !important; /* Lề an toàn 8mm hai bên tránh hàng lỗ đục của giấy in kim */
+    padding: 3mm 16mm 2mm 16mm !important; /* Lề an toàn 16mm hai bên chừa khoảng cách rộng rãi tránh đè vào lỗ đục */
     page-break-inside: avoid;
     font-family: "Times New Roman", Times, serif !important;
   }
