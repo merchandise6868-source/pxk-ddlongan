@@ -1248,7 +1248,6 @@ function printCurrentSlip() {
       <div class="p-title-box">
         <div class="p-title">PHIẾU XUẤT KHO</div>
         <div class="p-sub-info">
-          <div class="p-sub-left"></div>
           <div class="p-date">${dateText}</div>
           <div class="p-slip-no">Số: ${soPhieu}</div>
         </div>
