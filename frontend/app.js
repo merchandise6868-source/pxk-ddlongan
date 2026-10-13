@@ -481,7 +481,7 @@ function renderTableStructure() {
   const mau = AppState.currentMau;
 
   // 1. Tiêu đề cột
-  let thHtml = '<tr><th style="width: 40px;">STT</th>';
+  let thHtml = '<tr><th class="th-stt-col">STT</th>';
   if (mau === 1) {
     thHtml += `
       <th style="min-width: 280px;">Tên hàng, quy cách</th>
@@ -515,6 +515,7 @@ function renderTableStructure() {
     });
     thHtml += `
       <th class="th-total-col">Tổng</th>
+      <th class="th-note-col">Ghi chú</th>
     `;
   }
   thHtml += '</tr>';
@@ -579,6 +580,7 @@ function renderTableBody() {
       });
       rowHtml += `
         <td><input type="text" class="excel-cell cell-center td-total-cell" data-field="sl_chung_tu" value="${formatNum(row.sl_chung_tu)}" readonly style="font-weight: 700;"></td>
+        <td><input type="text" class="excel-cell td-note-cell" data-field="ghi_chu" value="${escapeHtml(row.ghi_chu)}"></td>
       `;
     }
 
@@ -928,6 +930,7 @@ function calculateTotals() {
     });
     footHtml += `
       <td style="text-align: center; font-weight: bold; color: var(--primary); padding: 4px 2px;">${formatNum(totalSlCt)}</td>
+      <td></td>
     `;
   }
   footHtml += '</tr>';
@@ -1112,12 +1115,13 @@ function printCurrentSlip() {
   } else if (mau === 3) {
     tableHeaderHtml = `
       <tr>
-        <th style="width: 24px; white-space: nowrap;">STT</th>
+        <th class="p-cell-stt">STT</th>
         <th class="p-cell-po">PO</th>
         <th class="p-cell-ma">Mã hàng</th>
         <th class="p-cell-dvt">ĐVT</th>
         ${activeSizes.map(s => `<th class="p-cell-size">${s}</th>`).join('')}
         <th class="p-cell-total">Tổng</th>
+        <th class="p-cell-note">Ghi chú</th>
       </tr>
     `;
   }
@@ -1168,7 +1172,7 @@ function printCurrentSlip() {
       });
       tableBodyHtml += `
         <tr>
-          <td class="text-center nowrap">${sttCount}</td>
+          <td class="p-cell-stt">${sttCount}</td>
           <td class="p-cell-po">${escapeHtml(r.ma_hang)}</td>
           <td class="p-cell-ma">${escapeHtml(r.mau)}</td>
           <td class="p-cell-dvt">${escapeHtml(r.dvt)}</td>
@@ -1177,6 +1181,7 @@ function printCurrentSlip() {
             return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
           }).join('')}
           <td class="p-cell-total" style="font-weight: bold;">${formatNum(slCt)}</td>
+          <td class="p-cell-note">${escapeHtml(r.ghi_chu)}</td>
         </tr>
       `;
     }
@@ -1211,6 +1216,7 @@ function printCurrentSlip() {
           return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
         }).join('')}
         <td class="p-cell-total" style="font-weight: bold;">${formatNum(totalSlCt)}</td>
+        <td></td>
       </tr>
     `;
   }

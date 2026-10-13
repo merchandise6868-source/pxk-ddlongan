@@ -529,23 +529,30 @@ select.pxk-input {
 }
 
 /* Cột trong bảng Model 3: co dãn linh hoạt vừa khít nội dung */
+.excel-table th.th-stt-col {
+  width: 1%;
+  min-width: 28px;
+  white-space: nowrap;
+  padding: 6px 2px;
+}
+
 .excel-table th.th-po-col {
   width: 1%;
-  min-width: 65px;
+  min-width: 60px;
   white-space: nowrap;
-  padding: 6px 6px;
+  padding: 6px 4px;
 }
 
 .excel-table th.th-ma-col {
   width: 1%;
-  min-width: 65px;
+  min-width: 60px;
   white-space: nowrap;
-  padding: 6px 6px;
+  padding: 6px 4px;
 }
 
 .excel-table th.th-dvt-col {
   width: 1%;
-  min-width: 38px;
+  min-width: 32px;
   white-space: nowrap;
   padding: 6px 2px;
 }
@@ -553,14 +560,25 @@ select.pxk-input {
 /* Cột size & tổng trên web grid: co khít tối đa theo độ dài con số */
 .excel-table th.th-size-col {
   width: 1%;
-  min-width: 26px;
+  min-width: 24px;
   padding: 2px 1px;
 }
 
 .excel-table th.th-total-col {
   width: 1%;
-  min-width: 48px;
+  min-width: 44px;
   padding: 2px 2px;
+}
+
+/* Cột Ghi chú: tự động co giãn khoả lấp toàn bộ khoảng trống còn lại */
+.excel-table th.th-note-col {
+  width: auto;
+  min-width: 60px;
+  padding: 6px 6px;
+}
+
+.excel-cell.td-note-cell {
+  width: 100%;
 }
 
 /* Ô nhập sửa trực tiếp tiêu đề Size trên dòng Header */
