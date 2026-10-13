@@ -263,6 +263,15 @@
     font-size: 8.5pt !important;
   }
 
+  table.p-table th.p-cell-chitiet,
+  table.p-table td.p-cell-chitiet {
+    width: 1% !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    padding: 2px 4px !important;
+    font-size: 8.5pt !important;
+  }
+
   table.p-table th.p-cell-dvt,
   table.p-table td.p-cell-dvt {
     width: 1% !important;

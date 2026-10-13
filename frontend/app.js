@@ -4,7 +4,9 @@
  * Tự động bóc tách size, kiểm tra lệch số lượng, in chuẩn A5 máy in kim
  */
 
-const SIZES_DEFAULT = ['34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
+const SIZES_LT = ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48', '49'];
+const SIZES_JIAYU = ['35', '36', '37', '38', '39', '40', '41', '42', '43'];
+const SIZES_DEFAULT = [...SIZES_LT];
 const DEFAULT_COMPANY_ADDRESS = 'A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM';
 const ALT_COMPANY_ADDRESS = 'Lô C, Đường số 1, KCN Hòa Bình, H. Thủ Thừa, Long An';
 
@@ -249,7 +251,7 @@ function switchMau(mau) {
     } else if (mau === 2) {
       descEl.textContent = 'Cột: STT, Tên hàng, ĐVT, SL CT, SL Thực xuất, Ghi chú • Tự động bóc tách size từ text';
     } else if (mau === 3) {
-      descEl.textContent = 'Cột: STT, PO, Màu, ĐVT, dải size, Tổng • Cộng ngang theo size, cộng dọc chân cột';
+      descEl.textContent = 'Cột: STT, PO, Mã hàng, Chi tiết, ĐVT, dải size, Tổng • Cộng ngang theo size, cộng dọc chân cột';
     }
   }
 
@@ -281,16 +283,21 @@ function updateCustomSizeInputText() {
  * Chọn nhanh dải size cho Mẫu 3
  */
 window.setQuickSizeRange = function(type) {
-  if (type === 'compact') {
-    AppState.selectedSizes = ['36', '37', '38', '39', '40', '41', '42'];
-  } else if (type === 'common') {
-    AppState.selectedSizes = ['35', '36', '37', '38', '39', '40', '41', '42', '43'];
+  document.querySelectorAll('.pxk-size-pill').forEach(btn => btn.classList.remove('active'));
+  if (type === 'jiayu') {
+    AppState.selectedSizes = [...SIZES_JIAYU];
+    const btn = Array.from(document.querySelectorAll('.pxk-size-pill')).find(b => b.textContent.includes('JiaYu'));
+    if (btn) btn.classList.add('active');
+    showToast('Đã chọn dải size JiaYu: 35 - 43', 'info');
   } else {
-    AppState.selectedSizes = [...SIZES_DEFAULT];
+    // Mặc định LT: 35 đến 49 (Liến Thái)
+    AppState.selectedSizes = [...SIZES_LT];
+    const btn = Array.from(document.querySelectorAll('.pxk-size-pill')).find(b => b.textContent.includes('LT'));
+    if (btn) btn.classList.add('active');
+    showToast('Đã chọn dải size LT (Liến Thái): 35 - 49', 'info');
   }
   updateCustomSizeInputText();
   renderTableStructure();
-  showToast(`Đã chọn dải size: ${AppState.selectedSizes[0]} - ${AppState.selectedSizes[AppState.selectedSizes.length - 1]}`, 'info');
 };
 
 /**
@@ -460,6 +467,7 @@ function createEmptyRowData(stt) {
     ten_hang: '',
     ma_hang: '',
     mau: '',
+    chi_tiet: '',
     dvt: 'Đôi',
     sl_chung_tu: '',
     sl_thuc_xuat: '',
@@ -504,6 +512,7 @@ function renderTableStructure() {
     thHtml += `
       <th class="th-po-col">PO</th>
       <th class="th-ma-col">Mã hàng</th>
+      <th class="th-chitiet-col">Chi tiết</th>
       <th class="th-dvt-col">ĐVT</th>
     `;
     AppState.selectedSizes.forEach((s, sIdx) => {
@@ -571,6 +580,7 @@ function renderTableBody() {
       rowHtml += `
         <td><input type="text" class="excel-cell td-po-cell" data-field="ma_hang" value="${escapeHtml(row.ma_hang)}"></td>
         <td><input type="text" class="excel-cell cell-center td-ma-cell" data-field="mau" value="${escapeHtml(row.mau)}"></td>
+        <td><input type="text" class="excel-cell cell-center td-chitiet-cell" data-field="chi_tiet" value="${escapeHtml(row.chi_tiet || '')}"></td>
         <td><input type="text" class="excel-cell cell-center td-dvt-cell" data-field="dvt" value="${escapeHtml(row.dvt)}"></td>
       `;
       AppState.selectedSizes.forEach(s => {
@@ -922,7 +932,7 @@ function calculateTotals() {
       <td></td>
     `;
   } else if (mau === 3) {
-    footHtml += `<td></td><td></td>`;
+    footHtml += `<td></td><td></td><td></td>`;
     AppState.selectedSizes.forEach(s => {
       footHtml += `<td style="text-align: center; font-weight: bold; padding: 4px 2px;">${formatNum(sizeTotals[s])}</td>`;
     });
@@ -1115,6 +1125,7 @@ function printCurrentSlip() {
         <th class="p-cell-stt">STT</th>
         <th class="p-cell-po">PO</th>
         <th class="p-cell-ma">Mã hàng</th>
+        <th class="p-cell-chitiet">Chi tiết</th>
         <th class="p-cell-dvt">ĐVT</th>
         ${activeSizes.map(s => `<th class="p-cell-size">${s}</th>`).join('')}
         <th class="p-cell-total">Tổng</th>
@@ -1171,6 +1182,7 @@ function printCurrentSlip() {
           <td class="p-cell-stt">${sttCount}</td>
           <td class="p-cell-po">${escapeHtml(r.ma_hang)}</td>
           <td class="p-cell-ma">${escapeHtml(r.mau)}</td>
+          <td class="p-cell-chitiet">${escapeHtml(r.chi_tiet || '')}</td>
           <td class="p-cell-dvt">${escapeHtml(r.dvt)}</td>
           ${activeSizes.map(s => {
             const val = parseVnNumber(r.sizes[s]);
@@ -1205,7 +1217,7 @@ function printCurrentSlip() {
   } else if (mau === 3) {
     tableFootHtml = `
       <tr class="p-total-row">
-        <td colspan="4" class="text-center nowrap">CỘNG:</td>
+        <td colspan="5" class="text-center nowrap">CỘNG:</td>
         ${activeSizes.map(s => {
           const val = sizeTotals[s];
           return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;

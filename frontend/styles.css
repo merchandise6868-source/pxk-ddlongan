@@ -552,6 +552,13 @@ select.pxk-input {
   padding: 6px 4px;
 }
 
+.excel-table th.th-chitiet-col {
+  width: 1%;
+  min-width: 65px;
+  white-space: nowrap;
+  padding: 6px 4px;
+}
+
 .excel-table th.th-dvt-col {
   width: 1%;
   min-width: 32px;
