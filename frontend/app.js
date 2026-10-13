@@ -775,19 +775,7 @@ function handleCellKeyDown(e) {
   const cellsInRow = Array.from(tr.querySelectorAll('.excel-cell'));
   const cIdx = cellsInRow.indexOf(cell);
 
-  const isTextarea = cell.tagName === 'TEXTAREA';
-
-  if (e.key === 'ArrowRight' && (!isTextarea || cell.selectionStart === cell.value.length)) {
-    if (cIdx < cellsInRow.length - 1) {
-      cellsInRow[cIdx + 1].focus();
-      e.preventDefault();
-    }
-  } else if (e.key === 'ArrowLeft' && (!isTextarea || cell.selectionStart === 0)) {
-    if (cIdx > 0) {
-      cellsInRow[cIdx - 1].focus();
-      e.preventDefault();
-    }
-  } else if (e.key === 'ArrowDown') {
+  if (e.key === 'ArrowDown') {
     const nextTr = document.querySelector(`tr[data-row-index="${rIdx + 1}"]`);
     if (nextTr) {
       const nextCells = Array.from(nextTr.querySelectorAll('.excel-cell'));
