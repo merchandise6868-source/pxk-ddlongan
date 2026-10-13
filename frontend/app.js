@@ -1225,7 +1225,7 @@ function printCurrentSlip() {
             <span class="p-info-lbl">Địa chỉ:</span> A8/21C Bông Văn Dĩa, Xã Tân Nhựt, Tp. Hồ Chí Minh, Việt Nam
           </div>
           <div class="p-factory-mst">
-            <span class="p-info-lbl">Mã số thuế:</span> 1102116809 - 00001
+            <span class="p-info-lbl">Mã số thuế:</span> 1102116809
           </div>
         </div>
       </div>
