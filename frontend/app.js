@@ -515,7 +515,6 @@ function renderTableStructure() {
     });
     thHtml += `
       <th class="th-total-col">Tổng</th>
-      <th class="th-note-col">Ghi chú</th>
     `;
   }
   thHtml += '</tr>';
@@ -580,7 +579,6 @@ function renderTableBody() {
       });
       rowHtml += `
         <td><input type="text" class="excel-cell cell-center td-total-cell" data-field="sl_chung_tu" value="${formatNum(row.sl_chung_tu)}" readonly style="font-weight: 700;"></td>
-        <td><input type="text" class="excel-cell td-note-cell" data-field="ghi_chu" value="${escapeHtml(row.ghi_chu)}"></td>
       `;
     }
 
@@ -930,7 +928,6 @@ function calculateTotals() {
     });
     footHtml += `
       <td style="text-align: center; font-weight: bold; color: var(--primary); padding: 4px 2px;">${formatNum(totalSlCt)}</td>
-      <td></td>
     `;
   }
   footHtml += '</tr>';
@@ -1121,7 +1118,6 @@ function printCurrentSlip() {
         <th class="p-cell-dvt">ĐVT</th>
         ${activeSizes.map(s => `<th class="p-cell-size">${s}</th>`).join('')}
         <th class="p-cell-total">Tổng</th>
-        <th class="p-cell-note">Ghi chú</th>
       </tr>
     `;
   }
@@ -1181,7 +1177,6 @@ function printCurrentSlip() {
             return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
           }).join('')}
           <td class="p-cell-total" style="font-weight: bold;">${formatNum(slCt)}</td>
-          <td class="p-cell-note">${escapeHtml(r.ghi_chu)}</td>
         </tr>
       `;
     }
@@ -1216,7 +1211,6 @@ function printCurrentSlip() {
           return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
         }).join('')}
         <td class="p-cell-total" style="font-weight: bold;">${formatNum(totalSlCt)}</td>
-        <td></td>
       </tr>
     `;
   }

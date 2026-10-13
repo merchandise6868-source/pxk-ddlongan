@@ -509,7 +509,9 @@ select.pxk-input {
 }
 
 .excel-table {
-  width: 100%;
+  width: auto;
+  min-width: 0;
+  margin: 0 auto;
   border-collapse: collapse;
   font-size: 12px;
   user-select: text;
@@ -568,17 +570,6 @@ select.pxk-input {
   width: 1%;
   min-width: 44px;
   padding: 2px 2px;
-}
-
-/* Cột Ghi chú: tự động co giãn khoả lấp toàn bộ khoảng trống còn lại */
-.excel-table th.th-note-col {
-  width: auto;
-  min-width: 60px;
-  padding: 6px 6px;
-}
-
-.excel-cell.td-note-cell {
-  width: 100%;
 }
 
 /* Ô nhập sửa trực tiếp tiêu đề Size trên dòng Header */

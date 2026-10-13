@@ -202,13 +202,13 @@
     width: 100% !important;
   }
 
-  /* 4. BẢNG HÀNG HÓA IN KIM: RỘNG 100%, NÉT ĐƠN 1PX ĐEN TRẮNG, VỪA KHÍT NỘI DUNG */
+  /* 4. BẢNG HÀNG HÓA IN KIM: CĂN GIỮA TRANG, NÉT ĐƠN 1PX ĐEN TRẮNG, CO KHÍT VỪA NỘI DUNG */
   table.p-table {
     font-family: "Times New Roman", Times, serif !important;
-    width: 100% !important;
+    width: auto !important;
+    margin: 0 auto 6px auto !important;
     table-layout: auto !important;
     border-collapse: collapse !important;
-    margin: 0 0 6px 0 !important;
     font-size: 8.5pt !important;
     line-height: 1.25 !important;
     box-sizing: border-box !important;
@@ -292,15 +292,6 @@
     width: 1% !important;
     white-space: nowrap !important;
     text-align: center !important;
-    padding: 2px 4px !important;
-    font-size: 8.5pt !important;
-  }
-
-  /* Cột Ghi chú trên bản in: tự động giãn lấp đầy nếu khoảng trống dư dả */
-  table.p-table th.p-cell-note,
-  table.p-table td.p-cell-note {
-    width: auto !important;
-    text-align: left !important;
     padding: 2px 4px !important;
     font-size: 8.5pt !important;
   }
