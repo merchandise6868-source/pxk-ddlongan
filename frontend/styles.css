@@ -528,10 +528,32 @@ select.pxk-input {
   z-index: 10;
 }
 
+/* Cột trong bảng Model 3: co dãn linh hoạt vừa khít nội dung */
+.excel-table th.th-po-col {
+  width: 1%;
+  min-width: 65px;
+  white-space: nowrap;
+  padding: 6px 6px;
+}
+
+.excel-table th.th-ma-col {
+  width: 1%;
+  min-width: 65px;
+  white-space: nowrap;
+  padding: 6px 6px;
+}
+
+.excel-table th.th-dvt-col {
+  width: 1%;
+  min-width: 38px;
+  white-space: nowrap;
+  padding: 6px 2px;
+}
+
 /* Cột size & tổng trên web grid: co khít tối đa theo độ dài con số */
 .excel-table th.th-size-col {
   width: 1%;
-  min-width: 28px;
+  min-width: 26px;
   padding: 2px 1px;
 }
 

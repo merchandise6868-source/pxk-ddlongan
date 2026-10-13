@@ -502,9 +502,9 @@ function renderTableStructure() {
     `;
   } else if (mau === 3) {
     thHtml += `
-      <th style="min-width: 100px;">PO</th>
-      <th style="min-width: 75px;">Mã hàng</th>
-      <th style="width: 45px;">ĐVT</th>
+      <th class="th-po-col">PO</th>
+      <th class="th-ma-col">Mã hàng</th>
+      <th class="th-dvt-col">ĐVT</th>
     `;
     AppState.selectedSizes.forEach((s, sIdx) => {
       thHtml += `
@@ -515,7 +515,6 @@ function renderTableStructure() {
     });
     thHtml += `
       <th class="th-total-col">Tổng</th>
-      <th style="min-width: 90px;">Ghi chú</th>
     `;
   }
   thHtml += '</tr>';
@@ -570,17 +569,16 @@ function renderTableBody() {
       `;
     } else if (mau === 3) {
       rowHtml += `
-        <td><input type="text" class="excel-cell" data-field="ma_hang" value="${escapeHtml(row.ma_hang)}"></td>
-        <td><input type="text" class="excel-cell cell-center" data-field="mau" value="${escapeHtml(row.mau)}"></td>
-        <td><input type="text" class="excel-cell cell-center" data-field="dvt" value="${escapeHtml(row.dvt)}"></td>
+        <td><input type="text" class="excel-cell td-po-cell" data-field="ma_hang" value="${escapeHtml(row.ma_hang)}"></td>
+        <td><input type="text" class="excel-cell cell-center td-ma-cell" data-field="mau" value="${escapeHtml(row.mau)}"></td>
+        <td><input type="text" class="excel-cell cell-center td-dvt-cell" data-field="dvt" value="${escapeHtml(row.dvt)}"></td>
       `;
       AppState.selectedSizes.forEach(s => {
         const val = row.sizes[s] !== undefined ? row.sizes[s] : '';
         rowHtml += `<td><input type="text" class="excel-cell cell-center size-val-cell" data-size="${s}" value="${formatNum(val)}"></td>`;
       });
       rowHtml += `
-        <td><input type="text" class="excel-cell cell-center" data-field="sl_chung_tu" value="${formatNum(row.sl_chung_tu)}" readonly style="font-weight: 700;"></td>
-        <td><input type="text" class="excel-cell" data-field="ghi_chu" value="${escapeHtml(row.ghi_chu)}"></td>
+        <td><input type="text" class="excel-cell cell-center td-total-cell" data-field="sl_chung_tu" value="${formatNum(row.sl_chung_tu)}" readonly style="font-weight: 700;"></td>
       `;
     }
 
@@ -930,7 +928,6 @@ function calculateTotals() {
     });
     footHtml += `
       <td style="text-align: center; font-weight: bold; color: var(--primary); padding: 4px 2px;">${formatNum(totalSlCt)}</td>
-      <td></td>
     `;
   }
   footHtml += '</tr>';
@@ -1116,9 +1113,9 @@ function printCurrentSlip() {
     tableHeaderHtml = `
       <tr>
         <th style="width: 24px; white-space: nowrap;">STT</th>
-        <th style="white-space: nowrap; padding: 2px 4px;">PO</th>
-        <th style="white-space: nowrap; padding: 2px 4px;">Mã hàng</th>
-        <th style="width: 28px; white-space: nowrap; text-align: center;">ĐVT</th>
+        <th class="p-cell-po">PO</th>
+        <th class="p-cell-ma">Mã hàng</th>
+        <th class="p-cell-dvt">ĐVT</th>
         ${activeSizes.map(s => `<th class="p-cell-size">${s}</th>`).join('')}
         <th class="p-cell-total">Tổng</th>
       </tr>
@@ -1172,9 +1169,9 @@ function printCurrentSlip() {
       tableBodyHtml += `
         <tr>
           <td class="text-center nowrap">${sttCount}</td>
-          <td class="text-left nowrap" style="padding: 2px 4px;">${escapeHtml(r.ma_hang)}</td>
-          <td class="text-center nowrap" style="padding: 2px 4px;">${escapeHtml(r.mau)}</td>
-          <td class="text-center nowrap">${escapeHtml(r.dvt)}</td>
+          <td class="p-cell-po">${escapeHtml(r.ma_hang)}</td>
+          <td class="p-cell-ma">${escapeHtml(r.mau)}</td>
+          <td class="p-cell-dvt">${escapeHtml(r.dvt)}</td>
           ${activeSizes.map(s => {
             const val = parseVnNumber(r.sizes[s]);
             return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;

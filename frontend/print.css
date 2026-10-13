@@ -238,6 +238,34 @@
   table.p-table td.text-left { text-align: left !important; }
   table.p-table tr { page-break-inside: avoid !important; }
 
+  /* Các cột PO, Mã hàng, ĐVT co dãn linh hoạt vừa khít nội dung */
+  table.p-table th.p-cell-po,
+  table.p-table td.p-cell-po {
+    width: 1% !important;
+    white-space: nowrap !important;
+    text-align: left !important;
+    padding: 2px 4px !important;
+    font-size: 8.5pt !important;
+  }
+
+  table.p-table th.p-cell-ma,
+  table.p-table td.p-cell-ma {
+    width: 1% !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    padding: 2px 4px !important;
+    font-size: 8.5pt !important;
+  }
+
+  table.p-table th.p-cell-dvt,
+  table.p-table td.p-cell-dvt {
+    width: 1% !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    padding: 2px 2px !important;
+    font-size: 8.5pt !important;
+  }
+
   /* Ô số lượng size: co khít tối đa theo độ rộng con số, không chừa khoảng trống thừa */
   table.p-table th.p-cell-size,
   table.p-table td.p-cell-size {
