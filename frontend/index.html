@@ -281,118 +281,102 @@
          ========================================== -->
     <section id="tab-create" class="tab-content">
       <div class="card">
-        <!-- THANH CHỌN MẪU PHIẾU HIỆN ĐẠI (SEGMENTED CONTROL) -->
-        <div class="pxk-header-card">
-          <div class="pxk-mau-row">
-            <div class="pxk-mau-heading">
-              <span class="pxk-badge">MẪU PHIẾU</span>
+        <!-- BỘ CHỌN MẪU PHIẾU (KHỚP 100% THIẾT KẾ MẪU) -->
+        <div class="pxk-ui-panel">
+          <!-- DÒNG 1: MẪU PHIẾU -->
+          <div class="pxk-row-mau">
+            <span class="pxk-lbl-mau">MẪU PHIẾU</span>
+            <div class="pxk-seg-group">
+              <button type="button" class="pxk-seg-btn mau-card-btn" data-mau="1">1. Có đơn giá</button>
+              <button type="button" class="pxk-seg-btn mau-card-btn" data-mau="2">2. Không đơn giá</button>
+              <button type="button" class="pxk-seg-btn mau-card-btn active" data-mau="3">3. Size Run</button>
             </div>
-            <div class="pxk-mau-switcher">
-              <button type="button" class="mau-card-btn" data-mau="1">
-                <span class="m-icon">📑</span> 1. Có đơn giá
-              </button>
-              <button type="button" class="mau-card-btn active" data-mau="2">
-                <span class="m-icon">📄</span> 2. Không đơn giá
-              </button>
-              <button type="button" class="mau-card-btn" data-mau="3">
-                <span class="m-icon">📊</span> 3. Size Run
-              </button>
+            <span class="pxk-txt-desc" id="pxk-mau-desc-text">Cột: STT, PO, Màu, ĐVT, dải size, Tổng · Cộng ngang theo size, cộng dọc chân cột</span>
+          </div>
+
+          <!-- DÒNG 2: DẢI SIZE (HIỂN THỊ KHI CHỌN MẪU 3) -->
+          <div class="pxk-row-size" id="size-range-box">
+            <div class="pxk-size-bar">
+              <span class="pxk-lbl-size">Dải size</span>
+              <input type="text" id="custom-size-input" class="pxk-size-input" value="34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45">
+              <button type="button" class="pxk-size-pill active" onclick="setQuickSizeRange('full')">34-45</button>
+              <button type="button" class="pxk-size-pill" onclick="setQuickSizeRange('common')">35-43</button>
+              <button type="button" class="pxk-size-pill" onclick="setQuickSizeRange('compact')">36-42</button>
+              <button type="button" class="pxk-size-step" id="btn-add-size-col">+</button>
+              <button type="button" class="pxk-size-step" id="btn-del-size-col">−</button>
+              <button type="button" class="pxk-size-btn-apply" id="btn-apply-custom-sizes">Áp dụng</button>
             </div>
-            <div class="pxk-mau-desc" id="pxk-mau-desc-text">
-              Cột: STT, Tên hàng, ĐVT, SL CT, SL Thực xuất, Ghi chú • Tự động bóc tách size
+            <div class="pxk-size-hint">
+              Mẹo: click tiêu đề ô size trên bảng để sửa thành size lẻ (36.5...) hoặc tên tùy ý.
             </div>
           </div>
 
-          <!-- Thanh tùy chỉnh dải size Mẫu 3 -->
-          <div class="size-range-selector" id="size-range-box">
-            <div class="size-range-row">
-              <span class="size-title">📐 Dải size:</span>
-              <input type="text" id="custom-size-input" class="form-control size-input" placeholder="34, 35, 36..." value="34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45">
-              <div class="size-presets">
-                <button type="button" class="preset-pill" onclick="setQuickSizeRange('full')">34-45</button>
-                <button type="button" class="preset-pill" onclick="setQuickSizeRange('common')">35-43</button>
-                <button type="button" class="preset-pill" onclick="setQuickSizeRange('compact')">36-42</button>
-              </div>
-              <div class="size-actions">
-                <button type="button" class="size-step-btn" id="btn-add-size-col" title="Thêm cột size">➕</button>
-                <button type="button" class="size-step-btn" id="btn-del-size-col" title="Bớt cột size">➖</button>
-                <button type="button" class="btn btn-primary btn-apply-size" id="btn-apply-custom-sizes">Áp dụng</button>
-              </div>
-            </div>
-            <div class="size-hint">
-              💡 <em>Mẹo: Bạn có thể click trực tiếp vào ô tiêu đề size trên bảng để sửa thành size lẻ (36.5...) hoặc tên tùy ý.</em>
-            </div>
-          </div>
-        </div>
-
-        <!-- KHỐI THÔNG TIN ĐẦU PHIẾU (GRID 4 CỘT CÂN ĐỐI 100%) -->
-        <div class="slip-header-card">
-          <!-- Dropdown ẩn để giữ tương thích toàn bộ mã nguồn JS -->
+          <!-- DÒNG 3 & 4: 8 Ô NHẬP LIỆU (4 CỘT X 2 HÀNG CÂN ĐỐI TUYỆT ĐỐI) -->
+          <!-- Select ẩn giữ tương thích mã nguồn JS -->
           <select id="slip-mau" style="display: none;">
             <option value="2">Mẫu 2</option>
             <option value="1">Mẫu 1</option>
-            <option value="3">Mẫu 3</option>
+            <option value="3" selected>Mẫu 3</option>
           </select>
 
-          <!-- HÀNG 1: THÔNG TIN ĐỊNH DANH PHIẾU (4 CỘT ĐỀU NHAU) -->
-          <div class="slip-row-4col">
-            <div class="form-group">
-              <label><span class="f-icon">🏢</span> Bộ phận / Chuyền (*)</label>
-              <select id="slip-bophan" class="form-control">
-                <!-- Được nạp tự động từ API -->
+          <div class="pxk-fields-grid">
+            <!-- HÀNG 1 -->
+            <div class="pxk-field">
+              <label class="pxk-field-lbl">Bộ phận / Chuyền <span class="pxk-star">*</span></label>
+              <select id="slip-bophan" class="pxk-input">
+                <!-- Nạp tự động từ API -->
               </select>
             </div>
 
-            <div class="form-group">
-              <label><span class="f-icon">🔢</span> Số phiếu (*)</label>
-              <input type="text" id="slip-so" class="form-control font-semibold" placeholder="Tự động sinh (ví dụ: PXK-TC-00000001)">
+            <div class="pxk-field">
+              <label class="pxk-field-lbl">Số phiếu <span class="pxk-star">*</span></label>
+              <input type="text" id="slip-so" class="pxk-input" placeholder="PXK-TC-00000001">
             </div>
 
-            <div class="form-group">
-              <label><span class="f-icon">📅</span> Ngày xuất (*)</label>
-              <input type="date" id="slip-date" class="form-control">
+            <div class="pxk-field">
+              <label class="pxk-field-lbl">Ngày xuất <span class="pxk-star">*</span></label>
+              <input type="date" id="slip-date" class="pxk-input">
             </div>
 
-            <div class="form-group">
-              <label><span class="f-icon">👤</span> Người lập biểu</label>
-              <input type="text" id="slip-nguoilap" class="form-control" placeholder="Tên người lập...">
+            <div class="pxk-field">
+              <label class="pxk-field-lbl">Đơn vị nhận</label>
+              <input type="text" id="slip-donvi" class="pxk-input" placeholder="Đơn vị / khách hàng">
+            </div>
+
+            <!-- HÀNG 2 -->
+            <div class="pxk-field">
+              <label class="pxk-field-lbl">Lý do xuất</label>
+              <input type="text" id="slip-lydo" class="pxk-input" placeholder="Lý do xuất hàng">
+            </div>
+
+            <div class="pxk-field">
+              <label class="pxk-field-lbl">Đơn hàng</label>
+              <input type="text" id="slip-donhang" class="pxk-input" placeholder="Mã đơn hàng / PO">
+            </div>
+
+            <div class="pxk-field">
+              <label class="pxk-field-lbl">Bộ phận xuất kho</label>
+              <input type="text" id="slip-bophanxuat" class="pxk-input" placeholder="Tổ chặt, Chuyền may...">
+            </div>
+
+            <div class="pxk-field">
+              <label class="pxk-field-lbl">Người lập biểu</label>
+              <input type="text" id="slip-nguoilap" class="pxk-input" placeholder="Tên người lập">
             </div>
           </div>
 
-          <!-- HÀNG 2: THÔNG TIN GIAO NHẬN & ĐƠN HÀNG (4 CỘT ĐỀU NHAU) -->
-          <div class="slip-row-4col">
-            <div class="form-group">
-              <label><span class="f-icon">🏷️</span> Đơn hàng / PO</label>
-              <input type="text" id="slip-donhang" class="form-control" placeholder="Mã đơn hàng / PO...">
-            </div>
-
-            <div class="form-group">
-              <label><span class="f-icon">🚚</span> Đơn vị nhận</label>
-              <input type="text" id="slip-donvi" class="form-control" placeholder="Tên đơn vị / khách hàng...">
-            </div>
-
-            <div class="form-group">
-              <label><span class="f-icon">🏭</span> Bộ phận xuất kho</label>
-              <input type="text" id="slip-bophanxuat" class="form-control" placeholder="Tổ Chặt, Chuyền May, Kho...">
-            </div>
-
-            <div class="form-group">
-              <label><span class="f-icon">📝</span> Lý do xuất</label>
-              <input type="text" id="slip-lydo" class="form-control" placeholder="Lý do xuất hàng...">
-            </div>
-          </div>
-
-          <!-- HÀNG 3: CẤU HÌNH ĐỊA CHỈ IN ĐẦU PHIẾU (FULL WIDTH) -->
-          <div class="slip-address-banner">
-            <div class="address-header">
-              <label><span class="f-icon">📍</span> ĐỊA CHỈ CÔNG TY IN ĐẦU PHIẾU:</label>
-              <div class="address-quick-chips">
-                <span class="chip-label">Chọn nhanh:</span>
-                <button type="button" class="addr-chip active" id="btn-quick-addr-tannhut">🏢 Tân Nhựt (Mặc định)</button>
-                <button type="button" class="addr-chip" id="btn-quick-addr-longan">🏭 KCN Hòa Bình, Long An</button>
-              </div>
-            </div>
-            <input type="text" id="slip-diachi-cty" class="form-control address-input" value="A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM" placeholder="Nhập địa chỉ in trên phiếu...">
+          <!-- DÒNG 5: ĐỊA CHỈ IN ĐẦU PHIẾU -->
+          <div class="pxk-address-bar">
+            <span class="pxk-addr-lbl">Địa chỉ in đầu phiếu</span>
+            <input type="text" id="slip-diachi-cty" class="pxk-addr-input" value="A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM">
+            <button type="button" class="pxk-addr-pill active" id="btn-quick-addr-tannhut">
+              <svg class="pxk-pin-svg" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              Tân Nhựt (mặc định)
+            </button>
+            <button type="button" class="pxk-addr-pill" id="btn-quick-addr-longan">
+              <svg class="pxk-pin-svg" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              KCN Hòa Bình, Long An
+            </button>
           </div>
         </div>
 
