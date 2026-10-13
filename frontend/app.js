@@ -172,16 +172,20 @@ function initFormControls() {
     diachiInput.value = DEFAULT_COMPANY_ADDRESS;
   }
   const btnQuickTanNhut = document.getElementById('btn-quick-addr-tannhut');
+  const btnQuickLongAn = document.getElementById('btn-quick-addr-longan');
   if (btnQuickTanNhut) {
     btnQuickTanNhut.addEventListener('click', () => {
       if (diachiInput) diachiInput.value = DEFAULT_COMPANY_ADDRESS;
+      btnQuickTanNhut.classList.add('active');
+      if (btnQuickLongAn) btnQuickLongAn.classList.remove('active');
       showToast('Đã chọn địa chỉ: Xã Tân Nhựt, TP HCM', 'info');
     });
   }
-  const btnQuickLongAn = document.getElementById('btn-quick-addr-longan');
   if (btnQuickLongAn) {
     btnQuickLongAn.addEventListener('click', () => {
       if (diachiInput) diachiInput.value = ALT_COMPANY_ADDRESS;
+      btnQuickLongAn.classList.add('active');
+      if (btnQuickTanNhut) btnQuickTanNhut.classList.remove('active');
       showToast('Đã chọn địa chỉ: KCN Hòa Bình, Long An', 'info');
     });
   }
@@ -236,6 +240,18 @@ function switchMau(mau) {
       btn.classList.remove('active');
     }
   });
+
+  // Cập nhật văn bản mô tả mẫu phiếu
+  const descEl = document.getElementById('pxk-mau-desc-text');
+  if (descEl) {
+    if (mau === 1) {
+      descEl.textContent = 'Cột: STT, Tên hàng, ĐVT, SL CT, SL Thực xuất, Đơn giá, Thành tiền • Tự tính Thành tiền';
+    } else if (mau === 2) {
+      descEl.textContent = 'Cột: STT, Tên hàng, ĐVT, SL CT, SL Thực xuất, Ghi chú • Tự động bóc tách size từ text';
+    } else if (mau === 3) {
+      descEl.textContent = 'Cột: STT, PO, Màu, ĐVT, dải size, Tổng • Cộng ngang theo size, cộng dọc chân cột';
+    }
+  }
 
   // Hiện/ẩn thanh chọn dải size khi chọn Mẫu 3
   const sizeRangeBox = document.getElementById('size-range-box');
