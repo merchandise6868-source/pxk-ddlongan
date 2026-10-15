@@ -271,11 +271,11 @@ function switchMau(mau) {
   const descEl = document.getElementById('pxk-mau-desc-text');
   if (descEl) {
     if (mau === 1) {
-      descEl.textContent = 'Cột: STT, Tên hàng, ĐVT, SL CT, SL Thực xuất, Đơn giá, Thành tiền • Tự tính Thành tiền';
+      descEl.textContent = 'Nhập tên hàng, số lượng và đơn giá. Thành tiền tự tính.';
     } else if (mau === 2) {
-      descEl.textContent = 'Cột: STT, Tên hàng, ĐVT, SL CT, SL Thực xuất, Ghi chú • Tự động bóc tách size từ text';
+      descEl.textContent = 'Nhập tên hàng và số lượng. Nếu tên hàng có dạng 36/66, 37/150 thì size được tự tách.';
     } else if (mau === 3) {
-      descEl.textContent = 'Cột: STT, PO, Mã hàng, Diễn giải, ĐVT, dải size, Tổng • Cộng ngang theo size, cộng dọc chân cột';
+      descEl.textContent = 'Nhập số lượng theo từng size. Tổng ngang và tổng dọc tự tính.';
     }
   }
 
@@ -584,7 +584,7 @@ function renderTableBody() {
     if (mau === 3 && row.loai === 'dong_bo') tr.className = 'row-dongbo';
 
     let rowHtml = `<td style="text-align: center; font-weight: 600;">${rIdx + 1}${mau === 3 && row.loai === 'dong_bo'
-      ? `<button type="button" class="btn-del-block" title="Xóa cả bộ chi tiết này" onclick="removeBlock('${row.bo_key}')">✕</button>` : ''}</td>`;
+      ? `<button type="button" class="btn-del-block" title="Xóa cả bộ chi tiết này" onclick="removeBlock('${row.bo_key}')">Xóa bộ</button>` : ''}</td>`;
 
     if (mau === 1) {
       rowHtml += `
@@ -985,6 +985,12 @@ function calculateTotals() {
   }
   footHtml += '</tr>';
   tfoot.innerHTML = footHtml;
+
+  // Tổng cộng hiển thị ở thanh thao tác phía dưới
+  const sumEl = document.getElementById('slip-total-summary');
+  if (sumEl) sumEl.textContent = formatNum(totalSlCt) || '0';
+  const unitEl = document.getElementById('slip-total-unit');
+  if (unitEl) unitEl.textContent = mau === 1 && totalThanhTien ? `đôi · ${formatNum(totalThanhTien)} đ` : 'đôi';
 }
 
 /* ============================================================
@@ -1657,8 +1663,14 @@ function renderCustomerPills() {
   if (!box || !window.Catalog) return;
   const list = window.Catalog.khach;
   box.innerHTML = list.map(k => `
-    <button type="button" class="pxk-kh-pill ${k.id === AppState.khachHangId ? 'active' : ''}" data-kh="${k.id}" title="${escapeHtml(k.ten_day_du)}">${escapeHtml(k.ten_ngan)}</button>
-  `).join('') + `<button type="button" class="pxk-kh-pill pxk-kh-none ${!AppState.khachHangId ? 'active' : ''}" data-kh="">Khác / tự nhập</button>`;
+    <button type="button" class="pxk-kh-pill ${k.id === AppState.khachHangId ? 'active' : ''}" data-kh="${k.id}" aria-pressed="${k.id === AppState.khachHangId}">
+      <span class="kh-name">${escapeHtml(k.ten_ngan)}</span>
+      <span class="kh-sub">${escapeHtml(k.ten_day_du || '')}</span>
+    </button>
+  `).join('') + `<button type="button" class="pxk-kh-pill pxk-kh-none ${!AppState.khachHangId ? 'active' : ''}" data-kh="" aria-pressed="${!AppState.khachHangId}">
+      <span class="kh-name">Khách khác</span>
+      <span class="kh-sub">Tự nhập thông tin</span>
+    </button>`;
   box.querySelectorAll('[data-kh]').forEach(btn => btn.addEventListener('click', () => {
     selectCustomer(btn.dataset.kh ? parseInt(btn.dataset.kh, 10) : null);
   }));
@@ -1670,7 +1682,7 @@ function renderDayPills() {
   const kh = currentCustomer();
   const days = kh?.day_size || [];
   if (days.length < 2) { box.innerHTML = ''; return; }
-  box.innerHTML = `<span class="pxk-day-lbl">Dãy size:</span>` + days.map((d, i) => `
+  box.innerHTML = `<span class="pxk-day-lbl">Chọn dãy size</span>` + days.map((d, i) => `
     <button type="button" class="pxk-day-pill ${i === AppState.dayIdx ? 'active' : ''}" data-day="${i}" title="${escapeHtml(d.sizes.join(', '))}">${escapeHtml(d.ten)}</button>
   `).join('');
   box.querySelectorAll('[data-day]').forEach(btn => btn.addEventListener('click', () => applyDay(parseInt(btn.dataset.day, 10))));
@@ -1766,8 +1778,8 @@ function renderBoPanel() {
   panel.classList.add('show');
   const sets = window.Catalog.boOf(kh.id);
   list.innerHTML = sets.length
-    ? sets.map(b => `<button type="button" class="pxk-bo-btn" data-bo="${b.id}" title="${escapeHtml((b.chi_tiet || []).map(c => c.ten).join(', '))}">＋ ${escapeHtml(b.ten_bo)} <small>(${(b.chi_tiet || []).length} chi tiết)</small></button>`).join('')
-    : `<span class="pxk-bo-empty">Chưa có bộ chi tiết — thêm ở tab ⚙️ Danh Mục → Bộ chi tiết.</span>`;
+    ? sets.map(b => `<button type="button" class="pxk-bo-btn" data-bo="${b.id}" title="${escapeHtml((b.chi_tiet || []).map(c => c.ten).join(', '))}">+ ${escapeHtml(b.ten_bo)} <small>${(b.chi_tiet || []).length} chi tiết</small></button>`).join('')
+    : `<span class="pxk-bo-empty">Chưa có bộ chi tiết nào. Thêm ở tab Danh mục, mục Bộ chi tiết.</span>`;
   list.querySelectorAll('[data-bo]').forEach(btn => btn.addEventListener('click', () => insertBoBlock(parseInt(btn.dataset.bo, 10))));
 }
 

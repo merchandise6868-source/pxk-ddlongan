@@ -80,7 +80,7 @@
   let poRowsLocal = []; // dòng PO đang hiển thị (gồm cả dòng mới chưa lưu)
 
   function khOptions(selected, withAll) {
-    let html = withAll ? `<option value="">-- Tất cả khách hàng --</option>` : `<option value="">-- Chọn khách --</option>`;
+    let html = withAll ? `<option value="">Tất cả khách hàng</option>` : `<option value="">Chọn khách</option>`;
     Catalog.khachAll.forEach(k => {
       html += `<option value="${k.id}" ${parseInt(selected, 10) === k.id ? 'selected' : ''}>${esc(k.ten_ngan)}${k.an ? ' (ẩn)' : ''}</option>`;
     });
@@ -127,7 +127,7 @@
         <td class="c">${esc(k.dvt)}</td>
         <td class="c">${k.co_bo_chi_tiet ? '✔' : ''}</td>
         <td class="c">${k.an ? 'Ẩn' : 'Đang dùng'}</td>
-        <td class="c"><button class="btn btn-outline btn-xs" data-edit-kh="${k.id}">✏️ Sửa</button></td>
+        <td class="c"><button class="btn btn-outline btn-xs" data-edit-kh="${k.id}">Sửa</button></td>
       </tr>`).join('') || `<tr><td colspan="11" class="c cat-muted">Chưa có khách hàng</td></tr>`;
 
     tbody.querySelectorAll('[data-edit-kh]').forEach(b => b.addEventListener('click', () => fillKhForm(parseInt(b.dataset.editKh, 10))));
@@ -209,7 +209,7 @@
         <td><input class="cat-cell" data-f="mau" value="${esc(p.mau)}"></td>
         <td><input class="cat-cell r" data-f="don_gia" value="${fmt(p.don_gia)}"></td>
         <td><input class="cat-cell" data-f="ghi_chu" value="${esc(p.ghi_chu)}"></td>
-        <td class="c"><button class="btn btn-danger btn-xs" data-del-po="${i}">✕</button></td>
+        <td class="c"><button class="btn btn-danger btn-xs" data-del-po="${i}">Xóa</button></td>
       </tr>`).join('') || `<tr><td colspan="9" class="c cat-muted">Chưa có PO nào. Bấm "Thêm dòng" hoặc dán từ Excel.</td></tr>`;
 
     document.getElementById('cat-po-count').textContent = `${poRowsLocal.filter(r => r.id).length} dòng`;
@@ -300,14 +300,14 @@
     wrap.innerHTML = list.map(b => `
       <div class="cat-bo-card">
         <div class="cat-bo-head">
-          <div><strong>${esc(b.ten_bo)}</strong> <span class="cat-muted">· ART ${esc(b.art) || '—'} · ${esc(Catalog.byId(b.khach_hang_id)?.ten_ngan || '')}</span></div>
+          <div><strong>${esc(b.ten_bo)}</strong> <span class="cat-muted">ART ${esc(b.art) || 'chưa có'}, khách ${esc(Catalog.byId(b.khach_hang_id)?.ten_ngan || '')}</span></div>
           <div>
-            <button class="btn btn-outline btn-xs" data-edit-bo="${b.id}">✏️ Sửa</button>
-            <button class="btn btn-danger btn-xs" data-del-bo="${b.id}">✕</button>
+            <button class="btn btn-outline btn-xs" data-edit-bo="${b.id}">Sửa</button>
+            <button class="btn btn-danger btn-xs" data-del-bo="${b.id}">Xóa</button>
           </div>
         </div>
         <table class="cat-mini">
-          <tr><th>#</th><th>Chi tiết</th><th>Miếng / đôi</th><th>ĐVT</th></tr>
+          <tr><th>#</th><th>Chi tiết</th><th>Miếng/đôi</th><th>ĐVT</th></tr>
           ${(b.chi_tiet || []).map((c, i) => `<tr><td class="c">${i + 1}</td><td>${esc(c.ten)}</td><td class="c">${c.he_so || 2}</td><td class="c">${esc(c.dvt || 'Miếng')}</td></tr>`).join('')}
         </table>
       </div>`).join('') || `<div class="cat-muted" style="padding: 16px;">Chưa có bộ chi tiết nào cho khách hàng này.</div>`;

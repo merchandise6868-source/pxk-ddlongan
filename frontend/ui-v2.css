@@ -1,0 +1,410 @@
+/* ============================================================
+   GIAO DIỆN MỚI (10/2026) — CHỈ ÁP DỤNG CHO 2 TAB:
+   "Lập phiếu xuất" (#tab-create) và "Danh mục" (#tab-catalog)
+   Nguyên tắc: chữ to, ít màu, mỗi bước một khối, nút rõ nghĩa.
+   ============================================================ */
+
+.ui-scope {
+  --ui-ink: #1c2a28;
+  --ui-muted: #5a6865;
+  --ui-faint: #8a9794;
+  --ui-line: #d5dcd9;
+  --ui-line-strong: #b9c4c0;
+  --ui-wash: #f2f5f3;
+  --ui-paper: #ffffff;
+  --ui-brand: #0e5a4a;
+  --ui-brand-hover: #0b4a3d;
+  --ui-brand-soft: #e2efea;
+  --ui-amber: #a5600a;
+  --ui-amber-line: #e9b65f;
+  --ui-amber-soft: #fff5e3;
+  --ui-danger: #b42318;
+  --ui-focus: #1f7a65;
+  --ui-radius: 10px;
+  --ui-radius-sm: 7px;
+
+  font-family: "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ui-ink);
+  font-variant-numeric: tabular-nums;
+}
+.ui-scope button,
+.ui-scope input,
+.ui-scope select,
+.ui-scope textarea { font-family: inherit; }
+
+.ui-page { max-width: 1320px; margin: 0 auto; padding-bottom: 8px; }
+
+.ui-page-head { margin: 6px 0 18px; }
+.ui-page-head h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--ui-ink); }
+.ui-page-head p { color: var(--ui-muted); margin-top: 2px; max-width: 70ch; }
+
+/* ---------- Bước ---------- */
+.ui-step {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 16px;
+  background: var(--ui-paper);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  padding: 20px 22px 22px 18px;
+  margin-bottom: 14px;
+}
+.ui-step-num {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--ui-brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ui-step-body { min-width: 0; }
+.ui-step-title { font-size: 19px; font-weight: 700; line-height: 40px; }
+.ui-step-help { color: var(--ui-muted); font-size: 14px; margin: -4px 0 14px; }
+.ui-step-headrow { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+
+/* ---------- Ô nhập ---------- */
+.ui-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 16px; }
+.ui-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ui-span-2 { grid-column: span 2; }
+.ui-span-4 { grid-column: 1 / -1; }
+.ui-label { font-size: 14px; font-weight: 600; color: var(--ui-ink); }
+.ui-label-note { font-weight: 400; color: var(--ui-faint); margin-left: 6px; }
+.ui-req { color: var(--ui-danger); font-weight: 700; }
+
+.ui-scope .ui-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.ui-scope textarea.ui-input { height: auto; padding: 10px 14px; line-height: 1.5; resize: vertical; }
+.ui-scope .ui-input::placeholder { color: #a3aeab; }
+.ui-scope .ui-input:hover { border-color: #8f9d99; }
+.ui-scope .ui-input:focus { border-color: var(--ui-focus); box-shadow: 0 0 0 3px rgba(31, 122, 101, 0.18); }
+.ui-scope .ui-input-strong { font-weight: 700; letter-spacing: 0.01em; }
+
+.ui-inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ui-inline .ui-input { flex: 1; min-width: 240px; }
+.ui-hint { font-size: 13.5px; color: var(--ui-muted); }
+.ui-flex-fill { flex: 1; }
+
+/* ---------- Nút ---------- */
+.ui-btn {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: var(--ui-radius-sm);
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.ui-btn-lg { height: 50px; padding: 0 26px; font-size: 16px; }
+.ui-btn-square { width: 42px; padding: 0; font-size: 20px; }
+.ui-btn-primary { background: var(--ui-brand); color: #fff; }
+.ui-btn-primary:hover { background: var(--ui-brand-hover); }
+.ui-btn-dark { background: var(--ui-ink); color: #fff; }
+.ui-btn-dark:hover { background: #000; }
+.ui-btn-ghost { background: var(--ui-paper); border-color: var(--ui-line-strong); color: var(--ui-ink); }
+.ui-btn-ghost:hover { border-color: var(--ui-brand); color: var(--ui-brand); }
+.ui-scope :focus-visible { outline: 3px solid rgba(31, 122, 101, 0.45); outline-offset: 2px; }
+
+.ui-chip {
+  height: 42px; padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-line-strong);
+  background: var(--ui-paper);
+  font-size: 14px; font-weight: 500; color: var(--ui-ink);
+  cursor: pointer;
+}
+.ui-chip.active { border-color: var(--ui-brand); background: var(--ui-brand-soft); color: var(--ui-brand); font-weight: 600; }
+
+/* ---------- Bước 1: khách hàng ---------- */
+.ui-kh-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.ui-scope .pxk-kh-pill {
+  height: auto;
+  min-height: 72px;
+  padding: 12px 16px;
+  border-radius: var(--ui-radius);
+  border: 1.5px solid var(--ui-line);
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+  text-align: left;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+.ui-scope .pxk-kh-pill:hover { border-color: var(--ui-brand); color: var(--ui-ink); }
+.ui-scope .pxk-kh-pill .kh-name { font-size: 18px; font-weight: 700; line-height: 1.25; }
+.ui-scope .pxk-kh-pill .kh-sub { font-size: 13px; color: var(--ui-muted); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.ui-scope .pxk-kh-pill.active {
+  border-color: var(--ui-brand);
+  background: var(--ui-brand);
+  color: #fff;
+  box-shadow: none;
+}
+.ui-scope .pxk-kh-pill.active .kh-sub { color: rgba(255, 255, 255, 0.82); }
+.ui-scope .pxk-kh-pill.pxk-kh-none { border-style: dashed; background: var(--ui-wash); }
+.ui-scope .pxk-kh-pill.pxk-kh-none .kh-name { font-size: 16px; font-weight: 600; }
+.ui-scope .pxk-kh-pill.pxk-kh-none.active { background: var(--ui-ink); border-color: var(--ui-ink); border-style: solid; }
+
+.ui-day-list { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--ui-line); }
+.ui-day-list:empty { display: none; }
+.ui-scope .pxk-day-lbl { font-size: 14px; font-weight: 600; color: var(--ui-ink); margin-right: 4px; }
+.ui-scope .pxk-day-pill {
+  height: 42px; padding: 0 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ui-line-strong);
+  background: var(--ui-paper);
+  font-size: 15px; font-weight: 600; color: var(--ui-ink);
+  cursor: pointer;
+}
+.ui-scope .pxk-day-pill:hover { border-color: var(--ui-brand); color: var(--ui-brand); background: var(--ui-paper); }
+.ui-scope .pxk-day-pill.active { border-color: var(--ui-brand); background: var(--ui-brand-soft); color: var(--ui-brand); font-weight: 700; }
+
+/* ---------- Bước 3: kiểu phiếu ---------- */
+.ui-seg { display: inline-flex; align-items: center; gap: 4px; padding: 4px; background: var(--ui-wash); border: 1px solid var(--ui-line); border-radius: 999px; }
+.ui-seg-label { font-size: 13px; color: var(--ui-muted); padding: 0 8px 0 10px; }
+.ui-seg-btn {
+  height: 36px; padding: 0 16px; border: none; border-radius: 999px;
+  background: transparent; color: var(--ui-muted);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.ui-seg-btn:hover { color: var(--ui-ink); }
+.ui-seg-btn.active { background: var(--ui-paper); color: var(--ui-brand); box-shadow: 0 1px 2px rgba(16, 40, 34, 0.14); }
+
+/* ---------- Bộ chi tiết (JiaYu) ---------- */
+.ui-scope .ui-bo { display: none; gap: 14px; align-items: center; flex-wrap: wrap; margin: 4px 0 14px; padding: 14px 16px; background: var(--ui-amber-soft); border: 1px solid var(--ui-amber-line); border-radius: var(--ui-radius); }
+.ui-scope .ui-bo.show { display: flex; }
+.ui-bo-text { display: flex; flex-direction: column; flex: 1 1 320px; font-size: 14px; color: #5c3b07; }
+.ui-bo-text strong { font-size: 15px; color: #4a2f04; }
+.ui-bo-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.ui-scope .pxk-bo-btn {
+  height: 46px; padding: 0 18px;
+  border-radius: var(--ui-radius-sm);
+  border: 1.5px solid var(--ui-amber);
+  background: var(--ui-paper);
+  color: #4a2f04; font-size: 16px; font-weight: 700;
+  cursor: pointer;
+}
+.ui-scope .pxk-bo-btn small { font-size: 13px; font-weight: 500; color: var(--ui-amber); margin-left: 4px; }
+.ui-scope .pxk-bo-btn:hover { background: var(--ui-amber); color: #fff; }
+.ui-scope .pxk-bo-btn:hover small { color: #fff; }
+.ui-scope .pxk-bo-empty { font-size: 14px; color: #5c3b07; }
+
+/* ---------- Bảng nhập ---------- */
+#tab-create .ui-grid-wrap {
+  border: 1px solid var(--ui-line-strong);
+  border-radius: var(--ui-radius-sm);
+  max-height: 620px;
+  background: var(--ui-paper);
+}
+#tab-create #excel-grid { font-size: 15px; font-family: inherit; }
+#tab-create #excel-grid th {
+  background: var(--ui-wash);
+  color: var(--ui-ink);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 11px 6px;
+  border: 1px solid var(--ui-line);
+  border-bottom: 2px solid var(--ui-line-strong);
+}
+#tab-create #excel-grid td { border: 1px solid var(--ui-line); background: var(--ui-paper); height: 46px; }
+#tab-create #excel-grid tbody tr:hover td { background: #f7faf8; }
+#tab-create #excel-grid tbody td:first-child { color: var(--ui-faint); font-weight: 600; }
+#tab-create #excel-grid .excel-cell { font-family: inherit; font-size: 15px; min-height: 44px; padding: 6px 10px; color: var(--ui-ink); }
+#tab-create #excel-grid .excel-cell:focus { background: #eef7f3; box-shadow: inset 0 0 0 2px var(--ui-focus); font-weight: 600; }
+#tab-create #excel-grid .excel-cell.size-val-cell { padding: 6px 2px; font-size: 16px; font-weight: 500; }
+#tab-create #excel-grid .td-total-cell { font-size: 17px !important; font-weight: 700; color: var(--ui-brand); background: #f6faf8; }
+#tab-create #excel-grid th.th-size-col { min-width: 56px; }
+#tab-create #excel-grid th.th-total-col { min-width: 90px; }
+#tab-create .size-header-input {
+  font-family: inherit;
+  font-size: 15px; font-weight: 700;
+  color: var(--ui-ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 1px dashed var(--ui-line-strong);
+  border-radius: 4px;
+  max-width: 80px;
+  padding: 3px 2px;
+}
+#tab-create .size-header-input:hover { background: var(--ui-paper); border-color: var(--ui-line-strong); }
+#tab-create .size-header-input:focus { background: #fffbe8; border: 1px solid #c9a227; color: var(--ui-ink); box-shadow: none; }
+
+/* Dòng cộng */
+#tab-create #excel-grid tfoot td {
+  background: var(--ui-wash);
+  border: 1px solid var(--ui-line);
+  border-top: 2px solid var(--ui-ink);
+  height: 54px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ui-ink);
+}
+#tab-create #excel-grid tfoot .foot-size-total { font-size: 18px; font-weight: 800; text-align: center; color: var(--ui-ink); }
+#tab-create #excel-grid tfoot .foot-grand-total { font-size: 22px; font-weight: 800; text-align: center; color: #fff; background: var(--ui-brand); }
+
+/* Dòng chi tiết & đồng bộ đôi */
+#tab-create #excel-grid tr.row-chitiet td { background: #fffcf4; }
+#tab-create #excel-grid tr.row-chitiet td:first-child { border-left: 4px solid var(--ui-amber-line); }
+#tab-create #excel-grid tr.row-dongbo td { background: var(--ui-amber-soft); border-top: 2px solid var(--ui-amber-line); }
+#tab-create #excel-grid tr.row-dongbo td:first-child { border-left: 4px solid var(--ui-amber); }
+#tab-create #excel-grid tr.row-dongbo .excel-cell { font-weight: 800; font-style: italic; color: #4a2f04; }
+#tab-create .btn-del-block {
+  display: block; margin: 2px auto 0;
+  border: none; background: transparent;
+  color: var(--ui-danger); font-size: 12px; font-weight: 600; font-style: normal;
+  cursor: pointer; text-decoration: underline;
+}
+
+.ui-grid-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.ui-grid-tools .ui-hint { margin-left: 6px; }
+
+/* ---------- Tùy chỉnh thêm ---------- */
+.ui-more { margin-top: 18px; border-top: 1px solid var(--ui-line); padding-top: 12px; }
+.ui-more > summary { cursor: pointer; font-size: 14.5px; font-weight: 600; color: var(--ui-muted); list-style: none; display: inline-flex; align-items: center; gap: 8px; }
+.ui-more > summary::-webkit-details-marker { display: none; }
+.ui-more > summary::before { content: "+"; display: inline-flex; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--ui-line-strong); align-items: center; justify-content: center; font-size: 15px; line-height: 1; }
+.ui-more[open] > summary::before { content: "−"; }
+.ui-more > summary:hover { color: var(--ui-ink); }
+.ui-more-body { display: flex; flex-direction: column; gap: 18px; padding-top: 14px; }
+.ui-scope .ui-size-box { margin: 0; }
+.ui-scope .ui-size-box.show,
+.ui-scope .ui-addr { display: flex; flex-direction: column; gap: 6px; }
+
+/* ---------- Thanh thao tác cố định ---------- */
+.ui-actionbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 6px;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  box-shadow: 0 -6px 20px rgba(16, 40, 34, 0.08);
+}
+.ui-total { flex: 1; display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; color: var(--ui-muted); font-size: 15px; }
+.ui-total strong { font-size: 28px; font-weight: 800; color: var(--ui-ink); letter-spacing: -0.01em; }
+.ui-actionbar-right { display: flex; gap: 10px; }
+
+/* ============================================================
+   TAB DANH MỤC
+   ============================================================ */
+.ui-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+#tab-catalog .ui-tab {
+  height: 46px; padding: 0 20px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-line-strong);
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+  font-size: 15px; font-weight: 600;
+  cursor: pointer; margin: 0;
+}
+#tab-catalog .ui-tab:hover { border-color: var(--ui-brand); color: var(--ui-brand); }
+#tab-catalog .ui-tab.active { background: var(--ui-brand); border-color: var(--ui-brand); color: #fff; }
+
+.ui-panel { background: var(--ui-paper); border: 1px solid var(--ui-line); border-radius: var(--ui-radius); padding: 18px; margin-bottom: 14px; }
+.ui-panel-title { font-size: 19px; font-weight: 700; margin-bottom: 14px; }
+
+#tab-catalog .cat-pane { display: none; }
+#tab-catalog .cat-pane.active { display: block; }
+#tab-catalog .cat-muted { color: var(--ui-muted); font-size: 13.5px; }
+#tab-catalog .cat-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+#tab-catalog .cat-toolbar .ui-input { width: auto; min-width: 220px; }
+
+#tab-catalog .cat-table-wrap { border: 1px solid var(--ui-line); border-radius: var(--ui-radius-sm); max-height: 560px; overflow: auto; }
+#tab-catalog .cat-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+#tab-catalog .cat-table th {
+  background: var(--ui-wash); color: var(--ui-ink);
+  font-weight: 700; font-size: 14px; text-align: left;
+  padding: 11px 10px;
+  border: none; border-bottom: 2px solid var(--ui-line-strong);
+  position: sticky; top: 0; z-index: 2; white-space: nowrap;
+}
+#tab-catalog .cat-table td { padding: 12px 10px; border: none; border-bottom: 1px solid var(--ui-line); vertical-align: top; }
+#tab-catalog .cat-table tbody tr:hover td { background: #f7faf8; }
+#tab-catalog .cat-table td.c,
+#tab-catalog .cat-table th:first-child { text-align: center; }
+#tab-catalog .cat-table td.c { white-space: nowrap; }
+#tab-catalog .cat-table-edit td { padding: 0; vertical-align: middle; border-right: 1px solid var(--ui-line); }
+#tab-catalog .cat-table-edit td.c { padding: 0 6px; }
+#tab-catalog .cat-cell { width: 100%; height: 46px; border: none; background: transparent; padding: 0 10px; font-size: 15px; font-family: inherit; color: var(--ui-ink); outline: none; }
+#tab-catalog select.cat-cell { cursor: pointer; }
+#tab-catalog .cat-cell.r { text-align: right; font-weight: 600; }
+#tab-catalog .cat-cell:focus { background: #eef7f3; box-shadow: inset 0 0 0 2px var(--ui-focus); }
+#tab-catalog .cat-row-hidden td { color: var(--ui-faint); }
+#tab-catalog .cat-row-new td { background: #f3faf6; }
+#tab-catalog .cat-row-saved td { background: #dff1e8 !important; }
+
+#tab-catalog .btn-xs {
+  height: 34px; padding: 0 14px !important; font-size: 14px !important; font-weight: 600;
+  border-radius: var(--ui-radius-sm); font-family: inherit;
+}
+#tab-catalog .btn-outline.btn-xs { background: var(--ui-paper); border: 1px solid var(--ui-line-strong); color: var(--ui-ink); }
+#tab-catalog .btn-outline.btn-xs:hover { border-color: var(--ui-brand); color: var(--ui-brand); }
+#tab-catalog .btn-danger.btn-xs { background: var(--ui-paper); border: 1px solid #e3b4ae; color: var(--ui-danger); }
+#tab-catalog .btn-danger.btn-xs:hover { background: var(--ui-danger); color: #fff; }
+
+#tab-catalog .cat-form { margin-top: 0; display: flex; flex-direction: column; gap: 14px; background: var(--ui-paper); border: 1px solid var(--ui-line); }
+#tab-catalog .cat-form-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
+#tab-catalog .cat-textarea { min-height: 84px; }
+#tab-catalog .cat-checks { display: flex; gap: 8px 18px; flex-wrap: wrap; margin-bottom: 6px; }
+#tab-catalog .cat-check { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; font-size: 15px; font-weight: 500; color: var(--ui-ink); cursor: pointer; padding: 4px 0; }
+#tab-catalog .cat-check input { width: 18px; height: 18px; accent-color: var(--ui-brand); }
+
+#tab-catalog .cat-paste { margin: 0 0 12px; padding: 0 0 12px; border: none; border-bottom: 1px solid var(--ui-line); border-radius: 0; background: none; }
+#tab-catalog .cat-paste .ui-more-body > div { display: flex; }
+
+#tab-catalog .cat-bo-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+#tab-catalog .cat-bo-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+#tab-catalog .cat-bo-card { background: var(--ui-paper); border: 1px solid var(--ui-line); border-left: 4px solid var(--ui-amber-line); border-radius: var(--ui-radius); padding: 14px; }
+#tab-catalog .cat-bo-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+#tab-catalog .cat-bo-head strong { font-size: 17px; }
+#tab-catalog .cat-bo-head > div:first-child { display: flex; flex-direction: column; }
+#tab-catalog .cat-bo-head > div:last-child { display: flex; gap: 6px; }
+#tab-catalog .cat-mini { width: 100%; border-collapse: collapse; font-size: 14px; }
+#tab-catalog .cat-mini th { background: var(--ui-wash); font-weight: 600; text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--ui-line); }
+#tab-catalog .cat-mini td { padding: 7px 8px; border-bottom: 1px solid var(--ui-line); }
+#tab-catalog .cat-mini td.c { text-align: center; }
+
+/* ---------- Màn hình nhỏ ---------- */
+@media (max-width: 1100px) {
+  .ui-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #tab-catalog .cat-bo-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .ui-step { display: block; padding: 16px; }
+  .ui-step-num { float: left; width: 34px; height: 34px; font-size: 16px; margin-right: 10px; }
+  .ui-step-title { line-height: 34px; }
+  .ui-step-help { clear: both; margin-top: 8px; }
+  .ui-fields { grid-template-columns: 1fr; }
+  .ui-span-2, .ui-span-4 { grid-column: auto; }
+  .ui-actionbar { flex-wrap: wrap; }
+  .ui-total { justify-content: flex-start; }
+  .ui-actionbar-right { width: 100%; }
+  .ui-actionbar-right .ui-btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-scope * { transition: none !important; }
+}
+
+/* Thông báo nhỏ không che thanh "Lưu phiếu" */
+body:has(#tab-create.active) #toast-container { bottom: 110px; }
