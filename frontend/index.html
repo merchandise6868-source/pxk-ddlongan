@@ -4,8 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phiếu Xuất Kho - D&D Long An</title>
-  <link rel="stylesheet" href="styles.css?v=20261015a">
-  <link rel="stylesheet" href="print.css?v=20261015a">
+  <link rel="stylesheet" href="styles.css?v=20261015b">
+  <link rel="stylesheet" href="print.css?v=20261015b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="ui-v2.css?v=20261015b">
 </head>
 <body>
 
@@ -282,154 +286,159 @@
     <!-- ==========================================
          TAB 3: LẬP PHIẾU XUẤT KHO
          ========================================== -->
-    <section id="tab-create" class="tab-content">
-      <div class="card">
-        <!-- BỘ CHỌN MẪU PHIẾU (KHỚP 100% THIẾT KẾ MẪU) -->
-        <div class="pxk-ui-panel">
-          <!-- DÒNG 0: KHÁCH HÀNG (tự điền đơn vị nhận, bộ phận, lý do xuất, dãy size) -->
-          <div class="pxk-row-kh">
-            <span class="pxk-lbl-mau">KHÁCH HÀNG</span>
-            <div class="pxk-kh-pills" id="kh-pills"></div>
-            <div class="pxk-kh-days" id="kh-day-pills"></div>
+    <section id="tab-create" class="tab-content ui-scope">
+      <div class="ui-page">
+        <header class="ui-page-head">
+          <h2>Lập phiếu xuất kho</h2>
+          <p>Chọn khách hàng, kiểm tra thông tin phiếu, rồi nhập số lượng. Phiếu đang nhập được tự lưu nháp.</p>
+        </header>
+
+        <!-- BƯỚC 1: KHÁCH HÀNG -->
+        <section class="ui-step">
+          <div class="ui-step-num">1</div>
+          <div class="ui-step-body">
+            <h3 class="ui-step-title">Khách hàng</h3>
+            <p class="ui-step-help">Bấm vào tên khách. Đơn vị nhận, bộ phận, lý do xuất và dãy size sẽ tự điền.</p>
+            <div class="ui-kh-list" id="kh-pills"></div>
+            <div class="ui-day-list" id="kh-day-pills"></div>
           </div>
+        </section>
 
-          <!-- BỘ CHI TIẾT (hiện khi khách hàng có đồng bộ đôi, ví dụ JiaYu) -->
-          <div class="pxk-bo-panel" id="kh-bo-panel">
-            <span class="pxk-bo-lbl">Chọn bộ chi tiết để thêm vào phiếu:</span>
-            <div class="pxk-bo-list" id="kh-bo-list"></div>
-          </div>
+        <!-- BƯỚC 2: THÔNG TIN PHIẾU -->
+        <section class="ui-step">
+          <div class="ui-step-num">2</div>
+          <div class="ui-step-body">
+            <h3 class="ui-step-title">Thông tin phiếu</h3>
+            <p class="ui-step-help">Các ô đã tự điền vẫn sửa được nếu cần.</p>
 
-          <!-- DÒNG 1: MẪU PHIẾU -->
-          <div class="pxk-row-mau">
-            <span class="pxk-lbl-mau">MẪU PHIẾU</span>
-            <div class="pxk-seg-group">
-              <button type="button" class="pxk-seg-btn mau-card-btn" data-mau="1">1. Có đơn giá</button>
-              <button type="button" class="pxk-seg-btn mau-card-btn" data-mau="2">2. Không đơn giá</button>
-              <button type="button" class="pxk-seg-btn mau-card-btn active" data-mau="3">3. Size Run</button>
-            </div>
-            <span class="pxk-txt-desc" id="pxk-mau-desc-text">Cột: STT, PO, Màu, ĐVT, dải size, Tổng · Cộng ngang theo size, cộng dọc chân cột</span>
-          </div>
+            <select id="slip-mau" hidden>
+              <option value="2">Mẫu 2</option>
+              <option value="1">Mẫu 1</option>
+              <option value="3" selected>Mẫu 3</option>
+            </select>
 
-          <!-- DÒNG 2: DẢI SIZE (HIỂN THỊ KHI CHỌN MẪU 3) -->
-          <div class="pxk-row-size" id="size-range-box">
-            <div class="pxk-size-bar">
-              <span class="pxk-lbl-size">Dải size</span>
-              <input type="text" id="custom-size-input" class="pxk-size-input" value="35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49">
-              <button type="button" class="pxk-size-step" id="btn-add-size-col">+</button>
-              <button type="button" class="pxk-size-step" id="btn-del-size-col">−</button>
-              <button type="button" class="pxk-size-btn-apply" id="btn-apply-custom-sizes">Áp dụng</button>
-            </div>
-            <div class="pxk-size-hint">
-              Mẹo: chọn khách hàng để tự nạp dãy size · click tiêu đề ô size trên bảng để sửa thành size lẻ (36.5...) hoặc tên tùy ý.
-            </div>
-          </div>
+            <div class="ui-fields">
+              <label class="ui-field">
+                <span class="ui-label">Ngày xuất <b class="ui-req">*</b></span>
+                <input type="date" id="slip-date" class="ui-input">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Bộ phận / Chuyền <b class="ui-req">*</b></span>
+                <select id="slip-bophan" class="ui-input"></select>
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Số phiếu <b class="ui-req">*</b></span>
+                <input type="text" id="slip-so" class="ui-input ui-input-strong" placeholder="Tự tạo theo bộ phận">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Người lập phiếu</span>
+                <input type="text" id="slip-nguoilap" class="ui-input" placeholder="Tên người lập">
+              </label>
 
-          <!-- DÒNG 3 & 4: 8 Ô NHẬP LIỆU (4 CỘT X 2 HÀNG CÂN ĐỐI TUYỆT ĐỐI) -->
-          <!-- Select ẩn giữ tương thích mã nguồn JS -->
-          <select id="slip-mau" style="display: none;">
-            <option value="2">Mẫu 2</option>
-            <option value="1">Mẫu 1</option>
-            <option value="3" selected>Mẫu 3</option>
-          </select>
-
-          <div class="pxk-fields-grid">
-            <!-- HÀNG 1 -->
-            <div class="pxk-field">
-              <label class="pxk-field-lbl">Bộ phận / Chuyền <span class="pxk-star">*</span></label>
-              <select id="slip-bophan" class="pxk-input">
-                <!-- Nạp tự động từ API -->
-              </select>
-            </div>
-
-            <div class="pxk-field">
-              <label class="pxk-field-lbl">Số phiếu <span class="pxk-star">*</span></label>
-              <input type="text" id="slip-so" class="pxk-input" placeholder="PXK-TC-00000001">
-            </div>
-
-            <div class="pxk-field">
-              <label class="pxk-field-lbl">Ngày xuất <span class="pxk-star">*</span></label>
-              <input type="date" id="slip-date" class="pxk-input">
-            </div>
-
-            <div class="pxk-field">
-              <label class="pxk-field-lbl">Đơn vị nhận</label>
-              <input type="text" id="slip-donvi" class="pxk-input" placeholder="Đơn vị / khách hàng">
-            </div>
-
-            <!-- HÀNG 2 -->
-            <div class="pxk-field">
-              <label class="pxk-field-lbl">Bộ phận xuất kho</label>
-              <input type="text" id="slip-bophanxuat" class="pxk-input" placeholder="Tổ chặt, Chuyền may...">
-            </div>
-
-            <div class="pxk-field">
-              <label class="pxk-field-lbl">Đơn hàng</label>
-              <input type="text" id="slip-donhang" class="pxk-input" placeholder="Mã đơn hàng / PO">
-            </div>
-
-            <div class="pxk-field">
-              <label class="pxk-field-lbl">Lý do xuất</label>
-              <input type="text" id="slip-lydo" class="pxk-input" placeholder="Lý do xuất hàng">
-            </div>
-
-            <div class="pxk-field">
-              <label class="pxk-field-lbl">Người lập biểu</label>
-              <input type="text" id="slip-nguoilap" class="pxk-input" placeholder="Tên người lập">
+              <label class="ui-field ui-span-2">
+                <span class="ui-label">Đơn vị nhận</span>
+                <input type="text" id="slip-donvi" class="ui-input" placeholder="Tên công ty nhận hàng">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Bộ phận xuất kho</span>
+                <input type="text" id="slip-bophanxuat" class="ui-input" placeholder="Tổ chặt, Chuyền may...">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Lý do xuất</span>
+                <input type="text" id="slip-lydo" class="ui-input" placeholder="Lý do xuất hàng">
+              </label>
+              <label class="ui-field ui-span-4">
+                <span class="ui-label">Đơn hàng <span class="ui-label-note">tự ghép theo PO bạn nhập bên dưới</span></span>
+                <input type="text" id="slip-donhang" class="ui-input" placeholder="Mã đơn hàng">
+              </label>
             </div>
           </div>
+        </section>
 
-          <!-- DÒNG 5: ĐỊA CHỈ IN ĐẦU PHIẾU -->
-          <div class="pxk-address-bar">
-            <span class="pxk-addr-lbl">Địa chỉ in đầu phiếu</span>
-            <input type="text" id="slip-diachi-cty" class="pxk-addr-input" value="A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM">
-            <button type="button" class="pxk-addr-pill active" id="btn-quick-addr-tannhut">
-              <svg class="pxk-pin-svg" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              Tân Nhựt (mặc định)
-            </button>
-            <button type="button" class="pxk-addr-pill" id="btn-quick-addr-longan">
-              <svg class="pxk-pin-svg" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              KCN Hòa Bình, Long An
-            </button>
+        <!-- BƯỚC 3: HÀNG XUẤT -->
+        <section class="ui-step">
+          <div class="ui-step-num">3</div>
+          <div class="ui-step-body">
+            <div class="ui-step-headrow">
+              <div>
+                <h3 class="ui-step-title">Hàng xuất</h3>
+                <p class="ui-step-help" id="pxk-mau-desc-text">Nhập số lượng theo từng size. Tổng ngang và tổng dọc tự tính.</p>
+              </div>
+              <div class="ui-seg" role="group" aria-label="Kiểu phiếu">
+                <span class="ui-seg-label">Kiểu phiếu</span>
+                <button type="button" class="ui-seg-btn mau-card-btn" data-mau="1">Có đơn giá</button>
+                <button type="button" class="ui-seg-btn mau-card-btn" data-mau="2">Không đơn giá</button>
+                <button type="button" class="ui-seg-btn mau-card-btn active" data-mau="3">Theo size</button>
+              </div>
+            </div>
+
+            <!-- Bộ chi tiết (chỉ hiện với khách có đồng bộ đôi, ví dụ JiaYu) -->
+            <div class="ui-bo" id="kh-bo-panel">
+              <div class="ui-bo-text">
+                <strong>Thêm bộ chi tiết</strong>
+                <span>Bấm một bộ để thêm các dòng chi tiết và dòng đồng bộ đôi. Nhập số ở dòng đầu, các dòng còn lại tự chạy theo.</span>
+              </div>
+              <div class="ui-bo-list" id="kh-bo-list"></div>
+            </div>
+
+            <div class="excel-table-container ui-grid-wrap">
+              <table class="excel-table" id="excel-grid">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot>
+              </table>
+              <datalist id="po-datalist"></datalist>
+              <datalist id="art-datalist"></datalist>
+            </div>
+
+            <div class="ui-grid-tools">
+              <button type="button" class="ui-btn ui-btn-ghost" id="btn-add-row">+ Thêm dòng</button>
+              <button type="button" class="ui-btn ui-btn-ghost" id="btn-del-row">Xóa dòng cuối</button>
+              <span class="ui-hint">Có thể copy từ Excel rồi dán (Ctrl+V) vào ô bất kỳ. Enter hoặc phím mũi tên để chuyển ô.</span>
+            </div>
+
+            <details class="ui-more">
+              <summary>Tùy chỉnh thêm: dãy size, địa chỉ in đầu phiếu</summary>
+              <div class="ui-more-body">
+                <div class="pxk-row-size ui-size-box" id="size-range-box">
+                  <span class="ui-label">Dãy size đang dùng</span>
+                  <div class="ui-inline">
+                    <input type="text" id="custom-size-input" class="ui-input" value="35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46">
+                    <button type="button" class="ui-btn ui-btn-ghost ui-btn-square" id="btn-add-size-col" title="Thêm 1 cột size">+</button>
+                    <button type="button" class="ui-btn ui-btn-ghost ui-btn-square" id="btn-del-size-col" title="Bớt 1 cột size">−</button>
+                    <button type="button" class="ui-btn ui-btn-dark" id="btn-apply-custom-sizes">Áp dụng</button>
+                  </div>
+                  <span class="ui-hint">Gõ các size cách nhau bằng dấu phẩy. Cũng có thể bấm vào tiêu đề size trên bảng để sửa.</span>
+                </div>
+
+                <div class="ui-addr">
+                  <span class="ui-label">Địa chỉ in đầu phiếu</span>
+                  <div class="ui-inline">
+                    <input type="text" id="slip-diachi-cty" class="ui-input" value="A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM">
+                    <button type="button" class="ui-chip active" id="btn-quick-addr-tannhut">Tân Nhựt</button>
+                    <button type="button" class="ui-chip" id="btn-quick-addr-longan">KCN Hòa Bình, Long An</button>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
-        </div>
+        </section>
 
-        <!-- 1.2. THANH CÔNG CỤ THAO TÁC BẢNG -->
-        <div class="table-toolbar">
-          <div class="btn-group">
-            <button type="button" class="btn btn-outline" id="btn-add-row">➕ Thêm dòng</button>
-            <button type="button" class="btn btn-outline" id="btn-del-row">➖ Xóa dòng cuối</button>
-            <button type="button" class="btn btn-outline" id="btn-reset-form">🔄 Làm mới form</button>
+        <!-- THANH THAO TÁC CỐ ĐỊNH -->
+        <div class="ui-actionbar">
+          <button type="button" class="ui-btn ui-btn-ghost" id="btn-reset-form">Làm mới phiếu</button>
+          <div class="ui-total">
+            <span>Tổng cộng</span>
+            <strong id="slip-total-summary">0</strong>
+            <span id="slip-total-unit">đôi</span>
           </div>
-
-          <div style="font-size: 11px; color: var(--text-muted);">
-            💡 <em>Mẹo: Bạn có thể copy nguyên khối từ Excel rồi bấm Ctrl+V vào ô bất kỳ. Phím mũi tên để nhảy ô.</em>
+          <div class="ui-actionbar-right">
+            <button type="button" class="ui-btn ui-btn-ghost ui-btn-lg" id="btn-print-slip">In phiếu A5</button>
+            <button type="button" class="ui-btn ui-btn-primary ui-btn-lg" id="btn-save-slip">Lưu phiếu</button>
           </div>
-
-          <div class="btn-group">
-            <button type="button" class="btn btn-primary" id="btn-print-slip">🖨️ In Phiếu A5 (Máy in kim)</button>
-            <button type="button" class="btn btn-success" id="btn-save-slip">💾 Lưu Phiếu</button>
-          </div>
-        </div>
-
-        <!-- 1.3. BẢNG NHẬP LIỆU KIỂU EXCEL -->
-        <div class="excel-table-container">
-          <table class="excel-table" id="excel-grid">
-            <thead>
-              <!-- Sinh động theo Mẫu phiếu 1 / 2 / 3 -->
-            </thead>
-            <tbody>
-              <!-- Các dòng dữ liệu -->
-            </tbody>
-            <tfoot>
-              <!-- Dòng CỘNG tự tính -->
-            </tfoot>
-          </table>
-          <datalist id="po-datalist"></datalist>
-          <datalist id="art-datalist"></datalist>
         </div>
       </div>
     </section>
-
     <!-- TAB 2: DANH SÁCH PHIẾU ĐÃ LƯU -->
     <section id="tab-list" class="tab-content">
       <div class="card">
@@ -559,106 +568,150 @@
     <!-- ==========================================
          TAB: DANH MỤC (KHÁCH HÀNG · PO · BỘ CHI TIẾT)
          ========================================== -->
-    <section id="tab-catalog" class="tab-content">
-      <div class="card">
-        <div class="cat-sub-tabs">
-          <button type="button" class="cat-sub-btn active" data-sub="kh">👥 Khách hàng</button>
-          <button type="button" class="cat-sub-btn" data-sub="po">📦 PO / Đơn hàng / Đơn giá</button>
-          <button type="button" class="cat-sub-btn" data-sub="bo">🧩 Bộ chi tiết (đồng bộ đôi)</button>
-        </div>
+    <section id="tab-catalog" class="tab-content ui-scope">
+      <div class="ui-page">
+        <header class="ui-page-head">
+          <h2>Danh mục</h2>
+          <p>Khai báo sẵn khách hàng, PO và bộ chi tiết để lúc lập phiếu chỉ cần bấm chọn.</p>
+        </header>
+
+        <nav class="ui-tabs" aria-label="Danh mục">
+          <button type="button" class="ui-tab cat-sub-btn active" data-sub="kh">Khách hàng</button>
+          <button type="button" class="ui-tab cat-sub-btn" data-sub="po">PO, đơn hàng và đơn giá</button>
+          <button type="button" class="ui-tab cat-sub-btn" data-sub="bo">Bộ chi tiết</button>
+        </nav>
 
         <!-- 1. KHÁCH HÀNG -->
         <div class="cat-pane active" id="cat-pane-kh">
-          <div class="cat-table-wrap">
-            <table class="cat-table">
-              <thead><tr>
-                <th>STT</th><th>Tên (nút)</th><th>Tên đầy đủ / Đơn vị nhận</th><th>Dãy size</th><th>Bộ phận</th>
-                <th>BP xuất kho</th><th>Lý do xuất</th><th>ĐVT</th><th>Bộ CT</th><th>Trạng thái</th><th></th>
-              </tr></thead>
-              <tbody id="cat-kh-tbody"></tbody>
-            </table>
+          <div class="ui-panel">
+            <div class="cat-table-wrap">
+              <table class="cat-table">
+                <thead><tr>
+                  <th>STT</th><th>Tên trên nút</th><th>Tên đầy đủ (đơn vị nhận)</th><th>Dãy size</th><th>Bộ phận</th>
+                  <th>BP xuất kho</th><th>Lý do xuất</th><th>ĐVT</th><th>Bộ chi tiết</th><th>Trạng thái</th><th></th>
+                </tr></thead>
+                <tbody id="cat-kh-tbody"></tbody>
+              </table>
+            </div>
           </div>
 
-          <div class="cat-form" id="cat-kh-form">
-            <div class="cat-form-title" id="cat-kh-form-title">Thêm khách hàng mới</div>
-            <div class="cat-form-grid">
-              <label>Tên ngắn (hiện trên nút) *<input type="text" id="cat-kh-ten" class="pxk-input" placeholder="VD: Kurim"></label>
-              <label>Mã (tự sinh nếu bỏ trống)<input type="text" id="cat-kh-ma" class="pxk-input" placeholder="VD: KURIM"></label>
-              <label class="span2">Tên đầy đủ (Đơn vị nhận)<input type="text" id="cat-kh-tendaydu" class="pxk-input" placeholder="Công ty TNHH ..."></label>
-              <label>Bộ phận xuất kho<input type="text" id="cat-kh-bpxuat" class="pxk-input" placeholder="Tổ chặt / Chuyền may"></label>
-              <label>Lý do xuất<input type="text" id="cat-kh-lydo" class="pxk-input" placeholder="Giao thành phẩm"></label>
-              <label>ĐVT mặc định<input type="text" id="cat-kh-dvt" class="pxk-input" value="Đôi"></label>
-              <label>Thứ tự nút<input type="number" id="cat-kh-thutu" class="pxk-input" value="1"></label>
-              <label class="span2"><span>Dãy size (mỗi dãy 1 dòng, dạng <em>Tên dãy: size1, size2, ...</em>)</span>
-                <textarea id="cat-kh-days" class="pxk-input cat-textarea" rows="3" placeholder="Dãy A: 3-4, 4T-5T, 6-7&#10;Dãy B: 3-5T, 6-8T, 9-11T"></textarea>
+          <div class="ui-panel cat-form" id="cat-kh-form">
+            <h3 class="ui-panel-title" id="cat-kh-form-title">Thêm khách hàng mới</h3>
+            <div class="ui-fields">
+              <label class="ui-field">
+                <span class="ui-label">Tên trên nút <b class="ui-req">*</b></span>
+                <input type="text" id="cat-kh-ten" class="ui-input" placeholder="Ví dụ: Kurim">
               </label>
-              <div class="span2">
-                <div class="cat-sub-lbl">Bộ phận / Chuyền được chọn khi lập phiếu</div>
+              <label class="ui-field">
+                <span class="ui-label">Mã khách <span class="ui-label-note">để trống sẽ tự tạo</span></span>
+                <input type="text" id="cat-kh-ma" class="ui-input" placeholder="Ví dụ: KURIM">
+              </label>
+              <label class="ui-field ui-span-2">
+                <span class="ui-label">Tên đầy đủ (in ở "Đơn vị nhận")</span>
+                <input type="text" id="cat-kh-tendaydu" class="ui-input" placeholder="Công ty TNHH ...">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Bộ phận xuất kho</span>
+                <input type="text" id="cat-kh-bpxuat" class="ui-input" placeholder="Tổ chặt / Chuyền may">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Lý do xuất</span>
+                <input type="text" id="cat-kh-lydo" class="ui-input" placeholder="Giao thành phẩm">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Đơn vị tính</span>
+                <input type="text" id="cat-kh-dvt" class="ui-input" value="Đôi">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Thứ tự nút</span>
+                <input type="number" id="cat-kh-thutu" class="ui-input" value="1">
+              </label>
+              <label class="ui-field ui-span-2">
+                <span class="ui-label">Dãy size <span class="ui-label-note">mỗi dãy một dòng, ví dụ "Dãy A: 3-4, 4T-5T"</span></span>
+                <textarea id="cat-kh-days" class="ui-input cat-textarea" rows="3" placeholder="Dãy A: 3-4, 4T-5T, 6-7&#10;Dãy B: 3-5T, 6-8T, 9-11T"></textarea>
+              </label>
+              <div class="ui-field ui-span-2">
+                <span class="ui-label">Bộ phận / chuyền được chọn khi lập phiếu</span>
                 <div id="cat-kh-bophan" class="cat-checks"></div>
-                <label class="cat-check"><input type="checkbox" id="cat-kh-cobo"> Có bộ chi tiết (tính chi tiết rồi đồng bộ đôi như JiaYu)</label>
-                <label class="cat-check"><input type="checkbox" id="cat-kh-an"> Ẩn khách hàng này</label>
+                <label class="cat-check"><input type="checkbox" id="cat-kh-cobo"> Có bộ chi tiết (nhập từng chi tiết rồi đồng bộ ra đôi, như JiaYu)</label>
+                <label class="cat-check"><input type="checkbox" id="cat-kh-an"> Tạm ẩn khách hàng này</label>
               </div>
             </div>
             <div class="cat-form-actions">
-              <button type="button" class="btn btn-outline" id="cat-kh-new">➕ Nhập khách mới</button>
-              <button type="button" class="btn btn-success" id="cat-kh-save">💾 Lưu khách hàng</button>
+              <button type="button" class="ui-btn ui-btn-ghost" id="cat-kh-new">Nhập khách mới</button>
+              <button type="button" class="ui-btn ui-btn-primary" id="cat-kh-save">Lưu khách hàng</button>
             </div>
           </div>
         </div>
 
         <!-- 2. PO / ĐƠN HÀNG / ĐƠN GIÁ -->
         <div class="cat-pane" id="cat-pane-po">
-          <div class="cat-toolbar">
-            <select id="cat-po-kh" class="pxk-input" style="max-width: 220px;"></select>
-            <input type="text" id="cat-po-search" class="pxk-input" placeholder="🔎 Tìm PO, đơn hàng, ART..." style="max-width: 260px;">
-            <span class="cat-muted" id="cat-po-count"></span>
-            <div style="flex: 1;"></div>
-            <button type="button" class="btn btn-outline" id="cat-po-add">➕ Thêm dòng</button>
+          <div class="ui-panel">
+            <div class="cat-toolbar">
+              <select id="cat-po-kh" class="ui-input"></select>
+              <input type="search" id="cat-po-search" class="ui-input" placeholder="Tìm PO, đơn hàng, ART">
+              <span class="cat-muted" id="cat-po-count"></span>
+              <div class="ui-flex-fill"></div>
+              <button type="button" class="ui-btn ui-btn-primary" id="cat-po-add">+ Thêm dòng</button>
+            </div>
+
+            <details class="ui-more cat-paste">
+              <summary>Dán nhiều dòng từ Excel</summary>
+              <div class="ui-more-body">
+                <p class="ui-hint">Copy các cột theo đúng thứ tự: PO, Đơn hàng, ART, Màu, Đơn giá, Ghi chú. Khách hàng lấy theo ô chọn phía trên.</p>
+                <textarea id="cat-po-paste" class="ui-input cat-textarea" rows="4"></textarea>
+                <div><button type="button" class="ui-btn ui-btn-dark" id="cat-po-import">Nhập vào danh mục</button></div>
+              </div>
+            </details>
+
+            <div class="cat-table-wrap">
+              <table class="cat-table cat-table-edit">
+                <thead><tr>
+                  <th style="width: 48px;">STT</th><th style="width: 150px;">Khách hàng</th><th>PO</th><th>Đơn hàng</th>
+                  <th>ART (mã hàng)</th><th>Màu</th><th style="width: 130px;">Đơn giá (đ/đôi)</th><th>Ghi chú</th><th style="width: 64px;"></th>
+                </tr></thead>
+                <tbody id="cat-po-tbody"></tbody>
+              </table>
+            </div>
+            <p class="ui-hint">Sửa trực tiếp trong ô, rời khỏi ô là tự lưu. Để trống PO thì đơn giá áp cho mọi PO cùng ART.</p>
           </div>
-          <details class="cat-paste">
-            <summary>📋 Dán nhiều dòng từ Excel</summary>
-            <div class="cat-muted" style="margin: 6px 0;">Copy các cột theo đúng thứ tự: <b>PO | Đơn hàng | ART | Màu | Đơn giá | Ghi chú</b> rồi dán vào ô dưới (khách hàng lấy theo ô lọc bên trên).</div>
-            <textarea id="cat-po-paste" class="pxk-input cat-textarea" rows="4"></textarea>
-            <button type="button" class="btn btn-primary" id="cat-po-import" style="margin-top: 6px;">⬆️ Nhập vào danh mục</button>
-          </details>
-          <div class="cat-table-wrap">
-            <table class="cat-table cat-table-edit">
-              <thead><tr>
-                <th style="width: 40px;">STT</th><th style="width: 140px;">Khách hàng</th><th>PO</th><th>Đơn hàng</th>
-                <th>ART (Mã hàng)</th><th>Màu</th><th style="width: 110px;">Đơn giá (đ/đôi)</th><th>Ghi chú</th><th style="width: 46px;"></th>
-              </tr></thead>
-              <tbody id="cat-po-tbody"></tbody>
-            </table>
-          </div>
-          <div class="cat-muted" style="margin-top: 6px;">Sửa trực tiếp trong ô, rời ô là tự lưu. Đơn giá có thể để trống PO (áp cho mọi PO của ART đó).</div>
         </div>
 
         <!-- 3. BỘ CHI TIẾT -->
         <div class="cat-pane" id="cat-pane-bo">
           <div class="cat-toolbar">
-            <select id="cat-bo-kh" class="pxk-input" style="max-width: 220px;"></select>
+            <select id="cat-bo-kh" class="ui-input"></select>
           </div>
           <div class="cat-bo-layout">
             <div id="cat-bo-list" class="cat-bo-list"></div>
-            <div class="cat-form">
-              <div class="cat-form-title" id="cat-bo-form-title">Thêm bộ chi tiết mới</div>
-              <label>Khách hàng<select id="cat-bo-form-kh" class="pxk-input"></select></label>
-              <label>Tên bộ *<input type="text" id="cat-bo-ten" class="pxk-input" placeholder="VD: CP-002"></label>
-              <label>ART (tự điền vào cột Mã hàng)<input type="text" id="cat-bo-art" class="pxk-input" placeholder="VD: CP-002"></label>
-              <label><span>Danh sách chi tiết (mỗi dòng: <em>Tên | số miếng/đôi | ĐVT</em>)</span>
-                <textarea id="cat-bo-ct" class="pxk-input cat-textarea" rows="7" placeholder="Mũi trong | 2 | Miếng&#10;Mũi ngoài | 2 | Miếng&#10;Quai hậu | 2 | Miếng"></textarea>
+            <div class="ui-panel cat-form">
+              <h3 class="ui-panel-title" id="cat-bo-form-title">Thêm bộ chi tiết mới</h3>
+              <label class="ui-field">
+                <span class="ui-label">Khách hàng</span>
+                <select id="cat-bo-form-kh" class="ui-input"></select>
               </label>
-              <div class="cat-muted">Dòng ĐỒNG BỘ ĐÔI = số nhỏ nhất của các chi tiết ÷ số miếng/đôi (mặc định 2).</div>
+              <label class="ui-field">
+                <span class="ui-label">Tên bộ <b class="ui-req">*</b></span>
+                <input type="text" id="cat-bo-ten" class="ui-input" placeholder="Ví dụ: CP-002">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">ART <span class="ui-label-note">tự điền vào cột Mã hàng</span></span>
+                <input type="text" id="cat-bo-art" class="ui-input" placeholder="Ví dụ: CP-002">
+              </label>
+              <label class="ui-field">
+                <span class="ui-label">Các chi tiết <span class="ui-label-note">mỗi dòng: Tên | số miếng một đôi | ĐVT</span></span>
+                <textarea id="cat-bo-ct" class="ui-input cat-textarea" rows="7" placeholder="Mũi trong | 2 | Miếng&#10;Mũi ngoài | 2 | Miếng&#10;Quai hậu | 2 | Miếng"></textarea>
+              </label>
+              <p class="ui-hint">Dòng đồng bộ đôi = số nhỏ nhất trong các chi tiết chia cho số miếng một đôi (thường là 2).</p>
               <div class="cat-form-actions">
-                <button type="button" class="btn btn-outline" id="cat-bo-new">➕ Bộ mới</button>
-                <button type="button" class="btn btn-success" id="cat-bo-save">💾 Lưu bộ</button>
+                <button type="button" class="ui-btn ui-btn-ghost" id="cat-bo-new">Bộ mới</button>
+                <button type="button" class="ui-btn ui-btn-primary" id="cat-bo-save">Lưu bộ</button>
               </div>
             </div>
           </div>
         </div>
       </div>
     </section>
-
   </main>
 
   <!-- ==========================================
@@ -673,9 +726,9 @@
   <div id="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="catalog.js?v=20261015a"></script>
-  <script src="app.js?v=20261015a"></script>
-  <script src="dashboard.js?v=20261015a"></script>
+  <script src="catalog.js?v=20261015b"></script>
+  <script src="app.js?v=20261015b"></script>
+  <script src="dashboard.js?v=20261015b"></script>
   <script src="qc_totruong.js"></script>
 </body>
 </html>

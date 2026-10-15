@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-set LOG=%~dp0claude_log.txt
+set "LOG=%~dp0claude_log.txt"
 echo ===== GIT PUSH ===== > "%LOG%"
 git add -A -- . ":!claude_log.txt" >> "%LOG%" 2>&1
-git commit -m "feat: chon khach hang LT/JiaYu/Kurim, bo chi tiet dong bo doi, danh muc PO/don gia, dashboard cong no" >> "%LOG%" 2>&1
+git commit -m "update: cap nhat tu Claude %date% %time%" >> "%LOG%" 2>&1
 git push origin main >> "%LOG%" 2>&1
 echo PUSH_EXIT=%ERRORLEVEL% >> "%LOG%"
 echo ===== DEPLOY CLOUDFLARE ===== >> "%LOG%"
