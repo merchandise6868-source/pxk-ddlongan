@@ -4,12 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phiếu Xuất Kho - D&D Long An</title>
-  <link rel="stylesheet" href="styles.css?v=20261015b">
-  <link rel="stylesheet" href="print.css?v=20261015b">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0e5a4a">
+  <meta name="application-name" content="Phiếu Xuất Kho">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Phiếu Xuất Kho">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="/icons/favicon-64.png">
+  <link rel="stylesheet" href="styles.css?v=20261015d">
+  <link rel="stylesheet" href="print.css?v=20261015d">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="ui-v2.css?v=20261015b">
+  <link rel="stylesheet" href="ui-v2.css?v=20261015d">
 </head>
 <body>
 
@@ -21,12 +30,19 @@
       <h1>CÔNG TY TNHH GIA CÔNG THƯƠNG MẠI D&D LONG AN</h1>
       <p>Hệ thống Quản lý Phiếu Xuất Kho & Dashboard Sản Lượng Chuyền</p>
     </div>
+    <button type="button" class="pwa-install-btn" id="btn-install-app" hidden>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      Cài ứng dụng
+    </button>
     <nav class="nav-tabs">
       <button class="tab-btn active" data-target="tab-qc">
         🔍 Sản Lượng QC (KCS)
       </button>
       <button class="tab-btn" data-target="tab-totruong">
         ⏱️ Sản Lượng Tổ Trưởng (Theo Giờ)
+      </button>
+      <button class="tab-btn" data-target="tab-catalog">
+        ⚙️ Danh Mục
       </button>
       <button class="tab-btn" data-target="tab-create">
         📝 Lập Phiếu Xuất
@@ -36,9 +52,6 @@
       </button>
       <button class="tab-btn" data-target="tab-dashboard">
         📊 Dashboard Sản Lượng
-      </button>
-      <button class="tab-btn" data-target="tab-catalog">
-        ⚙️ Danh Mục
       </button>
     </nav>
   </header>
@@ -440,126 +453,145 @@
       </div>
     </section>
     <!-- TAB 2: DANH SÁCH PHIẾU ĐÃ LƯU -->
-    <section id="tab-list" class="tab-content">
-      <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">
-          <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group">
-              <label>Từ ngày</label>
-              <input type="date" id="filter-tu-ngay" class="form-control">
-            </div>
-            <div class="form-group">
-              <label>Đến ngày</label>
-              <input type="date" id="filter-den-ngay" class="form-control">
-            </div>
-            <div class="form-group">
-              <label>Bộ phận</label>
-              <select id="filter-bophan" class="form-control">
-                <option value="all">-- Tất cả --</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Tìm kiếm</label>
-              <input type="text" id="filter-search" class="form-control" placeholder="Số phiếu, đơn vị nhận...">
-            </div>
-            <button type="button" class="btn btn-primary" id="btn-filter-slips" style="height: 33px;">🔍 Lọc</button>
-          </div>
+    <section id="tab-list" class="tab-content ui-scope">
+      <div class="ui-page">
+        <header class="ui-page-head">
+          <h2>Danh sách phiếu</h2>
+          <p>Tất cả phiếu đã lưu hoặc đã in. Bấm "In lại" để in, "Sửa" để mở lại phiếu.</p>
+        </header>
+
+        <div class="ui-panel ui-filter">
+          <label class="ui-field">
+            <span class="ui-label">Từ ngày</span>
+            <input type="date" id="filter-tu-ngay" class="ui-input">
+          </label>
+          <label class="ui-field">
+            <span class="ui-label">Đến ngày</span>
+            <input type="date" id="filter-den-ngay" class="ui-input">
+          </label>
+          <label class="ui-field">
+            <span class="ui-label">Bộ phận</span>
+            <select id="filter-bophan" class="ui-input">
+              <option value="all">Tất cả bộ phận</option>
+            </select>
+          </label>
+          <label class="ui-field">
+            <span class="ui-label">Khách hàng</span>
+            <select id="filter-khachhang" class="ui-input">
+              <option value="all">Tất cả khách hàng</option>
+            </select>
+          </label>
+          <label class="ui-field ui-filter-search">
+            <span class="ui-label">Tìm kiếm</span>
+            <input type="search" id="filter-search" class="ui-input" placeholder="Số phiếu, đơn vị nhận, đơn hàng">
+          </label>
+          <button type="button" class="ui-btn ui-btn-primary" id="btn-filter-slips">Xem</button>
         </div>
 
-        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 6px;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            <thead>
-              <tr style="background: #f8fafc; border-bottom: 2px solid var(--border);">
-                <th style="padding: 8px; width: 40px; text-align: center;">STT</th>
-                <th style="padding: 8px; text-align: left;">Số phiếu</th>
-                <th style="padding: 8px; text-align: left;">Ngày</th>
-                <th style="padding: 8px; text-align: center;">Chuyền</th>
-                <th style="padding: 8px; text-align: left;">Mẫu</th>
-                <th style="padding: 8px; text-align: right;">SL Chứng từ</th>
-                <th style="padding: 8px; text-align: right;">SL Thực xuất</th>
-                <th style="padding: 8px; text-align: center;">Trạng thái</th>
-                <th style="padding: 8px; text-align: center; width: 180px;">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody id="slip-list-tbody">
-              <!-- Nạp danh sách phiếu -->
-            </tbody>
-          </table>
+        <div class="ui-summary" id="slip-list-summary"></div>
+
+        <div class="ui-panel ui-panel-flush">
+          <div class="ui-table-wrap">
+            <table class="ui-table" id="slip-list-table">
+              <thead>
+                <tr>
+                  <th class="c" style="width: 56px;">STT</th>
+                  <th>Số phiếu</th>
+                  <th>Ngày</th>
+                  <th>Khách hàng</th>
+                  <th class="c">Bộ phận</th>
+                  <th>Kiểu phiếu</th>
+                  <th class="r">Số lượng</th>
+                  <th class="c">Trạng thái</th>
+                  <th class="r" style="width: 230px;"></th>
+                </tr>
+              </thead>
+              <tbody id="slip-list-tbody">
+                <!-- Nạp danh sách phiếu -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- TAB 3: DASHBOARD SẢN LƯỢNG -->
-    <section id="tab-dashboard" class="tab-content">
-      <div class="card">
-        <!-- 3.1. BỘ LỌC DASHBOARD -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-          <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-            <div class="form-group">
-              <label>Từ ngày</label>
-              <input type="date" id="dash-tu-ngay" class="form-control" value="2026-10-01">
-            </div>
-            <div class="form-group">
-              <label>Đến ngày</label>
-              <input type="date" id="dash-den-ngay" class="form-control" value="2026-10-31">
-            </div>
-            <div class="form-group">
-              <label>Chuyền</label>
-              <select id="dash-bophan" class="form-control">
-                <option value="all">-- Tất cả chuyền --</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Khách hàng</label>
-              <select id="dash-khachhang" class="form-control">
-                <option value="all">-- Tất cả khách hàng --</option>
-              </select>
-            </div>
-            <button type="button" class="btn btn-primary" id="btn-filter-dashboard" style="height: 33px;">📊 Xem báo cáo</button>
+    <section id="tab-dashboard" class="tab-content ui-scope">
+      <div class="ui-page">
+        <header class="ui-page-head ui-page-head-row">
+          <div>
+            <h2>Dashboard sản lượng</h2>
+            <p>Sản lượng theo tổ, chuyền và công nợ theo khách hàng. Dòng chi tiết (miếng) của JiaYu không cộng vào sản lượng.</p>
           </div>
+          <div class="ui-seg ui-seg-lg" role="group" aria-label="Chế độ xem">
+            <button type="button" class="ui-seg-btn dash-view-btn active" data-view="chuyen">Theo tổ, chuyền</button>
+            <button type="button" class="ui-seg-btn dash-view-btn" data-view="khach">Theo khách hàng, công nợ</button>
+          </div>
+        </header>
 
-          <button type="button" class="btn btn-success" id="btn-export-excel">📥 Xuất file Excel (CSV)</button>
+        <div class="ui-panel ui-filter">
+          <label class="ui-field">
+            <span class="ui-label">Từ ngày</span>
+            <input type="date" id="dash-tu-ngay" class="ui-input">
+          </label>
+          <label class="ui-field">
+            <span class="ui-label">Đến ngày</span>
+            <input type="date" id="dash-den-ngay" class="ui-input">
+          </label>
+          <label class="ui-field">
+            <span class="ui-label">Chuyền</span>
+            <select id="dash-bophan" class="ui-input">
+              <option value="all">Tất cả chuyền</option>
+            </select>
+          </label>
+          <label class="ui-field">
+            <span class="ui-label">Khách hàng</span>
+            <select id="dash-khachhang" class="ui-input">
+              <option value="all">Tất cả khách hàng</option>
+            </select>
+          </label>
+          <button type="button" class="ui-btn ui-btn-primary" id="btn-filter-dashboard">Xem báo cáo</button>
+          <button type="button" class="ui-btn ui-btn-ghost" id="btn-export-excel">Tải file Excel</button>
         </div>
 
-        <!-- CHUYỂN CHẾ ĐỘ XEM -->
-        <div class="dash-view-switch">
-          <button type="button" class="dash-view-btn active" data-view="chuyen">🏭 Theo Tổ / Chuyền</button>
-          <button type="button" class="dash-view-btn" data-view="khach">💰 Theo Khách Hàng (Công nợ)</button>
-        </div>
-
+        <!-- THEO TỔ / CHUYỀN -->
         <div id="dash-view-chuyen">
-        <!-- 3.2. THẺ TỔNG SẢN LƯỢNG -->
-        <div class="stats-grid" id="dash-dept-cards"></div>
+          <div class="ui-stats" id="dash-dept-cards"></div>
 
-        <!-- 3.3. BIỂU ĐỒ SẢN LƯỢNG THEO NGÀY -->
-        <div id="daily-chart-container" style="margin-bottom: 20px;"></div>
-
-        <!-- 3.4. BẢNG MA TRẬN MÃ HÀNG - MÀU - SIZE -->
-        <h3 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">
-          Bảng Ma Trận Sản Lượng (Mã hàng · Màu · Size Run)
-        </h3>
-        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 6px;">
-          <table class="excel-table" id="matrix-table">
-            <thead></thead>
-            <tbody></tbody>
-            <tfoot></tfoot>
-          </table>
-        </div>
-        </div>
-
-        <!-- XEM THEO KHÁCH HÀNG / CÔNG NỢ -->
-        <div id="dash-view-khach" style="display: none;">
-          <div class="stats-grid" id="dash-kh-cards"></div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin: 4px 0 8px;">
-            <h3 style="font-size: 14px; font-weight: 700;">Bảng kê công nợ (theo phiếu · PO · ART)</h3>
-            <span class="cat-muted" style="font-size: 12px;">Đơn giá lấy từ Danh mục → PO / Đơn hàng / Đơn giá. Dòng tô vàng = chưa có đơn giá.</span>
+          <div class="ui-panel">
+            <h3 class="ui-panel-title">Sản lượng từng ngày</h3>
+            <div id="daily-chart-container"></div>
           </div>
-          <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 6px;">
-            <table class="excel-table" id="congno-table">
-              <thead></thead>
-              <tbody></tbody>
-              <tfoot></tfoot>
-            </table>
+
+          <div class="ui-panel ui-panel-flush">
+            <div class="ui-panel-head">
+              <h3 class="ui-panel-title">Sản lượng theo PO, mã hàng và size</h3>
+            </div>
+            <div class="ui-table-wrap">
+              <table class="ui-table ui-table-num" id="matrix-table">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- THEO KHÁCH HÀNG / CÔNG NỢ -->
+        <div id="dash-view-khach" style="display: none;">
+          <div class="ui-stats" id="dash-kh-cards"></div>
+          <div class="ui-panel ui-panel-flush">
+            <div class="ui-panel-head">
+              <h3 class="ui-panel-title">Bảng kê công nợ</h3>
+              <span class="ui-hint">Đơn giá lấy từ Danh mục, mục PO, đơn hàng và đơn giá. Dòng tô vàng là chưa có đơn giá.</span>
+            </div>
+            <div class="ui-table-wrap">
+              <table class="ui-table ui-table-num" id="congno-table">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -722,13 +754,35 @@
     <!-- Nạp tự động layout phiếu in khi ấn printCurrentSlip() -->
   </div>
 
+  <!-- HƯỚNG DẪN CÀI ỨNG DỤNG (iPhone / trình duyệt không hỗ trợ cài tự động) -->
+  <dialog class="install-guide" id="install-guide">
+    <h3>Cài ứng dụng Phiếu Xuất Kho</h3>
+    <div class="install-guide-block">
+      <strong>iPhone, iPad (Safari)</strong>
+      <ol>
+        <li>Bấm nút <b>Chia sẻ</b> (hình vuông có mũi tên lên) ở thanh dưới.</li>
+        <li>Chọn <b>Thêm vào MH chính</b> (Add to Home Screen).</li>
+        <li>Bấm <b>Thêm</b>. Biểu tượng app sẽ hiện trên màn hình chính.</li>
+      </ol>
+    </div>
+    <div class="install-guide-block">
+      <strong>Máy tính, Android (Chrome hoặc Edge)</strong>
+      <ol>
+        <li>Bấm biểu tượng cài đặt ở cuối thanh địa chỉ, hoặc menu <b>⋮</b>.</li>
+        <li>Chọn <b>Cài đặt ứng dụng</b> / <b>Thêm vào màn hình chính</b>.</li>
+      </ol>
+    </div>
+    <div class="install-guide-actions"><button type="button" id="install-guide-close">Đã hiểu</button></div>
+  </dialog>
+
   <!-- TOAST CONTAINER -->
   <div id="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="catalog.js?v=20261015b"></script>
-  <script src="app.js?v=20261015b"></script>
-  <script src="dashboard.js?v=20261015b"></script>
+  <script src="catalog.js?v=20261015d"></script>
+  <script src="app.js?v=20261015d"></script>
+  <script src="dashboard.js?v=20261015d"></script>
   <script src="qc_totruong.js"></script>
+  <script src="pwa.js?v=20261015d"></script>
 </body>
 </html>

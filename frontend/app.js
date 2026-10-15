@@ -99,8 +99,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   fetchNextSlipNumber();
   loadSlipList();
 
+  fillSlipListCustomerFilter();
+  ['filter-tu-ngay', 'filter-den-ngay', 'filter-bophan', 'filter-khachhang'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', loadSlipList);
+  });
+  document.getElementById('filter-search')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadSlipList(); });
+
   // Danh mục thay đổi (thêm khách / PO / bộ chi tiết) -> cập nhật lại nút & gợi ý
   window.addEventListener('catalog-changed', () => {
+    fillSlipListCustomerFilter();
     renderCustomerPills();
     renderDayPills();
     renderBoPanel();
@@ -189,7 +196,7 @@ function initFormControls() {
   document.getElementById('btn-del-row').addEventListener('click', () => deleteLastRow());
   document.getElementById('btn-reset-form').addEventListener('click', resetForm);
   document.getElementById('btn-save-slip').addEventListener('click', saveSlip);
-  document.getElementById('btn-print-slip').addEventListener('click', () => printCurrentSlip());
+  document.getElementById('btn-print-slip').addEventListener('click', printAndSaveSlip);
   document.getElementById('btn-filter-slips').addEventListener('click', loadSlipList);
 
   // Xử lý địa chỉ công ty in đầu phiếu
@@ -439,7 +446,7 @@ async function loadDepartments() {
       const filterSel = document.getElementById('filter-bophan');
       
       sel.innerHTML = '';
-      filterSel.innerHTML = '<option value="all">-- Tất cả bộ phận --</option>';
+      filterSel.innerHTML = '<option value="all">Tất cả bộ phận</option>';
 
       data.data.forEach(bp => {
         sel.add(new Option(`${bp.ma} - ${bp.ten}`, bp.ma));
@@ -996,7 +1003,13 @@ function calculateTotals() {
 /* ============================================================
    8. LƯU PHIẾU VÀO DATABASE
    ============================================================ */
-async function saveSlip() {
+/**
+ * Lưu phiếu.
+ * opts.forPrint = true: dùng khi bấm "In phiếu" -> lưu xong KHÔNG xóa form (để in), không chuyển tab.
+ * Trả về: 'saved' (đã lưu) · 'empty' (in phiếu trắng, không có dòng nào) · false (lỗi / chưa đủ thông tin)
+ */
+async function saveSlip(opts = {}) {
+  if (opts && opts.type) opts = {}; // được gọi trực tiếp từ sự kiện click
   const soPhieu = document.getElementById('slip-so').value.trim();
   const maBoPhan = document.getElementById('slip-bophan').value;
   const ngay = document.getElementById('slip-date').value;
@@ -1008,7 +1021,7 @@ async function saveSlip() {
 
   if (!soPhieu) {
     showToast('Vui lòng nhập hoặc tạo Số phiếu!', 'error');
-    return;
+    return false;
   }
 
   // Chuẩn bị payload dòng chi tiết
@@ -1055,8 +1068,9 @@ async function saveSlip() {
   });
 
   if (validLines.length === 0) {
+    if (opts.forPrint) return 'empty';
     showToast('Vui lòng nhập ít nhất 1 dòng hàng hóa!', 'error');
-    return;
+    return false;
   }
 
   const diaChiCty = document.getElementById('slip-diachi-cty')?.value?.trim() || DEFAULT_COMPANY_ADDRESS;
@@ -1099,6 +1113,11 @@ async function saveSlip() {
         filterDenNgay.value = ngay;
       }
 
+      if (opts.forPrint) {
+        showToast(`Đã lưu phiếu ${soPhieu} vào Danh sách phiếu`, 'success');
+        return 'saved';
+      }
+
       // Xóa form và nháp
       resetForm();
 
@@ -1110,12 +1129,42 @@ async function saveSlip() {
       if (listTabBtn) {
         listTabBtn.click();
       }
+      return 'saved';
     } else {
       showToast(data.error || 'Lỗi khi lưu phiếu', 'error');
+      return false;
     }
   } catch (err) {
     console.error('Lỗi lưu phiếu:', err);
     showToast('Lỗi kết nối máy chủ', 'error');
+    return false;
+  }
+}
+
+/**
+ * Bấm "In phiếu": tự lưu phiếu vào Danh sách phiếu rồi mới in.
+ * - Phiếu mới -> tạo mới; phiếu đang sửa -> cập nhật (không tạo trùng)
+ * - In xong: làm mới form để lập phiếu tiếp theo
+ * - Phiếu chưa có dòng nào -> chỉ in mẫu trắng, không lưu
+ */
+let printSaving = false;
+async function printAndSaveSlip() {
+  if (printSaving) return;
+  printSaving = true;
+  const btn = document.getElementById('btn-print-slip');
+  const oldText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Đang lưu...'; }
+  try {
+    const result = await saveSlip({ forPrint: true });
+    if (result === false) return;
+    printCurrentSlip();
+    if (result === 'saved') {
+      resetForm();
+      loadSlipList();
+    }
+  } finally {
+    printSaving = false;
+    if (btn) { btn.disabled = false; btn.textContent = oldText; }
   }
 }
 
@@ -1386,10 +1435,12 @@ async function loadSlipList() {
   const tuNgay = document.getElementById('filter-tu-ngay').value;
   const denNgay = document.getElementById('filter-den-ngay').value;
   const boPhan = document.getElementById('filter-bophan').value;
+  const khach = document.getElementById('filter-khachhang')?.value || 'all';
   const search = document.getElementById('filter-search').value.trim();
 
   let query = `?tu_ngay=${tuNgay}&den_ngay=${denNgay}`;
   if (boPhan) query += `&bo_phan=${boPhan}`;
+  if (khach && khach !== 'all') query += `&khach_hang_id=${khach}`;
   if (search) query += `&search=${encodeURIComponent(search)}`;
 
   try {
@@ -1403,37 +1454,69 @@ async function loadSlipList() {
   }
 }
 
+/** Đổ danh sách khách hàng vào ô lọc của Danh sách phiếu */
+function fillSlipListCustomerFilter() {
+  const sel = document.getElementById('filter-khachhang');
+  if (!sel || !window.Catalog) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="all">Tất cả khách hàng</option>' +
+    window.Catalog.khachAll.map(k => `<option value="${k.id}">${escapeHtml(k.ten_ngan)}</option>`).join('') +
+    '<option value="none">Chưa gán khách hàng</option>';
+  sel.value = Array.from(sel.options).some(o => o.value === cur) ? cur : 'all';
+}
+
+function formatDateVn(iso) {
+  if (!iso) return '';
+  const [y, m, d] = String(iso).split('-');
+  return d && m && y ? `${d}/${m}/${y}` : iso;
+}
+
 function renderSlipListTable(slips) {
   const tbody = document.getElementById('slip-list-tbody');
+  const summary = document.getElementById('slip-list-summary');
+
+  const active = (slips || []).filter(s => s.trang_thai !== 'cancelled');
+  if (summary) {
+    const totalPairs = active.reduce((a, s) => a + (parseFloat(s.tong_sl_chung_tu) || 0), 0);
+    const cancelled = (slips || []).length - active.length;
+    summary.innerHTML = (slips || []).length
+      ? `<span><strong>${active.length}</strong> phiếu</span>
+         <span><strong>${formatNum(totalPairs) || 0}</strong> đôi</span>
+         ${cancelled ? `<span class="ui-summary-muted">${cancelled} phiếu đã hủy (không tính)</span>` : ''}`
+      : '';
+  }
+
   if (!slips || slips.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">Không có phiếu nào phù hợp bộ lọc.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="ui-empty">Không có phiếu nào trong khoảng thời gian này. Thử đổi ngày hoặc bỏ bớt điều kiện lọc.</td></tr>';
     return;
   }
 
+  const mauText = m => (m === 1 ? 'Có đơn giá' : (m === 2 ? 'Không đơn giá' : 'Theo size'));
+
   tbody.innerHTML = slips.map((s, idx) => {
-    const mauText = s.mau_phieu === 1 ? 'Có đơn giá' : (s.mau_phieu === 2 ? 'Không đơn giá' : 'Size run');
-    const statusBadge = s.trang_thai === 'cancelled' 
-      ? '<span class="mismatch-badge">Đã hủy</span>' 
-      : '<span class="match-badge">Đã lưu</span>';
-    
-    const warnBadge = s.canh_bao_lech_size === 1 
-      ? '<span title="Tổng size bóc tách lệch so với SL chứng từ">⚠️ Lệch size</span>' 
+    const cancelled = s.trang_thai === 'cancelled';
+    const status = cancelled
+      ? '<span class="ui-badge ui-badge-off">Đã hủy</span>'
+      : '<span class="ui-badge ui-badge-ok">Đã lưu</span>';
+    const warn = s.canh_bao_lech_size === 1
+      ? '<span class="ui-badge ui-badge-warn" title="Tổng size bóc tách lệch so với SL chứng từ">Lệch size</span>'
       : '';
+    const khach = s.ten_khach_hang || s.don_vi_nhan || '';
 
     return `
-      <tr>
-        <td style="text-align: center;">${idx + 1}</td>
-        <td><strong>${s.so_phieu}</strong> ${warnBadge}</td>
-        <td>${s.ngay}</td>
-        <td style="text-align: center;"><span class="btn" style="padding: 2px 6px; font-size: 11px; background: #e2e8f0;">${s.ma_bo_phan}</span></td>
-        <td>${mauText}</td>
-        <td style="text-align: right; font-weight: 600;">${formatNum(s.tong_sl_chung_tu)}</td>
-        <td style="text-align: right;">${formatNum(s.tong_sl_thuc_xuat)}</td>
-        <td style="text-align: center;">${statusBadge}</td>
-        <td style="text-align: center; white-space: nowrap;">
-          <button class="btn btn-primary" style="padding: 3px 8px; font-size: 11px;" onclick="reprintSlip(${s.id})">🖨️ In A5</button>
-          <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px;" onclick="editSlip(${s.id})">✏️ Sửa</button>
-          ${s.trang_thai !== 'cancelled' ? `<button class="btn btn-danger" style="padding: 3px 8px; font-size: 11px;" onclick="cancelSlip(${s.id})">✕ Hủy</button>` : ''}
+      <tr class="${cancelled ? 'is-cancelled' : ''}">
+        <td class="c ui-muted">${idx + 1}</td>
+        <td><span class="ui-slip-no">${escapeHtml(s.so_phieu)}</span> ${warn}</td>
+        <td class="nowrap">${formatDateVn(s.ngay)}</td>
+        <td>${escapeHtml(khach)}${s.don_hang ? `<div class="ui-sub">ĐH ${escapeHtml(s.don_hang)}</div>` : ''}</td>
+        <td class="c"><span class="ui-tag">${escapeHtml(s.ma_bo_phan)}</span></td>
+        <td>${mauText(s.mau_phieu)}</td>
+        <td class="r ui-num-strong">${formatNum(s.tong_sl_chung_tu) || 0}</td>
+        <td class="c">${status}</td>
+        <td class="r nowrap">
+          <button type="button" class="ui-btn-sm ui-btn-sm-primary" onclick="reprintSlip(${s.id})">In lại</button>
+          <button type="button" class="ui-btn-sm" onclick="editSlip(${s.id})">Sửa</button>
+          ${!cancelled ? `<button type="button" class="ui-btn-sm ui-btn-sm-danger" onclick="cancelSlip(${s.id})">Hủy</button>` : ''}
         </td>
       </tr>
     `;

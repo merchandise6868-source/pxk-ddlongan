@@ -318,9 +318,16 @@ async function handleApi(url, request, env) {
       sql += ' AND p.trang_thai = ?';
       params.push(trangThai);
     }
+    const khachHangId = url.searchParams.get('khach_hang_id');
+    if (khachHangId === 'none') {
+      sql += ' AND p.khach_hang_id IS NULL';
+    } else if (khachHangId && khachHangId !== 'all') {
+      sql += ' AND p.khach_hang_id = ?';
+      params.push(parseInt(khachHangId, 10));
+    }
     if (search) {
-      sql += ' AND (p.so_phieu LIKE ? OR p.don_vi_nhan LIKE ? OR p.ly_do_xuat LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      sql += ' AND (p.so_phieu LIKE ? OR p.don_vi_nhan LIKE ? OR p.ly_do_xuat LIKE ? OR p.don_hang LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     sql += ' GROUP BY p.id ORDER BY p.ngay DESC, p.id DESC LIMIT 200';

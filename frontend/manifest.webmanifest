@@ -1,0 +1,24 @@
+{
+  "name": "Phiếu Xuất Kho - D&D Long An",
+  "short_name": "Phiếu Xuất Kho",
+  "description": "Lập phiếu xuất kho, theo dõi sản lượng và công nợ - D&D Long An",
+  "id": "/",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#f2f5f3",
+  "theme_color": "#0e5a4a",
+  "lang": "vi",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Lập phiếu xuất", "url": "/?tab=tab-create", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Danh sách phiếu", "url": "/?tab=tab-list", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Dashboard", "url": "/?tab=tab-dashboard", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
