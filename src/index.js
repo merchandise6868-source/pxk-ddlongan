@@ -3,6 +3,8 @@
  * Chạy trên Cloudflare Workers + D1 Database + Static Assets
  */
 
+import { ensureSchema, handleCatalogApi, guessKhachHangId } from './catalog.js';
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -52,6 +54,12 @@ export default {
 async function handleApi(url, request, env) {
   const method = request.method;
   const path = url.pathname;
+
+  // Tự nâng cấp database (bảng khách hàng, PO, bộ chi tiết...) ở lần gọi đầu tiên
+  await ensureSchema(env);
+
+  const catalogRes = await handleCatalogApi(path, method, url, request, env);
+  if (catalogRes) return catalogRes;
 
   // -------------------------------------------------------------
   // GET /api/bophan: Danh sách bộ phận/chuyền
@@ -281,14 +289,15 @@ async function handleApi(url, request, env) {
     const search = url.searchParams.get('search');
 
     let sql = `
-      SELECT p.*, b.ten as ten_bo_phan,
+      SELECT p.*, b.ten as ten_bo_phan, k.ten_ngan as ten_khach_hang,
         COUNT(d.id) as tong_so_dong,
         COALESCE(SUM(d.sl_chung_tu), 0) as tong_sl_chung_tu,
         COALESCE(SUM(d.sl_thuc_xuat), 0) as tong_sl_thuc_xuat,
         COALESCE(SUM(d.thanh_tien), 0) as tong_thanh_tien
       FROM phieu p
       LEFT JOIN bo_phan b ON p.ma_bo_phan = b.ma
-      LEFT JOIN phieu_dong d ON p.id = d.phieu_id
+      LEFT JOIN khach_hang k ON p.khach_hang_id = k.id
+      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') != 'chi_tiet'
       WHERE 1=1
     `;
     const params = [];
@@ -371,6 +380,7 @@ async function handleApi(url, request, env) {
       ghi_chu = '',
       lines = [],
     } = body;
+    const khach_hang_id = parseInt(body.khach_hang_id, 10) || await guessKhachHangId(env, don_vi_nhan);
 
     if (!so_phieu || !ma_bo_phan || !ngay) {
       return Response.json(
@@ -403,8 +413,8 @@ async function handleApi(url, request, env) {
     let insertPhieuRes;
     try {
       insertPhieuRes = await env.DB.prepare(`
-        INSERT INTO phieu (so_phieu, ma_bo_phan, mau_phieu, ngay, don_vi_nhan, ly_do_xuat, don_hang, bo_phan_xuat, trang_thai, nguoi_lap, dia_chi_cty, ghi_chu, canh_bao_lech_size)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO phieu (so_phieu, ma_bo_phan, mau_phieu, ngay, don_vi_nhan, ly_do_xuat, don_hang, bo_phan_xuat, trang_thai, nguoi_lap, dia_chi_cty, ghi_chu, canh_bao_lech_size, khach_hang_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         so_phieu,
         ma_bo_phan,
@@ -418,7 +428,8 @@ async function handleApi(url, request, env) {
         nguoi_lap,
         dia_chi_cty,
         ghi_chu,
-        canh_bao_lech_size
+        canh_bao_lech_size,
+        khach_hang_id
       ).run();
     } catch (insertErr) {
       if (String(insertErr?.message || insertErr).includes('no such column')) {
@@ -459,8 +470,8 @@ async function handleApi(url, request, env) {
       const thanh_tien = parseFloat(line.thanh_tien) || (sl_thuc_xuat > 0 ? sl_thuc_xuat * don_gia : sl_chung_tu * don_gia);
 
       const insertLineRes = await env.DB.prepare(`
-        INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         phieuId,
         stt,
@@ -472,7 +483,9 @@ async function handleApi(url, request, env) {
         sl_thuc_xuat,
         don_gia,
         thanh_tien,
-        line.ghi_chu || ''
+        line.ghi_chu || '',
+        line.loai || '',
+        parseFloat(line.he_so) || 0
       ).run();
 
       const phieuDongId = insertLineRes.meta.last_row_id;
@@ -535,6 +548,7 @@ async function handleApi(url, request, env) {
       ghi_chu = '',
       lines = [],
     } = body;
+    const khach_hang_id = parseInt(body.khach_hang_id, 10) || await guessKhachHangId(env, don_vi_nhan);
 
     let canh_bao_lech_size = 0;
     for (const line of lines) {
@@ -548,7 +562,7 @@ async function handleApi(url, request, env) {
       await env.DB.prepare(`
         UPDATE phieu
         SET so_phieu = ?, ma_bo_phan = ?, mau_phieu = ?, ngay = ?, don_vi_nhan = ?, 
-            ly_do_xuat = ?, don_hang = ?, bo_phan_xuat = ?, trang_thai = ?, nguoi_lap = ?, dia_chi_cty = ?, ghi_chu = ?, canh_bao_lech_size = ?, cap_nhat_luc = CURRENT_TIMESTAMP
+            ly_do_xuat = ?, don_hang = ?, bo_phan_xuat = ?, trang_thai = ?, nguoi_lap = ?, dia_chi_cty = ?, ghi_chu = ?, canh_bao_lech_size = ?, khach_hang_id = ?, cap_nhat_luc = CURRENT_TIMESTAMP
         WHERE id = ?
       `).bind(
         so_phieu,
@@ -564,6 +578,7 @@ async function handleApi(url, request, env) {
         dia_chi_cty,
         ghi_chu,
         canh_bao_lech_size,
+        khach_hang_id,
         id
       ).run();
     } catch (updateErr) {
@@ -608,8 +623,8 @@ async function handleApi(url, request, env) {
       const thanh_tien = parseFloat(line.thanh_tien) || (sl_thuc_xuat > 0 ? sl_thuc_xuat * don_gia : sl_chung_tu * don_gia);
 
       const insertLineRes = await env.DB.prepare(`
-        INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         id,
         stt,
@@ -621,7 +636,9 @@ async function handleApi(url, request, env) {
         sl_thuc_xuat,
         don_gia,
         thanh_tien,
-        line.ghi_chu || ''
+        line.ghi_chu || '',
+        line.loai || '',
+        parseFloat(line.he_so) || 0
       ).run();
 
       const phieuDongId = insertLineRes.meta.last_row_id;
@@ -668,6 +685,10 @@ async function handleApi(url, request, env) {
     const boPhan = url.searchParams.get('bo_phan');
 
     let whereClause = "p.trang_thai != 'cancelled'";
+    const khachHang = url.searchParams.get('khach_hang_id');
+    if (khachHang && khachHang !== 'all') {
+      whereClause += ' AND p.khach_hang_id = ?';
+    }
     const params = [];
 
     if (tuNgay) {
@@ -682,6 +703,7 @@ async function handleApi(url, request, env) {
       whereClause += ' AND p.ma_bo_phan = ?';
       params.push(boPhan);
     }
+    if (khachHang && khachHang !== 'all') params.unshift(parseInt(khachHang, 10));
 
     // 1. Thẻ tổng sản lượng theo từng bộ phận
     const sumDeptSql = `
@@ -691,7 +713,7 @@ async function handleApi(url, request, env) {
         COUNT(DISTINCT p.id) as so_luong_phieu
       FROM phieu p
       LEFT JOIN bo_phan b ON p.ma_bo_phan = b.ma
-      LEFT JOIN phieu_dong d ON p.id = d.phieu_id
+      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') != 'chi_tiet'
       WHERE ${whereClause}
       GROUP BY p.ma_bo_phan
       ORDER BY b.thu_tu ASC
@@ -710,7 +732,7 @@ async function handleApi(url, request, env) {
       FROM phieu p
       JOIN phieu_dong d ON p.id = d.phieu_id
       JOIN phieu_dong_size s ON d.id = s.phieu_dong_id
-      WHERE ${whereClause}
+      WHERE ${whereClause} AND COALESCE(d.loai, '') != 'chi_tiet'
       GROUP BY ma_hang, mau, p.ma_bo_phan, s.size
       ORDER BY ma_hang ASC, mau ASC, s.size ASC
     `;
@@ -723,7 +745,7 @@ async function handleApi(url, request, env) {
         COALESCE(SUM(d.sl_chung_tu), 0) as sl_chung_tu,
         COALESCE(SUM(d.sl_thuc_xuat), 0) as sl_thuc_xuat
       FROM phieu p
-      LEFT JOIN phieu_dong d ON p.id = d.phieu_id
+      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') != 'chi_tiet'
       WHERE ${whereClause}
       GROUP BY p.ngay, p.ma_bo_phan
       ORDER BY p.ngay ASC

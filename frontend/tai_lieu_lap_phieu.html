@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tài Liệu Trực Quan: Phân Tích HTML & CSS - Tab Lập Phiếu Xuất Kho</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-hover: #1e40af;
+      --primary-light: #eff6ff;
+      --secondary: #475569;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b91c1c;
+      --bg-app: #0f172a;
+      --bg-card: #ffffff;
+      --border: #cbd5e1;
+      --border-focus: #2563eb;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --doc-bg: #f8fafc;
+      --code-bg: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--doc-bg);
+      color: #1e293b;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    /* Header tài liệu */
+    .doc-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+      color: #ffffff;
+      padding: 30px 40px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    .doc-header-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .doc-title h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .doc-title p {
+      font-size: 13px;
+      color: #93c5fd;
+      margin-top: 4px;
+    }
+
+    .doc-nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .doc-nav a {
+      color: #e2e8f0;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      transition: all 0.2s;
+    }
+
+    .doc-nav a:hover {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    /* Container chính */
+    .doc-container {
+      max-width: 1440px;
+      margin: 30px auto;
+      padding: 0 30px;
+    }
+
+    /* Section khối thành phần */
+    .comp-section {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 40px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    }
+
+    .comp-header {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .comp-header h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #1e3a8a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-tag {
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+
+    /* Khung so sánh song song 2 cột */
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    @media (max-width: 1024px) {
+      .split-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .code-col {
+      background: var(--code-bg);
+      color: #f8fafc;
+      padding: 20px;
+      overflow-x: auto;
+      border-right: 1px solid #334155;
+    }
+
+    .preview-col {
+      background: #f1f5f9;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Code block styling */
+    .code-box-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    pre code {
+      font-family: "Fira Code", Consolas, Monaco, "Courier New", Courier, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      display: block;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .code-html { color: #facc15; }
+    .code-css { color: #38bdf8; }
+
+    /* Khung live preview */
+    .preview-card {
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .preview-card-header {
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-raw {
+      background: #fef2f2;
+      color: #991b1b;
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .header-styled {
+      background: #ecfdf5;
+      color: #065f46;
+      border-bottom: 1px solid #a7f3d0;
+    }
+
+    .preview-card-body {
+      padding: 16px;
+      min-height: 80px;
+    }
+
+    /* Khung iframe cho render raw HTML không bị dính CSS ngoài */
+    .raw-iframe {
+      width: 100%;
+      min-height: 95px;
+      border: none;
+      background: #fff;
+    }
+
+    /* Khối phân tích chi tiết */
+    .analysis-body {
+      padding: 20px 24px;
+      background: #ffffff;
+    }
+
+    .analysis-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .analysis-table th, .analysis-table td {
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    .analysis-table th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .analysis-table tr:nth-child(even) td {
+      background: #fafafa;
+    }
+
+    .tag-prop {
+      font-family: monospace;
+      color: #2563eb;
+      font-weight: 700;
+      background: #eff6ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* ============================================================
+       STYLES GỐC CỦA DỰ ÁN CHO LIVE PREVIEW (D&D LONG AN)
+       ============================================================ */
+    .live-scope {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 13px;
+      color: #0f172a;
+    }
+
+    .live-scope .card {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      border: 1px solid #cbd5e1;
+      padding: 18px;
+    }
+
+    .live-scope .pxk-ui-panel { width: 100%; }
+
+    /* DÒNG 1: MẪU PHIẾU */
+    .live-scope .pxk-row-mau {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .live-scope .pxk-lbl-mau {
+      font-size: 13px;
+      font-weight: 700;
+      color: #475569;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    .live-scope .pxk-seg-group {
+      display: inline-flex;
+      background: #eef2f6;
+      padding: 4px;
+      border-radius: 8px;
+      gap: 2px;
+    }
+
+    .live-scope .pxk-seg-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .live-scope .pxk-seg-btn:hover { color: #0f172a; }
+
+    .live-scope .pxk-seg-btn.active {
+      background: #ffffff;
+      color: #1e40af;
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .live-scope .pxk-txt-desc {
+      font-size: 12.5px;
+      color: #475569;
+      margin-left: 2px;
+      line-height: 1.4;
+    }
+
+    /* DÒNG 2: DẢI SIZE */
+    .live-scope .pxk-row-size {
+      display: block;
+      margin-bottom: 14px;
+    }
+
+    .live-scope .pxk-size-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .live-scope .pxk-lbl-size {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e40af;
+      white-space: nowrap;
+    }
+
+    .live-scope .pxk-size-input {
+      flex: 1;
+      min-width: 250px;
+      height: 36px;
+      padding: 6px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1e293b;
+      background: #ffffff;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .live-scope .pxk-size-input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    .live-scope .pxk-size-pill {
+      height: 32px;
+      padding: 0 14px;
+      border-radius: 9999px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .live-scope .pxk-size-pill.active,
+    .live-scope .pxk-size-pill:hover {
+      border: 1.5px solid #2563eb;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+
+    .live-scope .pxk-size-step {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #334155;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .live-scope .pxk-size-step:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    .live-scope .pxk-size-btn-apply {
+      height: 34px;
+      padding: 0 16px;
+      border: none;
+      border-radius: 6px;
+      background: #1e3a8a;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease;
+    }
+
+    .live-scope .pxk-size-btn-apply:hover { background: #1e40af; }
+
+    .live-scope .pxk-size-hint {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 6px;
+    }
+
+    /* DÒNG 3 & 4: 8 Ô NHẬP LIỆU */
+    .live-scope .pxk-fields-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px 16px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .live-scope .pxk-fields-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .live-scope .pxk-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .live-scope .pxk-field-lbl {
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .live-scope .pxk-star {
+      color: #ea580c;
+      font-weight: 700;
+      margin-left: 2px;
+    }
+
+    .live-scope .pxk-input {
+      height: 36px;
+      padding: 6px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1e293b;
+      background: #ffffff;
+      outline: none;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    .live-scope .pxk-input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    /* DÒNG 5: ĐỊA CHỈ IN ĐẦU PHIẾU */
+    .live-scope .pxk-address-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .live-scope .pxk-addr-lbl {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #475569;
+      white-space: nowrap;
+    }
+
+    .live-scope .pxk-addr-input {
+      flex: 1;
+      min-width: 260px;
+      height: 36px;
+      padding: 6px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1e293b;
+      outline: none;
+      background: #ffffff;
+      box-sizing: border-box;
+    }
+
+    .live-scope .pxk-addr-input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    .live-scope .pxk-addr-pill {
+      height: 34px;
+      padding: 0 16px;
+      border-radius: 9999px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .live-scope .pxk-addr-pill:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    .live-scope .pxk-addr-pill.active {
+      border: 1.5px solid #2563eb;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+
+    /* THANH CÔNG CỤ BẢNG */
+    .live-scope .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .live-scope .btn-group {
+      display: inline-flex;
+      gap: 6px;
+    }
+
+    .live-scope .btn {
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .live-scope .btn-primary { background: #1e3a8a; color: #fff; }
+    .live-scope .btn-primary:hover { background: #1e40af; }
+    .live-scope .btn-success { background: #15803d; color: #fff; }
+    .live-scope .btn-success:hover { background: #166534; }
+    .live-scope .btn-outline { background: #fff; border-color: #cbd5e1; color: #0f172a; }
+    .live-scope .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
+
+    /* BẢNG EXCEL */
+    .live-scope .excel-table-container {
+      overflow-x: auto;
+      border: 1px solid #94a3b8;
+      border-radius: 4px;
+      background: #fff;
+      max-height: 380px;
+      position: relative;
+    }
+
+    .live-scope .excel-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .live-scope .excel-table th {
+      background: #e2e8f0;
+      color: #1e293b;
+      font-weight: 700;
+      text-align: center;
+      padding: 6px 4px;
+      border: 1px solid #94a3b8;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .live-scope .excel-table th.th-stt-col { width: 38px; min-width: 38px; }
+    .live-scope .excel-table th.th-po-col { width: 120px; min-width: 120px; }
+    .live-scope .excel-table th.th-ma-col { width: 85px; min-width: 85px; }
+    .live-scope .excel-table th.th-chitiet-col { width: 105px; min-width: 105px; }
+    .live-scope .excel-table th.th-dvt-col { width: 45px; min-width: 45px; }
+    .live-scope .excel-table th.th-size-col { width: 1%; min-width: 28px; padding: 2px 1px; }
+    .live-scope .excel-table th.th-total-col { width: 1%; min-width: 48px; }
+
+    .live-scope .size-header-input {
+      width: 100%;
+      min-width: 22px;
+      max-width: 32px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 11px;
+      color: #1d4ed8;
+      background: #ffffff;
+      border: 1px dashed #3b82f6;
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .live-scope .size-header-input:focus {
+      background: #fef9c3;
+      border: 1px solid #ca8a04;
+      color: #854d0e;
+    }
+
+    .live-scope .excel-table td {
+      border: 1px solid #cbd5e1;
+      padding: 0;
+      background: #ffffff;
+    }
+
+    .live-scope .excel-cell {
+      width: 100%;
+      height: 100%;
+      min-height: 28px;
+      border: none;
+      outline: none;
+      padding: 4px 6px;
+      font-family: inherit;
+      font-size: 12px;
+      background: transparent;
+      box-sizing: border-box;
+    }
+
+    .live-scope .excel-cell:focus {
+      background: #eff6ff;
+      box-shadow: inset 0 0 0 2px #2563eb;
+      font-weight: 600;
+    }
+
+    .live-scope .excel-cell.cell-center { text-align: center; }
+    .live-scope .excel-cell.cell-right { text-align: right; }
+    .live-scope .excel-cell.size-val-cell {
+      padding: 4px 1px;
+      text-align: center;
+      font-weight: 500;
+      min-width: 26px;
+    }
+
+    .live-scope .excel-table tr:hover td { background-color: #f8fafc; }
+    .live-scope .excel-table tr.selected-row td { background-color: #e0f2fe; }
+
+    .live-scope .excel-table tfoot td {
+      background: #f1f5f9;
+      font-weight: 700;
+      padding: 6px 8px;
+      border: 1px solid #94a3b8;
+    }
+
+    .pin-icon {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ============================================================
+       STYLES CHO KHỐI MÔ PHỎNG MÁY IN KIM A5
+       ============================================================ */
+    .print-simulator-wrap {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .print-controls-bar {
+      width: 100%;
+      max-width: 860px;
+      background: #0f172a;
+      padding: 12px 18px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      color: #f8fafc;
+    }
+
+    .print-slider-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .print-slider-group label {
+      color: #94a3b8;
+    }
+
+    .print-slider-group input[type="range"] {
+      cursor: pointer;
+    }
+
+    .print-slider-val {
+      color: #38bdf8;
+      font-weight: 700;
+      min-width: 38px;
+    }
+
+    /* Tờ giấy in kim khổ A5 ngang liên tục có lỗ 2 bên */
+    .sim-paper-sheet {
+      width: 860px;
+      min-height: 540px;
+      background: #fefefe;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      position: relative;
+      display: flex;
+      box-sizing: border-box;
+      border-radius: 2px;
+    }
+
+    /* Dải lỗ đục vi tính 2 bên mép giấy */
+    .sim-perf-margin {
+      width: 26px;
+      background: #f1f5f9;
+      border-right: 1px dashed #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-around;
+      padding: 10px 0;
+      flex-shrink: 0;
+    }
+
+    .sim-perf-margin.right {
+      border-right: none;
+      border-left: 1px dashed #cbd5e1;
+    }
+
+    .sim-feed-hole {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #1e293b;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+      margin: 4px 0;
+    }
+
+    /* Vùng in nội dung chính bên trong giấy */
+    .sim-print-content {
+      flex: 1;
+      background: #ffffff;
+      font-family: "Times New Roman", Times, serif;
+      color: #000000;
+      box-sizing: border-box;
+      transition: padding 0.1s ease;
+      position: relative;
+      padding: 7mm 21mm 2mm 11mm;
+    }
+
+    .sim-danger-zone {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 21mm;
+      border-left: 1.5px dashed #ef4444;
+      background: rgba(239, 68, 68, 0.05);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sim-danger-text {
+      writing-mode: vertical-rl;
+      color: #dc2626;
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER TÀI LIỆU -->
+  <header class="doc-header">
+    <div class="doc-header-inner">
+      <div class="doc-title">
+        <h1>📑 TÀI LIỆU PHÂN TÍCH HTML & CSS: TAB LẬP PHIẾU XUẤT KHO</h1>
+        <p>Hệ Thống Quản Lý Phiếu Xuất Kho — D&D Long An | Hiển thị Code & Giao diện thực tế song song</p>
+      </div>
+      <nav class="doc-nav">
+        <a href="#sec-mau">1. Mẫu Phiếu</a>
+        <a href="#sec-size">2. Dải Size</a>
+        <a href="#sec-grid">3. Lưới 8 Trường</a>
+        <a href="#sec-addr">4. Địa Chỉ In</a>
+        <a href="#sec-toolbar">5. Thanh Công Cụ</a>
+        <a href="#sec-table">6. Bảng Excel</a>
+        <a href="#sec-full">7. Toàn Bộ Tab Live</a>
+        <a href="#sec-print" style="background: #15803d; color: #ffffff;">8. 🖨️ Căn Chỉnh Máy In A5</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- NỘI DUNG TÀI LIỆU -->
+  <main class="doc-container">
+
+    <!-- ========================================================
+         KHỐI 1: BỘ CHỌN MẪU PHIẾU
+         ======================================================== -->
+    <section class="comp-section" id="sec-mau">
+      <div class="comp-header">
+        <h2><span>🎯 Khối 1: Bộ Chọn Mẫu Phiếu (Segmented Control)</span></h2>
+        <span class="badge-tag">UI Switch Pattern</span>
+      </div>
+
+      <div class="split-grid">
+        <!-- CỘT TRÁI: CODE -->
+        <div class="code-col">
+          <div class="code-box-title">
+            <span>📄 Code HTML</span>
+          </div>
+          <pre><code class="code-html">&lt;div class="pxk-row-mau"&gt;
+  &lt;span class="pxk-lbl-mau"&gt;MẪU PHIẾU&lt;/span&gt;
+  &lt;div class="pxk-seg-group"&gt;
+    &lt;button type="button" class="pxk-seg-btn"&gt;1. Có đơn giá&lt;/button&gt;
+    &lt;button type="button" class="pxk-seg-btn"&gt;2. Không đơn giá&lt;/button&gt;
+    &lt;button type="button" class="pxk-seg-btn active"&gt;3. Size Run&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;span class="pxk-txt-desc"&gt;
+    Cột: STT, PO, Màu, ĐVT, dải size, Tổng · Cộng ngang theo size
+  &lt;/span&gt;
+&lt;/div&gt;</code></pre>
+
+          <div class="code-box-title" style="margin-top: 16px;">
+            <span>🎨 Code CSS Cốt Lõi</span>
+          </div>
+          <pre><code class="code-css">.pxk-row-mau {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.pxk-seg-group {
+  display: inline-flex;
+  background: #eef2f6;       /* Rãnh trượt màu xám */
+  padding: 4px;
+  border-radius: 8px;
+  gap: 2px;
+}
+.pxk-seg-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pxk-seg-btn.active {
+  background: #ffffff;       /* Nổi thành card màu trắng */
+  color: #1e40af;            /* Chữ xanh Navy */
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}</code></pre>
+        </div>
+
+        <!-- CỘT PHẢI: SO SÁNH TRỰC QUAN LIVE -->
+        <div class="preview-col">
+          <!-- BƯỚC 1: HTML THUẦN (IFRAME CÔ LẬP KHÔNG CSS) -->
+          <div class="preview-card">
+            <div class="preview-card-header header-raw">
+              <span>❌ KHI CHỈ CÓ HTML THUẦN (Trình duyệt mặc định)</span>
+              <span>Chưa CSS</span>
+            </div>
+            <div class="preview-card-body">
+              <iframe class="raw-iframe" style="height: 60px;" srcdoc='
+                <div>
+                  <span>MẪU PHIẾU</span>
+                  <div>
+                    <button type="button">1. Có đơn giá</button>
+                    <button type="button">2. Không đơn giá</button>
+                    <button type="button">3. Size Run</button>
+                  </div>
+                  <span>Cột: STT, PO, Màu, ĐVT, dải size, Tổng · Cộng ngang theo size</span>
+                </div>
+              '></iframe>
+              <small style="color: #991b1b; display: block; margin-top: 4px;">⚠️ Nút xám gồ ghề, font serif lỗi thời, rớt dòng lộn xộn, không biết nút nào đang chọn.</small>
+            </div>
+          </div>
+
+          <!-- BƯỚC 2: KHI ĐÃ CÓ CSS (RENDER THỰC TẾ) -->
+          <div class="preview-card">
+            <div class="preview-card-header header-styled">
+              <span>✅ KHI ĐÃ ÁP DỤNG CSS (Giao diện thực tế chuẩn UX/UI)</span>
+              <span>Đã có CSS</span>
+            </div>
+            <div class="preview-card-body live-scope">
+              <div class="pxk-row-mau">
+                <span class="pxk-lbl-mau">MẪU PHIẾU</span>
+                <div class="pxk-seg-group">
+                  <button type="button" class="pxk-seg-btn" onclick="demoSelectMau(this)">1. Có đơn giá</button>
+                  <button type="button" class="pxk-seg-btn" onclick="demoSelectMau(this)">2. Không đơn giá</button>
+                  <button type="button" class="pxk-seg-btn active" onclick="demoSelectMau(this)">3. Size Run</button>
+                </div>
+                <span class="pxk-txt-desc">Cột: STT, PO, Màu, ĐVT, dải size, Tổng · Cộng ngang theo size, cộng dọc chân cột</span>
+              </div>
+              <small style="color: #065f46; display: block; margin-top: 4px;">✨ Rãnh trượt bo góc mềm mại, nút Active nổi khối đổ bóng thẻ Card màu trắng tinh khiết.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHÂN TÍCH KỸ THUẬT -->
+      <div class="analysis-body">
+        <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a;">🔍 Phân Tích Kỹ Thuật & Giá Trị Thiết Kế:</h3>
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th width="25%">Thuộc tính CSS</th>
+              <th width="35%">Tác dụng kỹ thuật</th>
+              <th width="40%">Lợi ích thực tế cho người dùng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag-prop">display: flex; gap: 14px</span></td>
+              <td>Dàn hàng ngang tự động, tạo khoảng cách cố định giữa các phần tử</td>
+              <td>Nhãn, cụm nút và lời giải thích thẳng hàng nhau theo trục dọc, không bị dính cục.</td>
+            </tr>
+            <tr>
+              <td><span class="tag-prop">.pxk-seg-group</span></td>
+              <td>Nền xám <span class="tag-prop">#eef2f6</span> đóng vai trò là "rãnh trượt" (Segmented Track)</td>
+              <td>Gom 3 nút vào một cụm duy nhất, người dùng hiểu ngay đây là nhóm tùy chọn loại trừ lẫn nhau (Radio).</td>
+            </tr>
+            <tr>
+              <td><span class="tag-prop">.pxk-seg-btn.active</span></td>
+              <td>Nền trắng <span class="tag-prop">#ffffff</span> + <span class="tag-prop">box-shadow</span> nổi nhẹ</td>
+              <td>Tạo hiệu ứng nổi 3D, báo hiệu dứt khoát phiếu đang ở mẫu 3 để người lập biểu yên tâm.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         KHỐI 2: THANH CẤU HÌNH DẢI SIZE
+         ======================================================== -->
+    <section class="comp-section" id="sec-size">
+      <div class="comp-header">
+        <h2><span>📏 Khối 2: Thanh Cấu Hình Dải Size (Chuyên Biệt Cho Mẫu 3)</span></h2>
+        <span class="badge-tag">Flexbox Toolbar</span>
+      </div>
+
+      <div class="split-grid">
+        <div class="code-col">
+          <div class="code-box-title"><span>📄 Code HTML</span></div>
+          <pre><code class="code-html">&lt;div class="pxk-row-size" id="size-range-box"&gt;
+  &lt;div class="pxk-size-bar"&gt;
+    &lt;span class="pxk-lbl-size"&gt;Dải size&lt;/span&gt;
+    &lt;input type="text" class="pxk-size-input" 
+           value="35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49"&gt;
+    &lt;button type="button" class="pxk-size-pill active"&gt;LT&lt;/button&gt;
+    &lt;button type="button" class="pxk-size-pill"&gt;JiaYu&lt;/button&gt;
+    &lt;button type="button" class="pxk-size-step"&gt;+&lt;/button&gt;
+    &lt;button type="button" class="pxk-size-step"&gt;−&lt;/button&gt;
+    &lt;button type="button" class="pxk-size-btn-apply"&gt;Áp dụng&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;div class="pxk-size-hint"&gt;
+    Mẹo: click tiêu đề ô size trên bảng để sửa thành size lẻ (36.5...) hoặc tên tùy ý.
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+          <div class="code-box-title" style="margin-top: 16px;"><span>🎨 Code CSS Cốt Lõi</span></div>
+          <pre><code class="code-css">.pxk-size-input {
+  flex: 1;                 /* Tự động kéo dài chiếm hết khoảng trống thừa */
+  min-width: 280px;
+  height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+.pxk-size-pill {
+  border-radius: 9999px;   /* Bo tròn 2 đầu dạng viên thuốc (Pill) */
+  padding: 0 14px;
+  height: 32px;
+  border: 1px solid #cbd5e1;
+}
+.pxk-size-pill.active {
+  background: #eff6ff;     /* Nền sáng xanh */
+  border-color: #2563eb;   /* Viền xanh đậm */
+  color: #1d4ed8;
+}
+.pxk-size-step {
+  width: 32px;
+  height: 32px;            /* Nút vuông cộng/trừ chuẩn 32x32px */
+  border-radius: 6px;
+}</code></pre>
+        </div>
+
+        <div class="preview-col">
+          <div class="preview-card">
+            <div class="preview-card-header header-raw">
+              <span>❌ KHI CHỈ CÓ HTML THUẦN</span>
+              <span>Chưa CSS</span>
+            </div>
+            <div class="preview-card-body">
+              <iframe class="raw-iframe" style="height: 65px;" srcdoc='
+                <div>
+                  <span>Dải size</span>
+                  <input type="text" value="35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49">
+                  <button type="button">LT</button>
+                  <button type="button">JiaYu</button>
+                  <button type="button">+</button>
+                  <button type="button">−</button>
+                  <button type="button">Áp dụng</button>
+                  <div>Mẹo: click tiêu đề ô size...</div>
+                </div>
+              '></iframe>
+              <small style="color: #991b1b; display: block; margin-top: 4px;">⚠️ Ô input bị ngắn cụn, 15 cỡ giày bị giấu cụt ngủn; các nút bấm méo mó, cao thấp cọc cạch.</small>
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-card-header header-styled">
+              <span>✅ KHI ĐÃ ÁP DỤNG CSS (Giao diện thực tế)</span>
+              <span>Đã có CSS</span>
+            </div>
+            <div class="preview-card-body live-scope">
+              <div class="pxk-row-size">
+                <div class="pxk-size-bar">
+                  <span class="pxk-lbl-size">Dải size</span>
+                  <input type="text" class="pxk-size-input" value="35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49">
+                  <button type="button" class="pxk-size-pill active" onclick="demoTogglePill(this)">LT</button>
+                  <button type="button" class="pxk-size-pill" onclick="demoTogglePill(this)">JiaYu</button>
+                  <button type="button" class="pxk-size-step">+</button>
+                  <button type="button" class="pxk-size-step">−</button>
+                  <button type="button" class="pxk-size-btn-apply">Áp dụng</button>
+                </div>
+                <div class="pxk-size-hint">💡 Mẹo: click tiêu đề ô size trên bảng để sửa thành size lẻ (36.5...) hoặc tên tùy ý.</div>
+              </div>
+              <small style="color: #065f46; display: block; margin-top: 4px;">✨ Ô input dãn dài trọn vẹn, nút con nhộng (Pill) tinh tế, nút + / - vuông vắn sắc sảo.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-body">
+        <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a;">🔍 Phân Tích Kỹ Thuật:</h3>
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th width="25%">Đặc tính kỹ thuật</th>
+              <th width="35%">Thuộc tính CSS phụ trách</th>
+              <th width="40%">Lợi ích thực tế</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Co giãn tự thích ứng</td>
+              <td><span class="tag-prop">flex: 1; min-width: 280px;</span></td>
+              <td>Màn hình máy tính rộng bao nhiêu, dải size tự mở rộng bấy nhiêu, nhìn thấy hết cả 15 size mà không phải cuộn ngang.</td>
+            </tr>
+            <tr>
+              <td>Hình dáng viên thuốc</td>
+              <td><span class="tag-prop">border-radius: 9999px;</span></td>
+              <td>Tạo cảm giác "Pill Tag" hiện đại, phân biệt nút gán nhãn chọn nhanh (LT/JiaYu) với nút thao tác thường.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         KHỐI 3: LƯỚI 8 TRƯỜNG DỮ LIỆU ĐẦU PHIẾU
+         ======================================================== -->
+    <section class="comp-section" id="sec-grid">
+      <div class="comp-header">
+        <h2><span>📋 Khối 3: Lưới 8 Trường Dữ Liệu Đầu Phiếu (CSS Grid 4 Cột x 2 Hàng)</span></h2>
+        <span class="badge-tag">CSS Grid System</span>
+      </div>
+
+      <div class="split-grid">
+        <div class="code-col">
+          <div class="code-box-title"><span>📄 Code HTML (Trích 4 trường hàng 1)</span></div>
+          <pre><code class="code-html">&lt;div class="pxk-fields-grid"&gt;
+  &lt;!-- HÀNG 1 --&gt;
+  &lt;div class="pxk-field"&gt;
+    &lt;label class="pxk-field-lbl"&gt;Bộ phận / Chuyền &lt;span class="pxk-star"&gt;*&lt;/span&gt;&lt;/label&gt;
+    &lt;select class="pxk-input"&gt;&lt;option&gt;Chuyền 1 - Xưởng may&lt;/option&gt;&lt;/select&gt;
+  &lt;/div&gt;
+  &lt;div class="pxk-field"&gt;
+    &lt;label class="pxk-field-lbl"&gt;Số phiếu &lt;span class="pxk-star"&gt;*&lt;/span&gt;&lt;/label&gt;
+    &lt;input type="text" class="pxk-input" value="PXK-TC-00000001"&gt;
+  &lt;/div&gt;
+  &lt;div class="pxk-field"&gt;
+    &lt;label class="pxk-field-lbl"&gt;Ngày xuất &lt;span class="pxk-star"&gt;*&lt;/span&gt;&lt;/label&gt;
+    &lt;input type="date" class="pxk-input" value="2026-10-14"&gt;
+  &lt;/div&gt;
+  &lt;div class="pxk-field"&gt;
+    &lt;label class="pxk-field-lbl"&gt;Đơn vị nhận&lt;/label&gt;
+    &lt;input type="text" class="pxk-input" placeholder="Đơn vị / khách hàng"&gt;
+  &lt;/div&gt;
+  &lt;!-- HÀNG 2: Bộ phận xuất kho, Đơn hàng, Lý do xuất, Người lập --&gt;
+&lt;/div&gt;</code></pre>
+
+          <div class="code-box-title" style="margin-top: 16px;"><span>🎨 Code CSS Cốt Lõi</span></div>
+          <pre><code class="code-css">.pxk-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);  /* Chia đều 4 cột tuyệt đối 25% */
+  gap: 12px 16px;                        /* Dãn dòng 12px, dãn cột 16px */
+}
+@media (max-width: 900px) {
+  .pxk-fields-grid {
+    grid-template-columns: repeat(2, 1fr);/* Tablet tự dồn 2 cột */
+  }
+}
+.pxk-field {
+  display: flex;
+  flex-direction: column;                 /* Đặt Label nằm trên Input */
+  gap: 4px;
+}
+.pxk-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); /* Hào quang xanh tập trung */
+}</code></pre>
+        </div>
+
+        <div class="preview-col">
+          <div class="preview-card">
+            <div class="preview-card-header header-raw">
+              <span>❌ KHI CHỈ CÓ HTML THUẦN</span>
+              <span>Chưa CSS</span>
+            </div>
+            <div class="preview-card-body">
+              <iframe class="raw-iframe" style="height: 120px;" srcdoc='
+                <div>
+                  <label>Bộ phận / Chuyền *</label>
+                  <select><option>Chuyền 1 - Xưởng may</option></select>
+                  <label>Số phiếu *</label>
+                  <input type="text" value="PXK-TC-00000001">
+                  <label>Ngày xuất *</label>
+                  <input type="date" value="2026-10-14">
+                  <label>Đơn vị nhận</label>
+                  <input type="text" placeholder="Đơn vị / khách hàng">
+                </div>
+              '></iframe>
+              <small style="color: #991b1b; display: block; margin-top: 4px;">⚠️ Các nhãn và ô input dính liền nhau thành một hàng dài, tự gãy vụn xuống dưới, không căn chỉnh mép.</small>
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-card-header header-styled">
+              <span>✅ KHI ĐÃ ÁP DỤNG CSS (Giao diện thực tế)</span>
+              <span>Đã có CSS</span>
+            </div>
+            <div class="preview-card-body live-scope">
+              <div class="pxk-fields-grid">
+                <div class="pxk-field">
+                  <label class="pxk-field-lbl">Bộ phận / Chuyền <span class="pxk-star">*</span></label>
+                  <select class="pxk-input"><option>Chuyền 1 - Xưởng may</option><option>Chuyền 2 - Xưởng chặt</option></select>
+                </div>
+                <div class="pxk-field">
+                  <label class="pxk-field-lbl">Số phiếu <span class="pxk-star">*</span></label>
+                  <input type="text" class="pxk-input" value="PXK-TC-00000001">
+                </div>
+                <div class="pxk-field">
+                  <label class="pxk-field-lbl">Ngày xuất <span class="pxk-star">*</span></label>
+                  <input type="date" class="pxk-input" value="2026-10-14">
+                </div>
+                <div class="pxk-field">
+                  <label class="pxk-field-lbl">Đơn vị nhận</label>
+                  <input type="text" class="pxk-input" placeholder="Đơn vị / khách hàng" value="Kho Long An">
+                </div>
+              </div>
+              <small style="color: #065f46; display: block; margin-top: 4px;">✨ Chia 4 cột cân bằng hoàn hảo, nhãn nằm ngay ngắn trên đầu ô, hiệu ứng Focus viền xanh đậm đà.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-body">
+        <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a;">🔍 Phân Tích Kỹ Thuật:</h3>
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th width="25%">Đặc tính kỹ thuật</th>
+              <th width="35%">Thuộc tính CSS phụ trách</th>
+              <th width="40%">Lợi ích thực tế</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Lưới Grid 4 cột</td>
+              <td><span class="tag-prop">grid-template-columns: repeat(4, 1fr)</span></td>
+              <td>Đảm bảo dù độ phân giải màn hình máy tính của xưởng là bao nhiêu thì 4 ô luôn rộng bằng nhau 100%, không bị xô lệch.</td>
+            </tr>
+            <tr>
+              <td>Dấu sao bắt buộc</td>
+              <td><span class="tag-prop">.pxk-star { color: #ea580c; font-weight: 700; }</span></td>
+              <td>Màu cam đỏ nổi bật nhắc nhở thủ kho 3 trường bắt buộc: Chuyền, Số phiếu, Ngày xuất để không bị lỗi lưu phiếu.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         KHỐI 4: THANH ĐỊA CHỈ IN ĐẦU PHIẾU
+         ======================================================== -->
+    <section class="comp-section" id="sec-addr">
+      <div class="comp-header">
+        <h2><span>📍 Khối 4: Thanh Địa Chỉ In Đầu Phiếu (Tân Nhựt / Long An)</span></h2>
+        <span class="badge-tag">Flex Alignment & SVG</span>
+      </div>
+
+      <div class="split-grid">
+        <div class="code-col">
+          <div class="code-box-title"><span>📄 Code HTML</span></div>
+          <pre><code class="code-html">&lt;div class="pxk-address-bar"&gt;
+  &lt;span class="pxk-addr-lbl"&gt;Địa chỉ in đầu phiếu&lt;/span&gt;
+  &lt;input type="text" class="pxk-addr-input" 
+         value="A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM"&gt;
+  &lt;button type="button" class="pxk-addr-pill active"&gt;
+    &lt;svg class="pxk-pin-svg" width="13" height="13" ...&gt;...&lt;/svg&gt;
+    Tân Nhựt (mặc định)
+  &lt;/button&gt;
+  &lt;button type="button" class="pxk-addr-pill"&gt;
+    &lt;svg class="pxk-pin-svg" width="13" height="13" ...&gt;...&lt;/svg&gt;
+    KCN Hòa Bình, Long An
+  &lt;/button&gt;
+&lt;/div&gt;</code></pre>
+
+          <div class="code-box-title" style="margin-top: 16px;"><span>🎨 Code CSS Cốt Lõi</span></div>
+          <pre><code class="code-css">.pxk-address-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pxk-addr-input {
+  flex: 1;                 /* Co giãn lấp đầy không gian */
+  min-width: 300px;
+  height: 36px;
+  border-radius: 6px;
+}
+.pxk-addr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;                /* Khoảng cách giữa icon ghim và text */
+  border-radius: 9999px;
+  padding: 0 16px;
+  height: 34px;
+}
+.pxk-addr-pill.active {
+  border: 1.5px solid #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}</code></pre>
+        </div>
+
+        <div class="preview-col">
+          <div class="preview-card">
+            <div class="preview-card-header header-raw">
+              <span>❌ KHI CHỈ CÓ HTML THUẦN</span>
+              <span>Chưa CSS</span>
+            </div>
+            <div class="preview-card-body">
+              <iframe class="raw-iframe" style="height: 60px;" srcdoc='
+                <div>
+                  <span>Địa chỉ in đầu phiếu</span>
+                  <input type="text" value="A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM">
+                  <button type="button">Tân Nhựt (mặc định)</button>
+                  <button type="button">KCN Hòa Bình, Long An</button>
+                </div>
+              '></iframe>
+              <small style="color: #991b1b; display: block; margin-top: 4px;">⚠️ Địa chỉ dài bị khuất chữ trong ô input hẹp; 2 nút bấm không có trạng thái phân biệt.</small>
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-card-header header-styled">
+              <span>✅ KHI ĐÃ ÁP DỤNG CSS (Giao diện thực tế)</span>
+              <span>Đã có CSS</span>
+            </div>
+            <div class="preview-card-body live-scope">
+              <div class="pxk-address-bar">
+                <span class="pxk-addr-lbl">Địa chỉ in đầu phiếu</span>
+                <input type="text" id="demo-addr-input" class="pxk-addr-input" value="A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM">
+                <button type="button" class="pxk-addr-pill active" onclick="demoSelectAddr(this, 'A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM')">
+                  <svg class="pin-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  Tân Nhựt (mặc định)
+                </button>
+                <button type="button" class="pxk-addr-pill" onclick="demoSelectAddr(this, 'Lô B1-1 KCN Hòa Bình, Huyện Thủ Thừa, Tỉnh Long An')">
+                  <svg class="pin-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  KCN Hòa Bình, Long An
+                </button>
+              </div>
+              <small style="color: #065f46; display: block; margin-top: 4px;">✨ Ô input dài thoáng đãng, nút chọn nhanh gắn icon bản đồ chuyên nghiệp, click để đổi trực tiếp.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-body">
+        <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a;">🔍 Phân Tích Kỹ Thuật:</h3>
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th width="25%">Đặc tính kỹ thuật</th>
+              <th width="35%">Thuộc tính CSS phụ trách</th>
+              <th width="40%">Lợi ích thực tế</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Gắn kết SVG và Văn bản</td>
+              <td><span class="tag-prop">display: inline-flex; align-items: center; gap: 6px;</span></td>
+              <td>Biểu tượng ghim bản đồ SVG được căn giữa chính xác từng pixel với dòng chữ, không bị lệch mép trên/dưới.</td>
+            </tr>
+            <tr>
+              <td>Co giãn linh hoạt</td>
+              <td><span class="tag-prop">flex: 1; min-width: 300px;</span></td>
+              <td>Người dùng đọc trọn vẹn toàn bộ câu địa chỉ dài của xưởng mà không cần phải dùng phím mũi tên cuộn ngang.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         KHỐI 5: THANH CÔNG CỤ THAO TÁC BẢNG
+         ======================================================== -->
+    <section class="comp-section" id="sec-toolbar">
+      <div class="comp-header">
+        <h2><span>🛠️ Khối 5: Thanh Công Cụ Thao Tác Bảng (Table Toolbar)</span></h2>
+        <span class="badge-tag">Visual Hierarchy</span>
+      </div>
+
+      <div class="split-grid">
+        <div class="code-col">
+          <div class="code-box-title"><span>📄 Code HTML</span></div>
+          <pre><code class="code-html">&lt;div class="table-toolbar"&gt;
+  &lt;!-- CỤM TRÁI: DÒNG DỮ LIỆU --&gt;
+  &lt;div class="btn-group"&gt;
+    &lt;button class="btn btn-outline"&gt;➕ Thêm dòng&lt;/button&gt;
+    &lt;button class="btn btn-outline"&gt;➖ Xóa dòng cuối&lt;/button&gt;
+    &lt;button class="btn btn-outline"&gt;🔄 Làm mới form&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;!-- Ở GIỮA: MẸO EXCEL --&gt;
+  &lt;div style="font-size: 11px; color: #64748b;"&gt;
+    💡 &lt;em&gt;Mẹo: Bạn có thể copy nguyên khối từ Excel rồi bấm Ctrl+V.&lt;/em&gt;
+  &lt;/div&gt;
+
+  &lt;!-- CỤM PHẢI: HÀNH ĐỘNG THỰC THI --&gt;
+  &lt;div class="btn-group"&gt;
+    &lt;button class="btn btn-primary"&gt;🖨️ In Phiếu A5 (Máy in kim)&lt;/button&gt;
+    &lt;button class="btn btn-success"&gt;💾 Lưu Phiếu&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+
+          <div class="code-box-title" style="margin-top: 16px;"><span>🎨 Code CSS Cốt Lõi</span></div>
+          <pre><code class="code-css">.table-toolbar {
+  display: flex;
+  justify-content: space-between; /* Đẩy 2 cụm nút sang 2 mép đối diện */
+  align-items: center;
+  gap: 8px;
+}
+.btn-outline {
+  background: #fff;
+  border-color: #cbd5e1;          /* Nút phụ: Nền trắng dịu mắt */
+  color: #0f172a;
+}
+.btn-primary {
+  background: #1e3a8a;            /* Nút In A5: Xanh Navy trang trọng */
+  color: #fff;
+}
+.btn-success {
+  background: #15803d;            /* Nút Lưu: Xanh lá cây an toàn */
+  color: #fff;
+}</code></pre>
+        </div>
+
+        <div class="preview-col">
+          <div class="preview-card">
+            <div class="preview-card-header header-raw">
+              <span>❌ KHI CHỈ CÓ HTML THUẦN</span>
+              <span>Chưa CSS</span>
+            </div>
+            <div class="preview-card-body">
+              <iframe class="raw-iframe" style="height: 60px;" srcdoc='
+                <div>
+                  <button>➕ Thêm dòng</button>
+                  <button>➖ Xóa dòng cuối</button>
+                  <button>🔄 Làm mới form</button>
+                  <span>💡 Mẹo: copy từ Excel...</span>
+                  <button>🖨️ In Phiếu A5</button>
+                  <button>💾 Lưu Phiếu</button>
+                </div>
+              '></iframe>
+              <small style="color: #991b1b; display: block; margin-top: 4px;">⚠️ Các nút dính chùm vào góc trái, cùng màu xám như nhau, rất dễ bấm nhầm giữa xóa dòng và lưu phiếu.</small>
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-card-header header-styled">
+              <span>✅ KHI ĐÃ ÁP DỤNG CSS (Giao diện thực tế)</span>
+              <span>Đã có CSS</span>
+            </div>
+            <div class="preview-card-body live-scope">
+              <div class="table-toolbar">
+                <div class="btn-group">
+                  <button type="button" class="btn btn-outline">➕ Thêm dòng</button>
+                  <button type="button" class="btn btn-outline">➖ Xóa dòng cuối</button>
+                  <button type="button" class="btn btn-outline">🔄 Làm mới form</button>
+                </div>
+                <div style="font-size: 11px; color: #64748b;">
+                  💡 <em>Mẹo: Bạn có thể copy từ Excel rồi Ctrl+V vào ô bất kỳ.</em>
+                </div>
+                <div class="btn-group">
+                  <button type="button" class="btn btn-primary">🖨️ In Phiếu A5 (Máy in kim)</button>
+                  <button type="button" class="btn btn-success">💾 Lưu Phiếu</button>
+                </div>
+              </div>
+              <small style="color: #065f46; display: block; margin-top: 4px;">✨ Dàn đều 2 bên, phân biệt màu sắc hành động rõ ràng: Thao tác phụ màu trắng, In ấn màu xanh, Lưu màu xanh lá.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-body">
+        <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a;">🔍 Phân Tích Kỹ Thuật:</h3>
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th width="25%">Đặc tính kỹ thuật</th>
+              <th width="35%">Thuộc tính CSS phụ trách</th>
+              <th width="40%">Lợi ích thực tế</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Phân cấp thị giác (Visual Hierarchy)</td>
+              <td><span class="tag-prop">.btn-primary / .btn-success / .btn-outline</span></td>
+              <td>Người dùng không bao giờ bấm nhầm "Xóa dòng" khi đang muốn "Lưu phiếu" nhờ màu xanh lá đặc trưng.</td>
+            </tr>
+            <tr>
+              <td>Bố cục đối xứng 2 đầu</td>
+              <td><span class="tag-prop">justify-content: space-between</span></td>
+              <td>Tạo khoảng thở ở giữa để hiển thị hướng dẫn mẹo phím tắt, giao diện thoáng đãng, chuyên nghiệp.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         KHỐI 6: BẢNG LƯỚI NHẬP LIỆU EXCEL
+         ======================================================== -->
+    <section class="comp-section" id="sec-table">
+      <div class="comp-header">
+        <h2><span>📊 Khối 6: Bảng Nhập Liệu Kiểu Excel (Sticky Thead & Inset Focus)</span></h2>
+        <span class="badge-tag">Spreadsheet Experience</span>
+      </div>
+
+      <div class="split-grid">
+        <div class="code-col">
+          <div class="code-box-title"><span>📄 Code HTML (Cấu trúc Table)</span></div>
+          <pre><code class="code-html">&lt;div class="excel-table-container"&gt;
+  &lt;table class="excel-table"&gt;
+    &lt;thead&gt;
+      &lt;tr&gt;
+        &lt;th class="th-stt-col"&gt;STT&lt;/th&gt;
+        &lt;th class="th-po-col"&gt;Mã Đơn (PO)&lt;/th&gt;
+        &lt;th class="th-ma-col"&gt;Mã Hàng&lt;/th&gt;
+        &lt;th class="th-chitiet-col"&gt;Chi Tiết / Màu&lt;/th&gt;
+        &lt;th class="th-dvt-col"&gt;ĐVT&lt;/th&gt;
+        &lt;th class="th-size-col"&gt;&lt;input class="size-header-input" value="38"&gt;&lt;/th&gt;
+        &lt;th class="th-size-col"&gt;&lt;input class="size-header-input" value="39"&gt;&lt;/th&gt;
+        &lt;th class="th-total-col"&gt;TỔNG&lt;/th&gt;
+      &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+      &lt;tr&gt;
+        &lt;td class="text-center"&gt;1&lt;/td&gt;
+        &lt;td&gt;&lt;input class="excel-cell" value="PO-9921"&gt;&lt;/td&gt;
+        &lt;td&gt;&lt;input class="excel-cell" value="MH-01"&gt;&lt;/td&gt;
+        &lt;td&gt;&lt;input class="excel-cell" value="Quai Đen"&gt;&lt;/td&gt;
+        &lt;td&gt;&lt;input class="excel-cell cell-center" value="Đôi"&gt;&lt;/td&gt;
+        &lt;td&gt;&lt;input class="excel-cell size-val-cell" value="120"&gt;&lt;/td&gt;
+        &lt;td&gt;&lt;input class="excel-cell size-val-cell" value="250"&gt;&lt;/td&gt;
+        &lt;td&gt;&lt;input class="excel-cell cell-right" readonly value="370"&gt;&lt;/td&gt;
+      &lt;/tr&gt;
+    &lt;/tbody&gt;
+  &lt;/table&gt;
+&lt;/div&gt;</code></pre>
+
+          <div class="code-box-title" style="margin-top: 16px;"><span>🎨 Code CSS Cốt Lõi</span></div>
+          <pre><code class="code-css">.excel-table {
+  border-collapse: collapse;   /* Triệt tiêu khe hở đôi giữa các ô */
+}
+.excel-table th {
+  position: sticky; top: 0;   /* Ghim chặt tiêu đề khi cuộn dọc */
+  background: #e2e8f0;
+  border: 1px solid #94a3b8;
+  z-index: 10;
+}
+.excel-table td {
+  padding: 0;                  /* Ô td không padding để input lấp 100% */
+}
+.excel-cell {
+  width: 100%; height: 100%;
+  border: none; outline: none; /* Bỏ viền mặc định của input */
+  padding: 4px 6px;
+}
+.excel-cell:focus {
+  background: #eff6ff;
+  box-shadow: inset 0 0 0 2px #2563eb; /* Khung viền chọn ô của Excel */
+}</code></pre>
+        </div>
+
+        <div class="preview-col">
+          <div class="preview-card">
+            <div class="preview-card-header header-raw">
+              <span>❌ KHI CHỈ CÓ HTML THUẦN</span>
+              <span>Chưa CSS</span>
+            </div>
+            <div class="preview-card-body">
+              <iframe class="raw-iframe" style="height: 125px;" srcdoc='
+                <table border="1">
+                  <tr>
+                    <th>STT</th><th>Mã Đơn (PO)</th><th>Size 38</th><th>Size 39</th><th>TỔNG</th>
+                  </tr>
+                  <tr>
+                    <td>1</td>
+                    <td><input type="text" value="PO-9921"></td>
+                    <td><input type="text" value="120"></td>
+                    <td><input type="text" value="250"></td>
+                    <td><input type="text" value="370"></td>
+                  </tr>
+                </table>
+              '></iframe>
+              <small style="color: #991b1b; display: block; margin-top: 4px;">⚠️ Viền đôi cổ điển, ô input bị lọt thỏm giữa ô td, viền đen bao quanh trông rất thô.</small>
+            </div>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-card-header header-styled">
+              <span>✅ KHI ĐÃ ÁP DỤNG CSS (Giao diện thực tế - Nhấp thử vào ô!)</span>
+              <span>Đã có CSS</span>
+            </div>
+            <div class="preview-card-body live-scope">
+              <div class="excel-table-container">
+                <table class="excel-table">
+                  <thead>
+                    <tr>
+                      <th class="th-stt-col">STT</th>
+                      <th class="th-po-col">Mã Đơn (PO)</th>
+                      <th class="th-ma-col">Mã Hàng</th>
+                      <th class="th-chitiet-col">Chi Tiết / Màu</th>
+                      <th class="th-dvt-col">ĐVT</th>
+                      <th class="th-size-col"><input class="size-header-input" value="38" title="Click để sửa size"></th>
+                      <th class="th-size-col"><input class="size-header-input" value="39" title="Click để sửa size"></th>
+                      <th class="th-total-col">TỔNG</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="text-align: center; font-weight: 600; color: #64748b;">1</td>
+                      <td><input class="excel-cell" value="PO-9921"></td>
+                      <td><input class="excel-cell" value="MH-01"></td>
+                      <td><input class="excel-cell" value="Quai Đen"></td>
+                      <td><input class="excel-cell cell-center" value="Đôi"></td>
+                      <td><input class="excel-cell size-val-cell" value="120"></td>
+                      <td><input class="excel-cell size-val-cell" value="250"></td>
+                      <td><input class="excel-cell cell-right" readonly value="370" style="font-weight: 700; color: #1e3a8a;"></td>
+                    </tr>
+                    <tr class="selected-row">
+                      <td style="text-align: center; font-weight: 600; color: #64748b;">2</td>
+                      <td><input class="excel-cell" value="PO-9922"></td>
+                      <td><input class="excel-cell" value="MH-02"></td>
+                      <td><input class="excel-cell" value="Lót Đỏ"></td>
+                      <td><input class="excel-cell cell-center" value="Đôi"></td>
+                      <td><input class="excel-cell size-val-cell" value="300"></td>
+                      <td><input class="excel-cell size-val-cell" value="150"></td>
+                      <td><input class="excel-cell cell-right" readonly value="450" style="font-weight: 700; color: #1e3a8a;"></td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="5" style="text-align: center;">CỘNG CHÂN BẢNG</td>
+                      <td style="text-align: center;">420</td>
+                      <td style="text-align: center;">400</td>
+                      <td style="text-align: right; color: #b91c1c;">820</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <small style="color: #065f46; display: block; margin-top: 4px;">✨ Hãy nhấp vào các ô trên: con trỏ ôm trọn viền xanh (Inset Focus), dòng 2 sáng xanh lam, header sticky cố định.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analysis-body">
+        <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a;">🔍 Phân Tích Kỹ Thuật:</h3>
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th width="25%">Đặc tính kỹ thuật</th>
+              <th width="35%">Thuộc tính CSS phụ trách</th>
+              <th width="40%">Lợi ích thực tế</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ghim dòng tiêu đề cố định</td>
+              <td><span class="tag-prop">position: sticky; top: 0; z-index: 10;</span></td>
+              <td>Khi nhập bảng dài 50-100 dòng, người dùng cuộn chuột xuống dưới vẫn nhìn thấy rõ tên từng cột size.</td>
+            </tr>
+            <tr>
+              <td>Trải nghiệm ô tính Excel</td>
+              <td><span class="tag-prop">box-shadow: inset 0 0 0 2px #2563eb</span></td>
+              <td>Tạo đường viền nét xanh bên trong lòng ô, biến web thành bảng tính Excel đích thực, nhập liệu siêu tốc.</td>
+            </tr>
+            <tr>
+              <td>Độ rộng cột cố định</td>
+              <td><span class="tag-prop">width: 135px; min-width: 135px;</span></td>
+              <td>Khóa chết kích thước cột để khi gõ các mã hàng dài ngắn khác nhau, các cột không bị giật rung lay chuyển.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         KHỐI 7: TOÀN BỘ TAB LẬP PHIẾU XUẤT KHO HOÀN CHỈNH
+         ======================================================== -->
+    <section class="comp-section" id="sec-full">
+      <div class="comp-header">
+        <h2><span>🌟 Toàn Bộ Giao Diện Hoàn Chỉnh Tab Lập Phiếu Xuất Kho (Full Live Demo)</span></h2>
+        <span class="badge-tag" style="background: #dcfce7; color: #15803d;">Tương tác thực tế 100%</span>
+      </div>
+
+      <div style="padding: 24px;" class="live-scope">
+        <div class="card">
+          <div class="pxk-ui-panel">
+            <!-- DÒNG 1: MẪU PHIẾU -->
+            <div class="pxk-row-mau">
+              <span class="pxk-lbl-mau">MẪU PHIẾU</span>
+              <div class="pxk-seg-group">
+                <button type="button" class="pxk-seg-btn" onclick="switchFullMau(1, this)">1. Có đơn giá</button>
+                <button type="button" class="pxk-seg-btn" onclick="switchFullMau(2, this)">2. Không đơn giá</button>
+                <button type="button" class="pxk-seg-btn active" onclick="switchFullMau(3, this)">3. Size Run</button>
+              </div>
+              <span class="pxk-txt-desc" id="full-mau-desc">Cột: STT, PO, Màu, ĐVT, dải size, Tổng · Cộng ngang theo size, cộng dọc chân cột</span>
+            </div>
+
+            <!-- DÒNG 2: DẢI SIZE -->
+            <div class="pxk-row-size" id="full-size-box">
+              <div class="pxk-size-bar">
+                <span class="pxk-lbl-size">Dải size</span>
+                <input type="text" id="full-size-input" class="pxk-size-input" value="35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49">
+                <button type="button" class="pxk-size-pill active" onclick="setQuickSize('lt')">LT</button>
+                <button type="button" class="pxk-size-pill" onclick="setQuickSize('jiayu')">JiaYu</button>
+                <button type="button" class="pxk-size-step">+</button>
+                <button type="button" class="pxk-size-step">−</button>
+                <button type="button" class="pxk-size-btn-apply">Áp dụng</button>
+              </div>
+              <div class="pxk-size-hint">
+                💡 Mẹo: click tiêu đề ô size trên bảng để sửa thành size lẻ (36.5...) hoặc tên tùy ý.
+              </div>
+            </div>
+
+            <!-- DÒNG 3 & 4: 8 Ô NHẬP LIỆU -->
+            <div class="pxk-fields-grid">
+              <div class="pxk-field">
+                <label class="pxk-field-lbl">Bộ phận / Chuyền <span class="pxk-star">*</span></label>
+                <select class="pxk-input">
+                  <option>Chuyền 1 - Thành phẩm</option>
+                  <option>Chuyền 2 - May</option>
+                  <option>Tổ chặt Long An</option>
+                </select>
+              </div>
+              <div class="pxk-field">
+                <label class="pxk-field-lbl">Số phiếu <span class="pxk-star">*</span></label>
+                <input type="text" class="pxk-input" value="PXK-TC-00000001">
+              </div>
+              <div class="pxk-field">
+                <label class="pxk-field-lbl">Ngày xuất <span class="pxk-star">*</span></label>
+                <input type="date" class="pxk-input" value="2026-10-14">
+              </div>
+              <div class="pxk-field">
+                <label class="pxk-field-lbl">Đơn vị nhận</label>
+                <input type="text" class="pxk-input" placeholder="Đơn vị / khách hàng" value="Kho Ngoại Quan Long An">
+              </div>
+
+              <div class="pxk-field">
+                <label class="pxk-field-lbl">Bộ phận xuất kho</label>
+                <input type="text" class="pxk-input" placeholder="Tổ chặt, Chuyền may..." value="Kho Thành Phẩm D&D">
+              </div>
+              <div class="pxk-field">
+                <label class="pxk-field-lbl">Đơn hàng</label>
+                <input type="text" class="pxk-input" placeholder="Mã đơn hàng / PO" value="PO-EXPORT-2026">
+              </div>
+              <div class="pxk-field">
+                <label class="pxk-field-lbl">Lý do xuất</label>
+                <input type="text" class="pxk-input" placeholder="Lý do xuất hàng" value="Xuất hàng thành phẩm xuất khẩu đợt 1">
+              </div>
+              <div class="pxk-field">
+                <label class="pxk-field-lbl">Người lập biểu</label>
+                <input type="text" class="pxk-input" placeholder="Tên người lập" value="Nguyễn Văn A">
+              </div>
+            </div>
+
+            <!-- DÒNG 5: ĐỊA CHỈ IN -->
+            <div class="pxk-address-bar">
+              <span class="pxk-addr-lbl">Địa chỉ in đầu phiếu</span>
+              <input type="text" id="full-addr-input" class="pxk-addr-input" value="A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM">
+              <button type="button" class="pxk-addr-pill active" id="pill-tn" onclick="setFullAddr('A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM', this)">
+                <svg class="pin-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                Tân Nhựt (mặc định)
+              </button>
+              <button type="button" class="pxk-addr-pill" id="pill-la" onclick="setFullAddr('Lô B1-1 KCN Hòa Bình, Huyện Thủ Thừa, Tỉnh Long An', this)">
+                <svg class="pin-icon" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                KCN Hòa Bình, Long An
+              </button>
+            </div>
+          </div>
+
+          <!-- THANH CÔNG CỤ -->
+          <div class="table-toolbar" style="margin-top: 14px;">
+            <div class="btn-group">
+              <button type="button" class="btn btn-outline">➕ Thêm dòng</button>
+              <button type="button" class="btn btn-outline">➖ Xóa dòng cuối</button>
+              <button type="button" class="btn btn-outline">🔄 Làm mới form</button>
+            </div>
+            <div style="font-size: 11px; color: #64748b;">
+              💡 <em>Mẹo: Bạn có thể copy nguyên khối từ Excel rồi bấm Ctrl+V vào ô bất kỳ. Phím mũi tên để nhảy ô.</em>
+            </div>
+            <div class="btn-group">
+              <button type="button" class="btn btn-primary">🖨️ In Phiếu A5 (Máy in kim)</button>
+              <button type="button" class="btn btn-success">💾 Lưu Phiếu</button>
+            </div>
+          </div>
+
+          <!-- BẢNG GRID EXCEL ĐẦY ĐỦ -->
+          <div class="excel-table-container">
+            <table class="excel-table">
+              <thead>
+                <tr>
+                  <th class="th-stt-col">STT</th>
+                  <th class="th-po-col">Mã Đơn (PO)</th>
+                  <th class="th-ma-col">Mã Hàng</th>
+                  <th class="th-chitiet-col">Chi Tiết / Màu</th>
+                  <th class="th-dvt-col">ĐVT</th>
+                  <th class="th-size-col"><input class="size-header-input" value="35"></th>
+                  <th class="th-size-col"><input class="size-header-input" value="36"></th>
+                  <th class="th-size-col"><input class="size-header-input" value="37"></th>
+                  <th class="th-size-col"><input class="size-header-input" value="38"></th>
+                  <th class="th-size-col"><input class="size-header-input" value="39"></th>
+                  <th class="th-size-col"><input class="size-header-input" value="40"></th>
+                  <th class="th-size-col"><input class="size-header-input" value="41"></th>
+                  <th class="th-size-col"><input class="size-header-input" value="42"></th>
+                  <th class="th-total-col">TỔNG</th>
+                  <th>Ghi Chú</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="text-align: center; color: #64748b;">1</td>
+                  <td><input class="excel-cell" value="PO-NIKE-01"></td>
+                  <td><input class="excel-cell" value="NK-AIR-MAX"></td>
+                  <td><input class="excel-cell" value="Đen Trắng"></td>
+                  <td><input class="excel-cell cell-center" value="Đôi"></td>
+                  <td><input class="excel-cell size-val-cell" value="10"></td>
+                  <td><input class="excel-cell size-val-cell" value="25"></td>
+                  <td><input class="excel-cell size-val-cell" value="40"></td>
+                  <td><input class="excel-cell size-val-cell" value="80"></td>
+                  <td><input class="excel-cell size-val-cell" value="95"></td>
+                  <td><input class="excel-cell size-val-cell" value="50"></td>
+                  <td><input class="excel-cell size-val-cell" value="30"></td>
+                  <td><input class="excel-cell size-val-cell" value="15"></td>
+                  <td><input class="excel-cell cell-right" readonly value="345" style="font-weight: 700; color: #1e3a8a;"></td>
+                  <td><input class="excel-cell" value="Đạt chuẩn kiểm QC"></td>
+                </tr>
+                <tr>
+                  <td style="text-align: center; color: #64748b;">2</td>
+                  <td><input class="excel-cell" value="PO-ADIDAS-09"></td>
+                  <td><input class="excel-cell" value="ADI-BOOST"></td>
+                  <td><input class="excel-cell" value="Xanh Dương"></td>
+                  <td><input class="excel-cell cell-center" value="Đôi"></td>
+                  <td><input class="excel-cell size-val-cell" value="5"></td>
+                  <td><input class="excel-cell size-val-cell" value="15"></td>
+                  <td><input class="excel-cell size-val-cell" value="30"></td>
+                  <td><input class="excel-cell size-val-cell" value="60"></td>
+                  <td><input class="excel-cell size-val-cell" value="70"></td>
+                  <td><input class="excel-cell size-val-cell" value="45"></td>
+                  <td><input class="excel-cell size-val-cell" value="20"></td>
+                  <td><input class="excel-cell size-val-cell" value="10"></td>
+                  <td><input class="excel-cell cell-right" readonly value="255" style="font-weight: 700; color: #1e3a8a;"></td>
+                  <td><input class="excel-cell" value="Kiểm tra lại PO"></td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="5" style="text-align: center;">CỘNG TỔNG DẢI SIZE</td>
+                  <td style="text-align: center;">15</td>
+                  <td style="text-align: center;">40</td>
+                  <td style="text-align: center;">70</td>
+                  <td style="text-align: center;">140</td>
+                  <td style="text-align: center;">165</td>
+                  <td style="text-align: center;">95</td>
+                  <td style="text-align: center;">50</td>
+                  <td style="text-align: center;">25</td>
+                  <td style="text-align: right; color: #b91c1c; font-size: 13px;">600</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         KHỐI 8: CƠ CHẾ CĂN CHỈNH & TÁC ĐỘNG MÁY IN KIM A5
+         ======================================================== -->
+    <section class="comp-section" id="sec-print">
+      <div class="comp-header">
+        <h2><span>🖨️ Khối 8: Cơ Chế Căn Chỉnh & Tác Động Máy In Kim Khổ A5 (@media print)</span></h2>
+        <span class="badge-tag" style="background: #fef3c7; color: #92400e;">Dot Matrix Printer Engineering</span>
+      </div>
+
+      <div class="split-grid">
+        <!-- CỘT TRÁI: CODE IN ẤN -->
+        <div class="code-col">
+          <div class="code-box-title">
+            <span>📄 Code CSS Định Tuyến Máy In (print.css)</span>
+          </div>
+          <pre><code class="code-css">/* 1. TRIỆT TIÊU LỀ MẶC ĐỊNH & NHẢ CHỌN NGANG/DỌC */
+@page {
+  size: auto;
+  margin: 0mm !important; /* Xóa lề để triệt tiêu Header/Footer rác của browser */
+}
+
+/* 2. CĂN CHỈNH TỌA ĐỘ VẬT LÝ KHỔ A5 NGANG */
+.print-page {
+  width: 100% !important;
+  /* Dời nội dung sang trái 5mm (0.5cm): Trái 11mm, Phải 21mm */
+  padding: 7mm 21mm 2mm 11mm !important; 
+  page-break-inside: avoid; /* Ép không bao giờ nhảy trang */
+  font-family: "Times New Roman", Times, serif !important;
+}
+
+/* 3. CÁCH LY VÙNG IN TUYỆT ĐỐI */
+@media print {
+  body * { visibility: hidden; }
+  #print-section, #print-section * { visibility: visible; }
+  #print-section {
+    position: absolute; left: 0; top: 0; width: 100%;
+    color: #000000 !important;
+    background: transparent !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}
+
+/* 4. ÉP NÉT KIM ĐEN ĐẬM 1PX - KHÔNG DÙNG NỀN MÀU */
+table.p-table th, table.p-table td {
+  border: 1px solid #000000 !important;
+  color: #000000 !important;
+  background: transparent !important;
+  padding: 2px 2px !important;
+}</code></pre>
+
+          <div class="code-box-title" style="margin-top: 16px;">
+            <span>⚡ Code JS Tác Động Máy In (app.js)</span>
+          </div>
+          <pre><code class="code-html">// 1. TỰ ĐỘNG LỌC CỘT SIZE THỰC TẾ (Chỉ in size có số lượng)
+const sizesWithData = AppState.selectedSizes.filter(s => {
+  return AppState.rows.some(r => parseVnNumber(r.sizes[s]) > 0);
+});
+if (sizesWithData.length > 0) activeSizes = sizesWithData;
+
+// 2. XÓA TIÊU ĐỀ TRANG ĐỂ KHÔNG IN LINK WEB
+const prevTitle = document.title;
+document.title = ''; // Làm sạch mép giấy
+window.print();
+setTimeout(() => { document.title = prevTitle; }, 1000);</code></pre>
+        </div>
+
+        <!-- CỘT PHẢI: MÔ PHỎNG GIẤY IN KIM A5 LIÊN TỤC -->
+        <div class="preview-col" style="background: #0f172a;">
+          <div class="print-controls-bar">
+            <span style="font-weight: 700; font-size: 13px; color: #38bdf8;">⚙️ BỘ CĂN CHỈNH LỀ MÁY IN THỰC TẾ:</span>
+            <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+              <div class="print-slider-group">
+                <label>Lề Trái:</label>
+                <input type="range" id="sim-pad-left" min="0" max="25" value="11" oninput="updateSimPadding()">
+                <span class="print-slider-val" id="val-pad-left">11mm</span>
+              </div>
+              <div class="print-slider-group">
+                <label>Lề Phải:</label>
+                <input type="range" id="sim-pad-right" min="5" max="35" value="21" oninput="updateSimPadding()">
+                <span class="print-slider-val" id="val-pad-right">21mm</span>
+              </div>
+              <div class="print-slider-group">
+                <label>Lề Trên:</label>
+                <input type="range" id="sim-pad-top" min="0" max="20" value="7" oninput="updateSimPadding()">
+                <span class="print-slider-val" id="val-pad-top">7mm</span>
+              </div>
+            </div>
+            <button type="button" class="btn btn-success" style="padding: 4px 10px; font-size: 11px;" onclick="window.print()">
+              🖨️ Thử In Thật (Ctrl+P)
+            </button>
+          </div>
+
+          <!-- MÔ HÌNH TỜ GIẤY IN KIM LIÊN TỤC -->
+          <div class="print-simulator-wrap">
+            <div class="sim-paper-sheet">
+              <!-- HÀNG LỖ ĐỤC MÁY IN BÊN TRÁI -->
+              <div class="sim-perf-margin left">
+                <div class="sim-feed-hole"></div><div class="sim-feed-hole"></div><div class="sim-feed-hole"></div>
+                <div class="sim-feed-hole"></div><div class="sim-feed-hole"></div><div class="sim-feed-hole"></div>
+                <div class="sim-feed-hole"></div><div class="sim-feed-hole"></div><div class="sim-feed-hole"></div>
+                <div class="sim-feed-hole"></div><div class="sim-feed-hole"></div><div class="sim-feed-hole"></div>
+              </div>
+
+              <!-- VÙNG NỘI DUNG IN CHÍNH BÊN TRONG -->
+              <div class="sim-print-content" id="sim-sheet-content">
+                <!-- VÙNG CẢNH BÁO LỀ PHẢI AN TOÀN -->
+                <div class="sim-danger-zone" id="sim-danger-guide">
+                  <span class="sim-danger-text">KHOẢNG CÁCH AN TOÀN TRÁNH ĐỤC LỖ KIM (21mm)</span>
+                </div>
+
+                <!-- ĐẦU PHIẾU -->
+                <div style="text-align: center; margin-bottom: 4px;">
+                  <div style="font-size: 11pt; font-weight: bold; text-transform: uppercase;">CÔNG TY TNHH GIA CÔNG THƯƠNG MẠI D&D LONG AN</div>
+                  <div style="font-size: 8.5pt; display: flex; justify-content: space-between; margin-top: 2px;">
+                    <div><strong>Địa chỉ:</strong> A8/21C Bông Văn Dĩa, Xã Tân Nhựt, TP. HCM</div>
+                    <div><strong>MST:</strong> 1102116809</div>
+                  </div>
+                </div>
+
+                <!-- TIÊU ĐỀ PHIẾU -->
+                <div style="text-align: center; margin: 4px 0 6px 0;">
+                  <div style="font-size: 18pt; font-weight: bold; letter-spacing: 0.5px;">PHIẾU XUẤT KHO</div>
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5pt; margin-top: 2px;">
+                    <div style="font-style: italic;">Ngày 14 tháng 10 năm 2026</div>
+                    <div style="font-weight: bold;">Số: PXK-TC-00000001</div>
+                  </div>
+                </div>
+
+                <!-- THÔNG TIN PHIẾU -->
+                <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; font-size: 9pt; gap: 3px 12px; margin-bottom: 8px;">
+                  <div><strong>Đơn vị nhận:</strong> Kho Ngoại Quan Long An</div>
+                  <div><strong>Bộ phận xuất kho:</strong> Kho Thành Phẩm D&D</div>
+                  <div><strong>Đơn hàng:</strong> PO-EXPORT-2026</div>
+                  <div><strong>Lý do xuất:</strong> Xuất thành phẩm giao đợt 1</div>
+                </div>
+
+                <!-- BẢNG HÀNG HÓA CO KHÍT -->
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 6px;">
+                  <thead>
+                    <tr style="background: transparent;">
+                      <th style="border: 1px solid #000; padding: 2px; width: 26px;">STT</th>
+                      <th style="border: 1px solid #000; padding: 2px; text-align: left;">PO</th>
+                      <th style="border: 1px solid #000; padding: 2px; text-align: center;">Mã hàng</th>
+                      <th style="border: 1px solid #000; padding: 2px;">Diễn giải</th>
+                      <th style="border: 1px solid #000; padding: 2px; width: 32px; text-align: center;">ĐVT</th>
+                      <th style="border: 1px solid #000; padding: 2px; width: 26px; text-align: center;">37</th>
+                      <th style="border: 1px solid #000; padding: 2px; width: 26px; text-align: center;">38</th>
+                      <th style="border: 1px solid #000; padding: 2px; width: 26px; text-align: center;">39</th>
+                      <th style="border: 1px solid #000; padding: 2px; width: 26px; text-align: center;">40</th>
+                      <th style="border: 1px solid #000; padding: 2px; width: 40px; text-align: center;">Tổng</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">1</td>
+                      <td style="border: 1px solid #000; padding: 2px;">PO-NIKE-01</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">NK-01</td>
+                      <td style="border: 1px solid #000; padding: 2px;">Quai Đen</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">Đôi</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">40</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">80</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">95</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">50</td>
+                      <td style="border: 1px solid #000; text-align: right; font-weight: bold; padding: 2px;">265</td>
+                    </tr>
+                    <tr style="font-weight: bold;">
+                      <td colspan="5" style="border: 1px solid #000; text-align: center; padding: 2px;">CỘNG TỔNG</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">40</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">80</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">95</td>
+                      <td style="border: 1px solid #000; text-align: center; padding: 2px;">50</td>
+                      <td style="border: 1px solid #000; text-align: right; padding: 2px;">265</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- KHUNG CHỮ KÝ 4 CỘT -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; margin-top: 10px; font-size: 9pt;">
+                  <div>
+                    <div style="font-weight: bold;">Người lập phiếu</div>
+                    <div style="height: 32px;"></div>
+                    <div style="font-style: italic;">Nguyễn Văn A</div>
+                  </div>
+                  <div>
+                    <div style="font-weight: bold;">Người giao</div>
+                    <div style="height: 32px;"></div>
+                    <div style="font-style: italic;">(Ký, ghi rõ họ tên)</div>
+                  </div>
+                  <div>
+                    <div style="font-weight: bold;">Người nhận</div>
+                    <div style="height: 32px;"></div>
+                    <div style="font-style: italic;">(Ký, ghi rõ họ tên)</div>
+                  </div>
+                  <div>
+                    <div style="font-weight: bold;">Giám đốc</div>
+                    <div style="height: 32px;"></div>
+                    <div style="font-style: italic;">(Ký, đóng dấu)</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- HÀNG LỖ ĐỤC MÁY IN BÊN PHẢI -->
+              <div class="sim-perf-margin right">
+                <div class="sim-feed-hole"></div><div class="sim-feed-hole"></div><div class="sim-feed-hole"></div>
+                <div class="sim-feed-hole"></div><div class="sim-feed-hole"></div><div class="sim-feed-hole"></div>
+                <div class="sim-feed-hole"></div><div class="sim-feed-hole"></div><div class="sim-feed-hole"></div>
+                <div class="sim-feed-hole"></div><div class="sim-feed-hole"></div><div class="sim-feed-hole"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHÂN TÍCH KỸ THUẬT MÁY IN -->
+      <div class="analysis-body">
+        <h3 style="font-size: 14px; font-weight: 700; color: #1e3a8a;">🔍 Bảng Phân Tích Kỹ Thuật Tác Động Cơ Học Máy In:</h3>
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th width="20%">Sự cố máy in thực tế</th>
+              <th width="35%">Thuộc tính CSS / Code JS khắc phục</th>
+              <th width="45%">Cơ chế tác động vào phần cứng máy in</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Kim đè vào lỗ đục làm rách giấy</strong></td>
+              <td><span class="tag-prop">padding: 7mm 21mm 2mm 11mm !important;</span></td>
+              <td>Dời lề phải vào trong <strong>21mm</strong>, tạo vùng đệm an toàn tuyệt đối, đầu kim không bao giờ gõ phạm vào hàng lỗ đục bên phải.</td>
+            </tr>
+            <tr>
+              <td><strong>Bị nhảy trang trắng (Trang 2 thừa)</strong></td>
+              <td><span class="tag-prop">page-break-inside: avoid; margin: 0mm;</span></td>
+              <td>Khóa chết chiều cao nội dung vừa trọn 1 trang giấy A5 ngang (148mm x 210mm), bánh răng máy in dừng đúng vạch xé giấy.</td>
+            </tr>
+            <tr>
+              <td><strong>Chữ bị mờ, đục chấm lấm tấm</strong></td>
+              <td><span class="tag-prop">border: 1px solid #000; color: #000; background: transparent;</span></td>
+              <td>Triệt tiêu toàn bộ màu xám và màu nền. Đầu kim gõ với lực tối đa tạo nét đen tuyền sắc nét, in rõ cả liên 2, liên 3 giấy than.</td>
+            </tr>
+            <tr>
+              <td><strong>Bảng size quá dài bị tràn mép giấy</strong></td>
+              <td><span class="tag-prop">JS: AppState.selectedSizes.filter()</span></td>
+              <td>Thuật toán tự động quét dữ liệu: nếu đơn hàng chỉ xuất 4 size thì chỉ in 4 cột size, tự loại bỏ 11 cột trống, bảng tự co khít ở giữa.</td>
+            </tr>
+            <tr>
+              <td><strong>In dính dòng tiêu đề URL web rác</strong></td>
+              <td><span class="tag-prop">document.title = ''; window.print();</span></td>
+              <td>Xóa rỗng title trước khi gọi hộp thoại in và phục hồi lại sau khi in, giữ sạch sẽ 100% mép giấy chuẩn biểu mẫu kế toán.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer style="text-align: center; padding: 25px; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0; background: #fff;">
+    Dự án Quản Lý Phiếu Xuất Kho — Công Ty D&D Long An &bull; Tài liệu phân tích kỹ thuật HTML & CSS chuyên sâu
+  </footer>
+
+  <!-- SCRIPT TƯƠNG TÁC DEMO TRÊN TÀI LIỆU -->
+  <script>
+    // Slider Căn Chỉnh Lề Máy In Sim
+    function updateSimPadding() {
+      const pLeft = document.getElementById('sim-pad-left').value;
+      const pRight = document.getElementById('sim-pad-right').value;
+      const pTop = document.getElementById('sim-pad-top').value;
+
+      document.getElementById('val-pad-left').textContent = pLeft + 'mm';
+      document.getElementById('val-pad-right').textContent = pRight + 'mm';
+      document.getElementById('val-pad-top').textContent = pTop + 'mm';
+
+      const sheet = document.getElementById('sim-sheet-content');
+      sheet.style.padding = `${pTop}mm ${pRight}mm 2mm ${pLeft}mm`;
+
+      const danger = document.getElementById('sim-danger-guide');
+      danger.style.width = pRight + 'mm';
+    }
+
+    // Demo Mẫu Phiếu
+    function demoSelectMau(btn) {
+      btn.parentElement.querySelectorAll('.pxk-seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    // Demo Pill Size
+    function demoTogglePill(btn) {
+      btn.parentElement.querySelectorAll('.pxk-size-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    // Demo Đổi Địa chỉ
+    function demoSelectAddr(btn, addr) {
+      btn.parentElement.querySelectorAll('.pxk-addr-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('demo-addr-input').value = addr;
+    }
+
+    // Full Demo Handlers
+    function switchFullMau(mau, btn) {
+      btn.parentElement.querySelectorAll('.pxk-seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const desc = document.getElementById('full-mau-desc');
+      const sizeBox = document.getElementById('full-size-box');
+      if (mau === 1) {
+        desc.textContent = 'Mẫu 1: Có đơn giá, thành tiền, cộng tổng giá trị xuất kho';
+        sizeBox.style.display = 'none';
+      } else if (mau === 2) {
+        desc.textContent = 'Mẫu 2: Không đơn giá, chỉ hiển thị số lượng xuất';
+        sizeBox.style.display = 'none';
+      } else {
+        desc.textContent = 'Cột: STT, PO, Màu, ĐVT, dải size, Tổng · Cộng ngang theo size, cộng dọc chân cột';
+        sizeBox.style.display = 'block';
+      }
+    }
+
+    function setQuickSize(type) {
+      const input = document.getElementById('full-size-input');
+      if (type === 'lt') {
+        input.value = '35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49';
+      } else {
+        input.value = '3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0';
+      }
+    }
+
+    function setFullAddr(addr, btn) {
+      document.querySelectorAll('#sec-full .pxk-addr-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('full-addr-input').value = addr;
+    }
+  </script>
+</body>
+</html>

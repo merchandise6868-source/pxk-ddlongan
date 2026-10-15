@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phiếu Xuất Kho - D&D Long An</title>
-  <link rel="stylesheet" href="styles.css?v=20261013e">
-  <link rel="stylesheet" href="print.css?v=20261013e">
+  <link rel="stylesheet" href="styles.css?v=20261015a">
+  <link rel="stylesheet" href="print.css?v=20261015a">
 </head>
 <body>
 
@@ -32,6 +32,9 @@
       </button>
       <button class="tab-btn" data-target="tab-dashboard">
         📊 Dashboard Sản Lượng
+      </button>
+      <button class="tab-btn" data-target="tab-catalog">
+        ⚙️ Danh Mục
       </button>
     </nav>
   </header>
@@ -283,6 +286,19 @@
       <div class="card">
         <!-- BỘ CHỌN MẪU PHIẾU (KHỚP 100% THIẾT KẾ MẪU) -->
         <div class="pxk-ui-panel">
+          <!-- DÒNG 0: KHÁCH HÀNG (tự điền đơn vị nhận, bộ phận, lý do xuất, dãy size) -->
+          <div class="pxk-row-kh">
+            <span class="pxk-lbl-mau">KHÁCH HÀNG</span>
+            <div class="pxk-kh-pills" id="kh-pills"></div>
+            <div class="pxk-kh-days" id="kh-day-pills"></div>
+          </div>
+
+          <!-- BỘ CHI TIẾT (hiện khi khách hàng có đồng bộ đôi, ví dụ JiaYu) -->
+          <div class="pxk-bo-panel" id="kh-bo-panel">
+            <span class="pxk-bo-lbl">Chọn bộ chi tiết để thêm vào phiếu:</span>
+            <div class="pxk-bo-list" id="kh-bo-list"></div>
+          </div>
+
           <!-- DÒNG 1: MẪU PHIẾU -->
           <div class="pxk-row-mau">
             <span class="pxk-lbl-mau">MẪU PHIẾU</span>
@@ -299,14 +315,12 @@
             <div class="pxk-size-bar">
               <span class="pxk-lbl-size">Dải size</span>
               <input type="text" id="custom-size-input" class="pxk-size-input" value="35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49">
-              <button type="button" class="pxk-size-pill active" onclick="setQuickSizeRange('lt')">LT</button>
-              <button type="button" class="pxk-size-pill" onclick="setQuickSizeRange('jiayu')">JiaYu</button>
               <button type="button" class="pxk-size-step" id="btn-add-size-col">+</button>
               <button type="button" class="pxk-size-step" id="btn-del-size-col">−</button>
               <button type="button" class="pxk-size-btn-apply" id="btn-apply-custom-sizes">Áp dụng</button>
             </div>
             <div class="pxk-size-hint">
-              Mẹo: click tiêu đề ô size trên bảng để sửa thành size lẻ (36.5...) hoặc tên tùy ý.
+              Mẹo: chọn khách hàng để tự nạp dãy size · click tiêu đề ô size trên bảng để sửa thành size lẻ (36.5...) hoặc tên tùy ý.
             </div>
           </div>
 
@@ -410,6 +424,8 @@
               <!-- Dòng CỘNG tự tính -->
             </tfoot>
           </table>
+          <datalist id="po-datalist"></datalist>
+          <datalist id="art-datalist"></datalist>
         </div>
       </div>
     </section>
@@ -482,9 +498,12 @@
               <label>Chuyền</label>
               <select id="dash-bophan" class="form-control">
                 <option value="all">-- Tất cả chuyền --</option>
-                <option value="TC">Tổ chặt (TC)</option>
-                <option value="CMA">Chuyền may A (CMA)</option>
-                <option value="CMB">Chuyền may B (CMB)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Khách hàng</label>
+              <select id="dash-khachhang" class="form-control">
+                <option value="all">-- Tất cả khách hàng --</option>
               </select>
             </div>
             <button type="button" class="btn btn-primary" id="btn-filter-dashboard" style="height: 33px;">📊 Xem báo cáo</button>
@@ -493,29 +512,15 @@
           <button type="button" class="btn btn-success" id="btn-export-excel">📥 Xuất file Excel (CSV)</button>
         </div>
 
-        <!-- 3.2. THẺ TỔNG SẢN LƯỢNG -->
-        <div class="stats-grid">
-          <div class="stat-card tc">
-            <div class="label">Tổ Chặt (TC)</div>
-            <div class="value" id="card-tc">0</div>
-            <div class="sub">Tổng số đôi đã xuất</div>
-          </div>
-          <div class="stat-card cma">
-            <div class="label">Chuyền May A (CMA)</div>
-            <div class="value" id="card-cma">0</div>
-            <div class="sub">Tổng số đôi đã xuất</div>
-          </div>
-          <div class="stat-card cmb">
-            <div class="label">Chuyền May B (CMB)</div>
-            <div class="value" id="card-cmb">0</div>
-            <div class="sub">Tổng số đôi đã xuất</div>
-          </div>
-          <div class="stat-card total">
-            <div class="label">Tổng Toàn Xưởng</div>
-            <div class="value" id="card-total">0</div>
-            <div class="sub">Tổng cộng các chuyền (Đôi)</div>
-          </div>
+        <!-- CHUYỂN CHẾ ĐỘ XEM -->
+        <div class="dash-view-switch">
+          <button type="button" class="dash-view-btn active" data-view="chuyen">🏭 Theo Tổ / Chuyền</button>
+          <button type="button" class="dash-view-btn" data-view="khach">💰 Theo Khách Hàng (Công nợ)</button>
         </div>
+
+        <div id="dash-view-chuyen">
+        <!-- 3.2. THẺ TỔNG SẢN LƯỢNG -->
+        <div class="stats-grid" id="dash-dept-cards"></div>
 
         <!-- 3.3. BIỂU ĐỒ SẢN LƯỢNG THEO NGÀY -->
         <div id="daily-chart-container" style="margin-bottom: 20px;"></div>
@@ -530,6 +535,126 @@
             <tbody></tbody>
             <tfoot></tfoot>
           </table>
+        </div>
+        </div>
+
+        <!-- XEM THEO KHÁCH HÀNG / CÔNG NỢ -->
+        <div id="dash-view-khach" style="display: none;">
+          <div class="stats-grid" id="dash-kh-cards"></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 4px 0 8px;">
+            <h3 style="font-size: 14px; font-weight: 700;">Bảng kê công nợ (theo phiếu · PO · ART)</h3>
+            <span class="cat-muted" style="font-size: 12px;">Đơn giá lấy từ Danh mục → PO / Đơn hàng / Đơn giá. Dòng tô vàng = chưa có đơn giá.</span>
+          </div>
+          <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 6px;">
+            <table class="excel-table" id="congno-table">
+              <thead></thead>
+              <tbody></tbody>
+              <tfoot></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB: DANH MỤC (KHÁCH HÀNG · PO · BỘ CHI TIẾT)
+         ========================================== -->
+    <section id="tab-catalog" class="tab-content">
+      <div class="card">
+        <div class="cat-sub-tabs">
+          <button type="button" class="cat-sub-btn active" data-sub="kh">👥 Khách hàng</button>
+          <button type="button" class="cat-sub-btn" data-sub="po">📦 PO / Đơn hàng / Đơn giá</button>
+          <button type="button" class="cat-sub-btn" data-sub="bo">🧩 Bộ chi tiết (đồng bộ đôi)</button>
+        </div>
+
+        <!-- 1. KHÁCH HÀNG -->
+        <div class="cat-pane active" id="cat-pane-kh">
+          <div class="cat-table-wrap">
+            <table class="cat-table">
+              <thead><tr>
+                <th>STT</th><th>Tên (nút)</th><th>Tên đầy đủ / Đơn vị nhận</th><th>Dãy size</th><th>Bộ phận</th>
+                <th>BP xuất kho</th><th>Lý do xuất</th><th>ĐVT</th><th>Bộ CT</th><th>Trạng thái</th><th></th>
+              </tr></thead>
+              <tbody id="cat-kh-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="cat-form" id="cat-kh-form">
+            <div class="cat-form-title" id="cat-kh-form-title">Thêm khách hàng mới</div>
+            <div class="cat-form-grid">
+              <label>Tên ngắn (hiện trên nút) *<input type="text" id="cat-kh-ten" class="pxk-input" placeholder="VD: Kurim"></label>
+              <label>Mã (tự sinh nếu bỏ trống)<input type="text" id="cat-kh-ma" class="pxk-input" placeholder="VD: KURIM"></label>
+              <label class="span2">Tên đầy đủ (Đơn vị nhận)<input type="text" id="cat-kh-tendaydu" class="pxk-input" placeholder="Công ty TNHH ..."></label>
+              <label>Bộ phận xuất kho<input type="text" id="cat-kh-bpxuat" class="pxk-input" placeholder="Tổ chặt / Chuyền may"></label>
+              <label>Lý do xuất<input type="text" id="cat-kh-lydo" class="pxk-input" placeholder="Giao thành phẩm"></label>
+              <label>ĐVT mặc định<input type="text" id="cat-kh-dvt" class="pxk-input" value="Đôi"></label>
+              <label>Thứ tự nút<input type="number" id="cat-kh-thutu" class="pxk-input" value="1"></label>
+              <label class="span2"><span>Dãy size (mỗi dãy 1 dòng, dạng <em>Tên dãy: size1, size2, ...</em>)</span>
+                <textarea id="cat-kh-days" class="pxk-input cat-textarea" rows="3" placeholder="Dãy A: 3-4, 4T-5T, 6-7&#10;Dãy B: 3-5T, 6-8T, 9-11T"></textarea>
+              </label>
+              <div class="span2">
+                <div class="cat-sub-lbl">Bộ phận / Chuyền được chọn khi lập phiếu</div>
+                <div id="cat-kh-bophan" class="cat-checks"></div>
+                <label class="cat-check"><input type="checkbox" id="cat-kh-cobo"> Có bộ chi tiết (tính chi tiết rồi đồng bộ đôi như JiaYu)</label>
+                <label class="cat-check"><input type="checkbox" id="cat-kh-an"> Ẩn khách hàng này</label>
+              </div>
+            </div>
+            <div class="cat-form-actions">
+              <button type="button" class="btn btn-outline" id="cat-kh-new">➕ Nhập khách mới</button>
+              <button type="button" class="btn btn-success" id="cat-kh-save">💾 Lưu khách hàng</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. PO / ĐƠN HÀNG / ĐƠN GIÁ -->
+        <div class="cat-pane" id="cat-pane-po">
+          <div class="cat-toolbar">
+            <select id="cat-po-kh" class="pxk-input" style="max-width: 220px;"></select>
+            <input type="text" id="cat-po-search" class="pxk-input" placeholder="🔎 Tìm PO, đơn hàng, ART..." style="max-width: 260px;">
+            <span class="cat-muted" id="cat-po-count"></span>
+            <div style="flex: 1;"></div>
+            <button type="button" class="btn btn-outline" id="cat-po-add">➕ Thêm dòng</button>
+          </div>
+          <details class="cat-paste">
+            <summary>📋 Dán nhiều dòng từ Excel</summary>
+            <div class="cat-muted" style="margin: 6px 0;">Copy các cột theo đúng thứ tự: <b>PO | Đơn hàng | ART | Màu | Đơn giá | Ghi chú</b> rồi dán vào ô dưới (khách hàng lấy theo ô lọc bên trên).</div>
+            <textarea id="cat-po-paste" class="pxk-input cat-textarea" rows="4"></textarea>
+            <button type="button" class="btn btn-primary" id="cat-po-import" style="margin-top: 6px;">⬆️ Nhập vào danh mục</button>
+          </details>
+          <div class="cat-table-wrap">
+            <table class="cat-table cat-table-edit">
+              <thead><tr>
+                <th style="width: 40px;">STT</th><th style="width: 140px;">Khách hàng</th><th>PO</th><th>Đơn hàng</th>
+                <th>ART (Mã hàng)</th><th>Màu</th><th style="width: 110px;">Đơn giá (đ/đôi)</th><th>Ghi chú</th><th style="width: 46px;"></th>
+              </tr></thead>
+              <tbody id="cat-po-tbody"></tbody>
+            </table>
+          </div>
+          <div class="cat-muted" style="margin-top: 6px;">Sửa trực tiếp trong ô, rời ô là tự lưu. Đơn giá có thể để trống PO (áp cho mọi PO của ART đó).</div>
+        </div>
+
+        <!-- 3. BỘ CHI TIẾT -->
+        <div class="cat-pane" id="cat-pane-bo">
+          <div class="cat-toolbar">
+            <select id="cat-bo-kh" class="pxk-input" style="max-width: 220px;"></select>
+          </div>
+          <div class="cat-bo-layout">
+            <div id="cat-bo-list" class="cat-bo-list"></div>
+            <div class="cat-form">
+              <div class="cat-form-title" id="cat-bo-form-title">Thêm bộ chi tiết mới</div>
+              <label>Khách hàng<select id="cat-bo-form-kh" class="pxk-input"></select></label>
+              <label>Tên bộ *<input type="text" id="cat-bo-ten" class="pxk-input" placeholder="VD: CP-002"></label>
+              <label>ART (tự điền vào cột Mã hàng)<input type="text" id="cat-bo-art" class="pxk-input" placeholder="VD: CP-002"></label>
+              <label><span>Danh sách chi tiết (mỗi dòng: <em>Tên | số miếng/đôi | ĐVT</em>)</span>
+                <textarea id="cat-bo-ct" class="pxk-input cat-textarea" rows="7" placeholder="Mũi trong | 2 | Miếng&#10;Mũi ngoài | 2 | Miếng&#10;Quai hậu | 2 | Miếng"></textarea>
+              </label>
+              <div class="cat-muted">Dòng ĐỒNG BỘ ĐÔI = số nhỏ nhất của các chi tiết ÷ số miếng/đôi (mặc định 2).</div>
+              <div class="cat-form-actions">
+                <button type="button" class="btn btn-outline" id="cat-bo-new">➕ Bộ mới</button>
+                <button type="button" class="btn btn-success" id="cat-bo-save">💾 Lưu bộ</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -548,8 +673,9 @@
   <div id="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="app.js?v=20261013e"></script>
-  <script src="dashboard.js"></script>
+  <script src="catalog.js?v=20261015a"></script>
+  <script src="app.js?v=20261015a"></script>
+  <script src="dashboard.js?v=20261015a"></script>
   <script src="qc_totruong.js"></script>
 </body>
 </html>

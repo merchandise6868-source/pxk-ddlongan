@@ -313,6 +313,12 @@
     padding: 3px 2px !important;
   }
 
+  /* Dòng ĐỒNG BỘ ĐÔI (bộ chi tiết JiaYu) */
+  .p-dongbo-row td {
+    font-weight: bold !important;
+    font-style: italic !important;
+  }
+
   /* 5. KHUNG CHỮ KÝ 4 CỘT: Người lập phiếu - Người giao - Người nhận - Giám đốc */
   .p-signatures {
     font-family: "Times New Roman", Times, serif !important;

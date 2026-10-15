@@ -19,6 +19,10 @@ const AppState = {
   departments: [],
   selectedSizes: [...SIZES_DEFAULT], // Dải size mẫu 3
   rows: [],
+  khachHangId: null,       // Khách hàng đang chọn
+  dayIdx: 0,               // Dãy size đang chọn của khách hàng
+  defaultDvt: 'Đôi',       // ĐVT mặc định cho dòng mới
+  lastAutoDonHang: '',     // Giá trị "Đơn hàng" do hệ thống tự ghép (để biết người dùng đã sửa tay chưa)
 };
 
 function saveSlipDraft() {
@@ -36,6 +40,9 @@ function saveSlipDraft() {
       diachiCty: document.getElementById('slip-diachi-cty')?.value || '',
       selectedSizes: AppState.selectedSizes,
       rows: AppState.rows,
+      khachHangId: AppState.khachHangId,
+      dayIdx: AppState.dayIdx,
+      lastAutoDonHang: AppState.lastAutoDonHang,
     };
     localStorage.setItem(SLIP_DRAFT_KEY, JSON.stringify(draft));
   } catch (err) {
@@ -54,6 +61,10 @@ function restoreSlipDraft() {
         AppState.selectedSizes = draft.selectedSizes;
       }
       AppState.rows = draft.rows;
+      AppState.khachHangId = draft.khachHangId || null;
+      AppState.dayIdx = draft.dayIdx || 0;
+      AppState.lastAutoDonHang = draft.lastAutoDonHang || '';
+      assignBlockKeys(AppState.rows);
 
       if (draft.donvi && document.getElementById('slip-donvi')) document.getElementById('slip-donvi').value = draft.donvi;
       if (draft.lydo && document.getElementById('slip-lydo')) document.getElementById('slip-lydo').value = draft.lydo;
@@ -63,6 +74,8 @@ function restoreSlipDraft() {
       if (draft.diachiCty && document.getElementById('slip-diachi-cty')) document.getElementById('slip-diachi-cty').value = draft.diachiCty;
       if (draft.date && document.getElementById('slip-date')) document.getElementById('slip-date').value = draft.date;
 
+      if (AppState.khachHangId) selectCustomer(AppState.khachHangId, { fromLoad: true });
+      if (draft.bophan) setDeptValue(draft.bophan);
       switchMau(AppState.currentMau);
       return true;
     }
@@ -73,15 +86,26 @@ function restoreSlipDraft() {
 }
 
 // Khởi chạy khi DOM sẵn sàng
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initFormControls();
-  loadDepartments();
+  initDefaultRows();
+  await Promise.all([loadDepartments(), window.Catalog ? window.Catalog.load() : null]);
+  renderCustomerPills();
   const hasRestored = restoreSlipDraft();
   if (!hasRestored) {
-    initDefaultRows();
+    renderTableStructure();
   }
+  fetchNextSlipNumber();
   loadSlipList();
+
+  // Danh mục thay đổi (thêm khách / PO / bộ chi tiết) -> cập nhật lại nút & gợi ý
+  window.addEventListener('catalog-changed', () => {
+    renderCustomerPills();
+    renderDayPills();
+    renderBoPanel();
+    refreshPoDatalist();
+  });
 });
 
 /* ============================================================
@@ -421,6 +445,7 @@ async function loadDepartments() {
         sel.add(new Option(`${bp.ma} - ${bp.ten}`, bp.ma));
         filterSel.add(new Option(`${bp.ma} - ${bp.ten}`, bp.ma));
       });
+      applyDeptFilter();
 
       fetchNextSlipNumber();
       const bpXuatInput = document.getElementById('slip-bophanxuat');
@@ -468,7 +493,10 @@ function createEmptyRowData(stt) {
     ma_hang: '',
     mau: '',
     chi_tiet: '',
-    dvt: 'Đôi',
+    dvt: AppState.defaultDvt || 'Đôi',
+    loai: '',        // '' dòng thường · 'chi_tiet' dòng chi tiết · 'dong_bo' dòng ĐỒNG BỘ ĐÔI
+    he_so: 0,        // số miếng / đôi của dòng chi tiết
+    bo_key: '',      // khóa nhóm các dòng cùng 1 bộ
     sl_chung_tu: '',
     sl_thuc_xuat: '',
     don_gia: '',
@@ -518,7 +546,7 @@ function renderTableStructure() {
     AppState.selectedSizes.forEach((s, sIdx) => {
       thHtml += `
         <th class="th-size-col">
-          <input type="text" class="size-header-input" data-size-idx="${sIdx}" value="${escapeHtml(s)}" title="Nhấp vào để đổi tên/số size này">
+          <input type="text" class="size-header-input" data-size-idx="${sIdx}" value="${escapeHtml(s)}" size="${Math.max(2, String(s).length)}" title="Nhấp vào để đổi tên/số size này">
         </th>
       `;
     });
@@ -552,8 +580,11 @@ function renderTableBody() {
   AppState.rows.forEach((row, rIdx) => {
     const tr = document.createElement('tr');
     tr.dataset.rowIndex = rIdx;
+    if (mau === 3 && row.loai === 'chi_tiet') tr.className = 'row-chitiet';
+    if (mau === 3 && row.loai === 'dong_bo') tr.className = 'row-dongbo';
 
-    let rowHtml = `<td style="text-align: center; font-weight: 600;">${rIdx + 1}</td>`;
+    let rowHtml = `<td style="text-align: center; font-weight: 600;">${rIdx + 1}${mau === 3 && row.loai === 'dong_bo'
+      ? `<button type="button" class="btn-del-block" title="Xóa cả bộ chi tiết này" onclick="removeBlock('${row.bo_key}')">✕</button>` : ''}</td>`;
 
     if (mau === 1) {
       rowHtml += `
@@ -578,8 +609,8 @@ function renderTableBody() {
       `;
     } else if (mau === 3) {
       rowHtml += `
-        <td><input type="text" class="excel-cell td-po-cell" data-field="ma_hang" value="${escapeHtml(row.ma_hang)}"></td>
-        <td><input type="text" class="excel-cell cell-center td-ma-cell" data-field="mau" value="${escapeHtml(row.mau)}"></td>
+        <td><input type="text" class="excel-cell td-po-cell" data-field="ma_hang" list="po-datalist" autocomplete="off" value="${escapeHtml(row.ma_hang)}"></td>
+        <td><input type="text" class="excel-cell cell-center td-ma-cell" data-field="mau" list="art-datalist" autocomplete="off" value="${escapeHtml(row.mau)}"></td>
         <td><input type="text" class="excel-cell cell-center td-chitiet-cell" data-field="chi_tiet" value="${escapeHtml(row.chi_tiet || '')}"></td>
         <td><input type="text" class="excel-cell cell-center td-dvt-cell" data-field="dvt" value="${escapeHtml(row.dvt)}"></td>
       `;
@@ -647,6 +678,7 @@ function handleCellInput(e) {
 
   const field = cell.dataset.field;
   const sizeKey = cell.dataset.size;
+  const oldVal = field ? row[field] : (sizeKey ? row.sizes[sizeKey] : undefined);
 
   if (field) {
     row[field] = cell.value;
@@ -654,8 +686,24 @@ function handleCellInput(e) {
     row.sizes[sizeKey] = parseVnNumber(cell.value);
   }
 
+  if (AppState.currentMau === 3) {
+    // Đổi PO / ART trên 1 dòng của bộ -> áp cho cả bộ
+    if ((field === 'ma_hang' || field === 'mau') && row.bo_key) {
+      propagateBlockField(rIdx, field, oldVal);
+    }
+    // Chọn PO -> tự điền ART + ghép Đơn hàng
+    if (field === 'ma_hang') {
+      onPoChanged(rIdx);
+    }
+    // Nhập số lượng ở dòng chi tiết đầu tiên -> các chi tiết khác trong bộ chạy theo
+    if (sizeKey && row.loai === 'chi_tiet') {
+      propagateFirstDetailSize(rIdx, sizeKey, oldVal);
+    }
+  }
+
   // Tự động tính toán lại dòng
   recalcRow(rIdx);
+  if (AppState.currentMau === 3 && row.loai === 'chi_tiet') recomputeDongBo(row.bo_key);
   calculateTotals();
   saveSlipDraft();
 }
@@ -894,7 +942,9 @@ function calculateTotals() {
 
   AppState.selectedSizes.forEach(s => sizeTotals[s] = 0);
 
+  const hasBlocks = mau === 3 && AppState.rows.some(r => r.loai === 'dong_bo');
   AppState.rows.forEach(r => {
+    if (mau === 3 && r.loai === 'chi_tiet') return; // Chi tiết (miếng) không cộng vào tổng đôi
     totalSlCt += parseVnNumber(r.sl_chung_tu);
     totalSlTx += parseVnNumber(r.sl_thuc_xuat);
     totalThanhTien += parseVnNumber(r.thanh_tien);
@@ -906,7 +956,7 @@ function calculateTotals() {
     }
   });
 
-  let footHtml = '<tr><td colspan="2" style="text-align: center; font-weight: bold;">CỘNG:</td>';
+  let footHtml = `<tr class="foot-total-row"><td colspan="2" style="text-align: center; font-weight: bold;">${hasBlocks ? 'CỘNG (ĐÔI):' : 'CỘNG:'}</td>`;
 
   if (mau === 1) {
     footHtml += `
@@ -927,10 +977,10 @@ function calculateTotals() {
   } else if (mau === 3) {
     footHtml += `<td></td><td></td><td></td>`;
     AppState.selectedSizes.forEach(s => {
-      footHtml += `<td style="text-align: center; font-weight: bold; padding: 4px 2px;">${formatNum(sizeTotals[s])}</td>`;
+      footHtml += `<td class="foot-size-total">${formatNum(sizeTotals[s])}</td>`;
     });
     footHtml += `
-      <td style="text-align: center; font-weight: bold; color: var(--primary); padding: 4px 2px;">${formatNum(totalSlCt)}</td>
+      <td class="foot-grand-total">${formatNum(totalSlCt)}</td>
     `;
   }
   footHtml += '</tr>';
@@ -991,6 +1041,8 @@ async function saveSlip() {
       thanh_tien: parseVnNumber(r.thanh_tien),
       ghi_chu: AppState.currentMau === 3 ? (r.chi_tiet || r.ghi_chu || '') : (r.ghi_chu || ''),
       chi_tiet: r.chi_tiet || '',
+      loai: AppState.currentMau === 3 ? (r.loai || '') : '',
+      he_so: r.he_so || 0,
       sizes,
       hasMismatch: r.hasMismatch,
     });
@@ -1014,6 +1066,7 @@ async function saveSlip() {
     bo_phan_xuat: boPhanXuat,
     nguoi_lap: nguoiLap,
     dia_chi_cty: diaChiCty,
+    khach_hang_id: AppState.khachHangId,
     lines: validLines,
   };
 
@@ -1135,15 +1188,23 @@ function printCurrentSlip() {
   activeSizes.forEach(s => sizeTotals[s] = 0);
 
   let sttCount = 0;
+  let printedNormalRows = 0;
+  let printedBlocks = 0;
   AppState.rows.forEach(r => {
     const slCt = parseVnNumber(r.sl_chung_tu);
     const slTx = parseVnNumber(r.sl_thuc_xuat);
     if (!r.ten_hang && !r.ma_hang && slCt === 0 && slTx === 0) return;
 
     sttCount++;
-    totalSlCt += slCt;
-    totalSlTx += slTx;
-    totalThanhTien += parseVnNumber(r.thanh_tien);
+    const isDetail = mau === 3 && r.loai === 'chi_tiet';
+    const isDongBo = mau === 3 && r.loai === 'dong_bo';
+    if (isDongBo) printedBlocks++;
+    else if (!isDetail) printedNormalRows++;
+    if (!isDetail) {
+      totalSlCt += slCt;
+      totalSlTx += slTx;
+      totalThanhTien += parseVnNumber(r.thanh_tien);
+    }
 
     if (mau === 1) {
       tableBodyHtml += `
@@ -1168,14 +1229,16 @@ function printCurrentSlip() {
         </tr>
       `;
     } else if (mau === 3) {
-      activeSizes.forEach(s => {
-        sizeTotals[s] += parseVnNumber(r.sizes[s]);
-      });
+      if (!isDetail) {
+        activeSizes.forEach(s => {
+          sizeTotals[s] += parseVnNumber(r.sizes[s]);
+        });
+      }
       tableBodyHtml += `
-        <tr>
+        <tr class="${isDongBo ? 'p-dongbo-row' : ''}">
           <td class="p-cell-stt">${sttCount}</td>
-          <td class="p-cell-po">${escapeHtml(r.ma_hang)}</td>
-          <td class="p-cell-ma">${escapeHtml(r.mau)}</td>
+          <td class="p-cell-po">${isDongBo ? '' : escapeHtml(r.ma_hang)}</td>
+          <td class="p-cell-ma">${isDongBo ? '' : escapeHtml(r.mau)}</td>
           <td class="p-cell-chitiet">${escapeHtml(r.chi_tiet || '')}</td>
           <td class="p-cell-dvt">${escapeHtml(r.dvt)}</td>
           ${activeSizes.map(s => {
@@ -1208,10 +1271,11 @@ function printCurrentSlip() {
         <td class="text-right nowrap">${formatNum(totalSlTx)}</td>
       </tr>
     `;
-  } else if (mau === 3) {
+  } else if (mau === 3 && !(printedBlocks === 1 && printedNormalRows === 0)) {
+    // Phiếu chỉ có 1 bộ chi tiết thì dòng ĐỒNG BỘ ĐÔI đã là dòng tổng -> không in thêm dòng CỘNG
     tableFootHtml = `
       <tr class="p-total-row">
-        <td colspan="5" class="text-center nowrap">CỘNG:</td>
+        <td colspan="5" class="text-center nowrap">${printedBlocks > 0 ? 'CỘNG (ĐÔI):' : 'CỘNG:'}</td>
         ${activeSizes.map(s => {
           const val = sizeTotals[s];
           return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
@@ -1426,9 +1490,12 @@ window.reprintSlip = async function(id) {
         thanh_tien: l.thanh_tien,
         ghi_chu: l.ghi_chu,
         chi_tiet: l.chi_tiet || l.ghi_chu || '',
+        loai: l.loai || '',
+        he_so: l.he_so || 0,
         sizes: sizesMap,
       };
     });
+    assignBlockKeys(AppState.rows);
 
     document.getElementById('slip-so').value = slip.so_phieu;
     document.getElementById('slip-date').value = slip.ngay;
@@ -1478,12 +1545,20 @@ window.editSlip = async function(id) {
           return a.localeCompare(b);
         });
         AppState.selectedSizes = slipSizes;
+        // Nếu dãy size của khách hàng chứa đủ các size của phiếu -> dùng nguyên dãy (đúng thứ tự)
+        const kh = window.Catalog?.byId(slip.khach_hang_id);
+        const dIdx = (kh?.day_size || []).findIndex(d => slipSizes.every(s => d.sizes.includes(s)));
+        if (dIdx > -1) {
+          AppState.selectedSizes = [...kh.day_size[dIdx].sizes];
+          AppState.dayIdx = dIdx;
+        }
         updateCustomSizeInputText();
       }
     }
 
+    selectCustomer(slip.khach_hang_id || null, { fromLoad: true });
     switchMau(slip.mau_phieu);
-    document.getElementById('slip-bophan').value = slip.ma_bo_phan;
+    setDeptValue(slip.ma_bo_phan);
     document.getElementById('slip-so').value = slip.so_phieu;
     document.getElementById('slip-date').value = slip.ngay;
     document.getElementById('slip-donvi').value = slip.don_vi_nhan || '';
@@ -1511,9 +1586,12 @@ window.editSlip = async function(id) {
         thanh_tien: l.thanh_tien,
         ghi_chu: l.ghi_chu,
         chi_tiet: l.chi_tiet || l.ghi_chu || '',
+        loai: l.loai || '',
+        he_so: l.he_so || 0,
         sizes: sizesMap,
       };
     });
+    assignBlockKeys(AppState.rows);
 
     renderTableStructure();
 
@@ -1557,10 +1635,340 @@ function resetForm() {
     localStorage.removeItem(SLIP_DRAFT_KEY);
   } catch (e) {}
 
-  switchMau(2);
+  AppState.lastAutoDonHang = '';
   initDefaultRows();
+  if (AppState.khachHangId) {
+    selectCustomer(AppState.khachHangId); // giữ khách hàng đang chọn, nạp lại thông tin mặc định
+  } else {
+    switchMau(2);
+  }
   fetchNextSlipNumber();
 }
+
+/* ============================================================
+   11. KHÁCH HÀNG · DÃY SIZE · BỘ PHẬN
+   ============================================================ */
+function currentCustomer() {
+  return AppState.khachHangId && window.Catalog ? window.Catalog.byId(AppState.khachHangId) : null;
+}
+
+function renderCustomerPills() {
+  const box = document.getElementById('kh-pills');
+  if (!box || !window.Catalog) return;
+  const list = window.Catalog.khach;
+  box.innerHTML = list.map(k => `
+    <button type="button" class="pxk-kh-pill ${k.id === AppState.khachHangId ? 'active' : ''}" data-kh="${k.id}" title="${escapeHtml(k.ten_day_du)}">${escapeHtml(k.ten_ngan)}</button>
+  `).join('') + `<button type="button" class="pxk-kh-pill pxk-kh-none ${!AppState.khachHangId ? 'active' : ''}" data-kh="">Khác / tự nhập</button>`;
+  box.querySelectorAll('[data-kh]').forEach(btn => btn.addEventListener('click', () => {
+    selectCustomer(btn.dataset.kh ? parseInt(btn.dataset.kh, 10) : null);
+  }));
+}
+
+function renderDayPills() {
+  const box = document.getElementById('kh-day-pills');
+  if (!box) return;
+  const kh = currentCustomer();
+  const days = kh?.day_size || [];
+  if (days.length < 2) { box.innerHTML = ''; return; }
+  box.innerHTML = `<span class="pxk-day-lbl">Dãy size:</span>` + days.map((d, i) => `
+    <button type="button" class="pxk-day-pill ${i === AppState.dayIdx ? 'active' : ''}" data-day="${i}" title="${escapeHtml(d.sizes.join(', '))}">${escapeHtml(d.ten)}</button>
+  `).join('');
+  box.querySelectorAll('[data-day]').forEach(btn => btn.addEventListener('click', () => applyDay(parseInt(btn.dataset.day, 10))));
+}
+
+function applyDay(idx) {
+  const kh = currentCustomer();
+  const d = kh?.day_size?.[idx];
+  if (!d) return;
+  AppState.dayIdx = idx;
+  AppState.selectedSizes = [...d.sizes];
+  updateCustomSizeInputText();
+  renderDayPills();
+  if (AppState.currentMau === 3) renderTableStructure();
+  saveSlipDraft();
+}
+
+/** Lọc ô Bộ phận / Chuyền theo khách hàng (giữ giá trị hiện tại nếu hợp lệ) */
+function applyDeptFilter() {
+  const sel = document.getElementById('slip-bophan');
+  if (!sel || !AppState.departments.length) return;
+  const kh = currentCustomer();
+  const allowed = kh?.bo_phan?.length ? kh.bo_phan : AppState.departments.map(d => d.ma);
+  const prev = sel.value;
+  sel.innerHTML = '';
+  AppState.departments.filter(d => allowed.includes(d.ma)).forEach(bp => sel.add(new Option(`${bp.ma} - ${bp.ten}`, bp.ma)));
+  if (!sel.options.length) AppState.departments.forEach(bp => sel.add(new Option(`${bp.ma} - ${bp.ten}`, bp.ma)));
+  if (Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
+  if (sel.value !== prev) fetchNextSlipNumber();
+}
+
+/** Đặt giá trị bộ phận (thêm tạm option nếu bộ lọc khách hàng không có) */
+function setDeptValue(ma) {
+  const sel = document.getElementById('slip-bophan');
+  if (!sel || !ma) return;
+  if (!Array.from(sel.options).some(o => o.value === ma)) {
+    const bp = AppState.departments.find(d => d.ma === ma);
+    sel.add(new Option(bp ? `${bp.ma} - ${bp.ten}` : ma, ma));
+  }
+  sel.value = ma;
+}
+
+/**
+ * Chọn khách hàng
+ * - fromLoad = true: chỉ đồng bộ giao diện (khi nạp nháp / sửa phiếu cũ), không ghi đè dữ liệu
+ */
+function selectCustomer(id, opts = {}) {
+  AppState.khachHangId = id || null;
+  const kh = currentCustomer();
+  AppState.defaultDvt = kh?.dvt || 'Đôi';
+
+  renderCustomerPills();
+  applyDeptFilter();
+  refreshPoDatalist();
+
+  if (!opts.fromLoad && kh) {
+    document.getElementById('slip-donvi').value = kh.ten_day_du || '';
+    document.getElementById('slip-lydo').value = kh.ly_do_xuat || '';
+    const bpx = document.getElementById('slip-bophanxuat');
+    if (bpx) bpx.value = kh.bo_phan_xuat || '';
+
+    // Dòng trống lấy ĐVT mặc định của khách
+    AppState.rows.forEach(r => { if (!r.loai && isRowEmpty(r)) r.dvt = AppState.defaultDvt; });
+
+    AppState.dayIdx = 0;
+    if (kh.day_size?.length) {
+      AppState.selectedSizes = [...kh.day_size[0].sizes];
+      updateCustomSizeInputText();
+    }
+    switchMau(3);
+    showToast(`Đã chọn khách hàng ${kh.ten_ngan}`, 'info');
+  }
+
+  renderDayPills();
+  renderBoPanel();
+  if (!opts.fromLoad) saveSlipDraft();
+}
+
+function isRowEmpty(r) {
+  const hasSize = r.sizes && Object.values(r.sizes).some(v => parseVnNumber(v) > 0);
+  return !r.ten_hang && !r.ma_hang && !r.mau && !r.chi_tiet && !parseVnNumber(r.sl_chung_tu) && !hasSize;
+}
+
+/* ============================================================
+   12. BỘ CHI TIẾT & DÒNG ĐỒNG BỘ ĐÔI (JIAYU)
+   ============================================================ */
+function renderBoPanel() {
+  const panel = document.getElementById('kh-bo-panel');
+  const list = document.getElementById('kh-bo-list');
+  if (!panel || !list) return;
+  const kh = currentCustomer();
+  if (!kh || !kh.co_bo_chi_tiet) { panel.classList.remove('show'); return; }
+  panel.classList.add('show');
+  const sets = window.Catalog.boOf(kh.id);
+  list.innerHTML = sets.length
+    ? sets.map(b => `<button type="button" class="pxk-bo-btn" data-bo="${b.id}" title="${escapeHtml((b.chi_tiet || []).map(c => c.ten).join(', '))}">＋ ${escapeHtml(b.ten_bo)} <small>(${(b.chi_tiet || []).length} chi tiết)</small></button>`).join('')
+    : `<span class="pxk-bo-empty">Chưa có bộ chi tiết — thêm ở tab ⚙️ Danh Mục → Bộ chi tiết.</span>`;
+  list.querySelectorAll('[data-bo]').forEach(btn => btn.addEventListener('click', () => insertBoBlock(parseInt(btn.dataset.bo, 10))));
+}
+
+function insertBoBlock(boId) {
+  const bo = window.Catalog.bo.find(b => b.id === boId);
+  if (!bo) return;
+  if (AppState.currentMau !== 3) switchMau(3);
+
+  // Bỏ các dòng trống ở cuối bảng rồi nối bộ mới vào
+  while (AppState.rows.length && !AppState.rows[AppState.rows.length - 1].loai && isRowEmpty(AppState.rows[AppState.rows.length - 1])) {
+    AppState.rows.pop();
+  }
+  const key = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const startIdx = AppState.rows.length;
+  // PO lấy theo bộ trước đó (nếu có) để nhập nhanh nhiều bộ cùng PO
+  const prevPo = [...AppState.rows].reverse().find(r => r.loai && r.ma_hang)?.ma_hang || '';
+
+  (bo.chi_tiet || []).forEach(ct => {
+    AppState.rows.push({
+      ...createEmptyRowData(AppState.rows.length + 1),
+      ma_hang: prevPo, mau: bo.art || '', chi_tiet: ct.ten, dvt: ct.dvt || 'Miếng',
+      loai: 'chi_tiet', he_so: ct.he_so || 2, bo_key: key,
+    });
+  });
+  AppState.rows.push({
+    ...createEmptyRowData(AppState.rows.length + 1),
+    ma_hang: prevPo, mau: bo.art || '', chi_tiet: 'ĐỒNG BỘ ĐÔI', dvt: 'Đôi',
+    loai: 'dong_bo', bo_key: key,
+  });
+
+  renderTableBody();
+  calculateTotals();
+  updateDonHangAuto();
+  saveSlipDraft();
+  showToast(`Đã thêm bộ ${bo.ten_bo} (${(bo.chi_tiet || []).length} chi tiết + dòng đồng bộ đôi)`, 'success');
+
+  // Đưa con trỏ vào ô PO (nếu trống) hoặc ô size đầu tiên của bộ vừa thêm
+  setTimeout(() => {
+    const tr = document.querySelector(`tr[data-row-index="${startIdx}"]`);
+    if (!tr) return;
+    const target = prevPo ? tr.querySelector('.size-val-cell') : tr.querySelector('[data-field="ma_hang"]');
+    if (target) { target.focus(); tr.scrollIntoView({ block: 'nearest' }); }
+  }, 30);
+}
+
+window.removeBlock = function(key) {
+  if (!key) return;
+  AppState.rows = AppState.rows.filter(r => r.bo_key !== key);
+  if (!AppState.rows.length) AppState.rows.push(createEmptyRowData(1));
+  renderTableBody();
+  calculateTotals();
+  updateDonHangAuto();
+  saveSlipDraft();
+};
+
+/** Gán bo_key cho các dòng nạp từ phiếu cũ: chuỗi dòng chi tiết liên tiếp + dòng đồng bộ ngay sau */
+function assignBlockKeys(rows) {
+  let key = '';
+  let n = 0;
+  rows.forEach(r => {
+    if (r.loai === 'chi_tiet') {
+      if (!key) key = `L${++n}`;
+      r.bo_key = r.bo_key || key;
+    } else if (r.loai === 'dong_bo') {
+      r.bo_key = r.bo_key || key || `L${++n}`;
+      key = '';
+    } else {
+      key = '';
+    }
+  });
+}
+
+function blockRows(key) {
+  return AppState.rows.map((r, i) => ({ r, i })).filter(x => x.r.bo_key === key);
+}
+
+/** Tính dòng ĐỒNG BỘ ĐÔI = min(số miếng từng chi tiết ÷ số miếng/đôi) theo từng size */
+function recomputeDongBo(key) {
+  const members = blockRows(key);
+  const details = members.filter(x => x.r.loai === 'chi_tiet');
+  members.filter(x => x.r.loai === 'dong_bo').forEach(({ r: db, i: dbIdx }) => {
+    let total = 0;
+    AppState.selectedSizes.forEach(s => {
+      const anyQty = details.some(x => parseVnNumber(x.r.sizes[s]) > 0);
+      let pairs = 0;
+      if (anyQty && details.length) {
+        pairs = Math.floor(Math.min(...details.map(x => parseVnNumber(x.r.sizes[s]) / (parseFloat(x.r.he_so) || 2))));
+      }
+      db.sizes[s] = pairs > 0 ? pairs : '';
+      total += pairs > 0 ? pairs : 0;
+      const cell = document.querySelector(`tr[data-row-index="${dbIdx}"] .size-val-cell[data-size="${CSS.escape(s)}"]`);
+      if (cell && document.activeElement !== cell) cell.value = formatNum(db.sizes[s]);
+    });
+    db.sl_chung_tu = total;
+    db.sl_thuc_xuat = total;
+    const sumCell = document.querySelector(`tr[data-row-index="${dbIdx}"] [data-field="sl_chung_tu"]`);
+    if (sumCell) sumCell.value = formatNum(total);
+  });
+}
+
+/** Ô size ở dòng chi tiết ĐẦU TIÊN của bộ: các dòng chi tiết khác đang trống / đang giống giá trị cũ sẽ chạy theo */
+function propagateFirstDetailSize(rIdx, sizeKey, oldVal) {
+  const row = AppState.rows[rIdx];
+  const details = blockRows(row.bo_key).filter(x => x.r.loai === 'chi_tiet');
+  if (!details.length || details[0].i !== rIdx) return;
+  const oldNum = parseVnNumber(oldVal);
+  details.slice(1).forEach(({ r, i }) => {
+    const cur = parseVnNumber(r.sizes[sizeKey]);
+    if (cur === 0 || cur === oldNum) {
+      r.sizes[sizeKey] = row.sizes[sizeKey];
+      const cell = document.querySelector(`tr[data-row-index="${i}"] .size-val-cell[data-size="${CSS.escape(sizeKey)}"]`);
+      if (cell) cell.value = formatNum(r.sizes[sizeKey]);
+      recalcRow(i);
+    }
+  });
+}
+
+/** Sửa PO / ART trên 1 dòng của bộ -> các dòng khác trong bộ (đang trống hoặc giống giá trị cũ) cập nhật theo */
+function propagateBlockField(rIdx, field, oldVal) {
+  const row = AppState.rows[rIdx];
+  blockRows(row.bo_key).forEach(({ r, i }) => {
+    if (i === rIdx) return;
+    if (!r[field] || r[field] === oldVal) {
+      r[field] = row[field];
+      const cell = document.querySelector(`tr[data-row-index="${i}"] [data-field="${field}"]`);
+      if (cell) cell.value = r[field];
+    }
+  });
+}
+
+/* ============================================================
+   13. GỢI Ý PO -> ART -> ĐƠN HÀNG (đọc từ danh mục, vẫn sửa tay được)
+   ============================================================ */
+function poEntries() {
+  return window.Catalog ? window.Catalog.poOf(AppState.khachHangId) : [];
+}
+
+function refreshPoDatalist() {
+  const dl = document.getElementById('po-datalist');
+  if (!dl) return;
+  const seen = new Set();
+  dl.innerHTML = poEntries().filter(p => p.po).filter(p => {
+    const k = `${p.po}__${p.art}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).map(p => `<option value="${escapeHtml(p.po)}" label="${escapeHtml([p.art && `ART ${p.art}`, p.don_hang && `ĐH ${p.don_hang}`, p.mau].filter(Boolean).join(' · '))}"></option>`).join('');
+}
+
+function refreshArtDatalist(po) {
+  const dl = document.getElementById('art-datalist');
+  if (!dl) return;
+  const list = poEntries().filter(p => p.art && (!po || p.po === po));
+  const arts = [...new Set((list.length ? list : poEntries().filter(p => p.art)).map(p => p.art))];
+  dl.innerHTML = arts.map(a => `<option value="${escapeHtml(a)}"></option>`).join('');
+}
+
+function onPoChanged(rIdx) {
+  const row = AppState.rows[rIdx];
+  const matches = poEntries().filter(p => p.po && p.po === String(row.ma_hang).trim());
+  if (matches.length) {
+    const art = matches[0].art || '';
+    if (art && (!row.mau || row.mau === row._autoArt || !matches.some(m => m.art === row.mau))) {
+      const old = row.mau;
+      row.mau = art;
+      row._autoArt = art;
+      const cell = document.querySelector(`tr[data-row-index="${rIdx}"] [data-field="mau"]`);
+      if (cell) cell.value = art;
+      if (row.bo_key) propagateBlockField(rIdx, 'mau', old);
+    }
+  }
+  updateDonHangAuto();
+}
+
+/** Ghép các "Đơn hàng" của những PO đang có trong phiếu vào ô Đơn hàng (nếu người dùng chưa sửa tay) */
+function updateDonHangAuto() {
+  const el = document.getElementById('slip-donhang');
+  if (!el) return;
+  const entries = poEntries();
+  const dhs = [];
+  AppState.rows.forEach(r => {
+    const po = String(r.ma_hang || '').trim();
+    if (!po) return;
+    entries.filter(p => p.po === po && p.don_hang).forEach(p => { if (!dhs.includes(p.don_hang)) dhs.push(p.don_hang); });
+  });
+  const joined = dhs.join(', ');
+  if (!el.value || el.value === AppState.lastAutoDonHang) {
+    el.value = joined;
+    AppState.lastAutoDonHang = joined;
+  }
+}
+
+// Ô ART: khi focus thì gợi ý ART theo PO của dòng
+document.addEventListener('focusin', (e) => {
+  const cell = e.target;
+  if (cell.matches && cell.matches('#excel-grid [data-field="mau"]')) {
+    const tr = cell.closest('tr');
+    const row = AppState.rows[parseInt(tr.dataset.rowIndex, 10)];
+    refreshArtDatalist(row ? String(row.ma_hang || '').trim() : '');
+  }
+});
 
 /* ============================================================
    TIỆN ÍCH DÙNG CHUNG
@@ -1591,6 +1999,7 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+window.showToast = showToast;
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
