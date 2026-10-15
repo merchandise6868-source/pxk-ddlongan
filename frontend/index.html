@@ -13,12 +13,12 @@
   <meta name="apple-mobile-web-app-title" content="Phiếu Xuất Kho">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="/icons/favicon-64.png">
-  <link rel="stylesheet" href="styles.css?v=20261015d">
-  <link rel="stylesheet" href="print.css?v=20261015d">
+  <link rel="stylesheet" href="styles.css?v=20261015f">
+  <link rel="stylesheet" href="print.css?v=20261015f">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="ui-v2.css?v=20261015d">
+  <link rel="stylesheet" href="ui-v2.css?v=20261015f">
 </head>
 <body>
 
@@ -406,8 +406,18 @@
 
             <div class="ui-grid-tools">
               <button type="button" class="ui-btn ui-btn-ghost" id="btn-add-row">+ Thêm dòng</button>
+              <button type="button" class="ui-btn ui-btn-ghost" id="btn-add-ks-row">+ Dòng công cụ / không size</button>
               <button type="button" class="ui-btn ui-btn-ghost" id="btn-del-row">Xóa dòng cuối</button>
-              <span class="ui-hint">Có thể copy từ Excel rồi dán (Ctrl+V) vào ô bất kỳ. Enter hoặc phím mũi tên để chuyển ô.</span>
+              <button type="button" class="ui-btn ui-btn-danger" id="btn-del-selected-rows" hidden>Xóa dòng đã chọn</button>
+            </div>
+            <div class="ui-keyhelp">
+              <span><kbd>← → ↑ ↓</kbd> chuyển ô</span>
+              <span><kbd>Kéo chuột</kbd> / <kbd>Shift</kbd>+mũi tên: quét khối</span>
+              <span>Bấm <b>số STT</b> để chọn cả dòng</span>
+              <span><kbd>Ctrl+C</kbd> <kbd>Ctrl+V</kbd> copy, dán (cả từ Excel)</span>
+              <span><kbd>Delete</kbd> xóa</span>
+              <span><kbd>Ctrl+Z</kbd> hoàn tác</span>
+              <span>Chuột phải: chèn / xóa dòng</span>
             </div>
 
             <details class="ui-more">
@@ -629,6 +639,10 @@
 
           <div class="ui-panel cat-form" id="cat-kh-form">
             <h3 class="ui-panel-title" id="cat-kh-form-title">Thêm khách hàng mới</h3>
+            <div class="ui-return-note" id="cat-kh-return-note" hidden>
+              <span>Nhập thông tin khách mới rồi bấm <b>Lưu khách hàng</b>. Lưu xong sẽ tự quay lại phiếu đang lập và chọn sẵn khách này.</span>
+              <button type="button" class="ui-btn ui-btn-ghost" id="cat-kh-back">Quay lại phiếu</button>
+            </div>
             <div class="ui-fields">
               <label class="ui-field">
                 <span class="ui-label">Tên trên nút <b class="ui-req">*</b></span>
@@ -779,10 +793,11 @@
   <div id="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="catalog.js?v=20261015d"></script>
-  <script src="app.js?v=20261015d"></script>
-  <script src="dashboard.js?v=20261015d"></script>
+  <script src="catalog.js?v=20261015f"></script>
+  <script src="app.js?v=20261015f"></script>
+  <script src="grid.js?v=20261015f"></script>
+  <script src="dashboard.js?v=20261015f"></script>
   <script src="qc_totruong.js"></script>
-  <script src="pwa.js?v=20261015d"></script>
+  <script src="pwa.js?v=20261015f"></script>
 </body>
 </html>

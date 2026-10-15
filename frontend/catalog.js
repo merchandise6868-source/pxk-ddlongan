@@ -78,6 +78,7 @@
   let editingKhId = null;
   let editingBoId = null;
   let poRowsLocal = []; // dòng PO đang hiển thị (gồm cả dòng mới chưa lưu)
+  let returnToCreate = false; // mở form từ nút "+ Khách hàng mới" ở tab Lập phiếu
 
   function khOptions(selected, withAll) {
     let html = withAll ? `<option value="">Tất cả khách hàng</option>` : `<option value="">Chọn khách</option>`;
@@ -180,11 +181,43 @@
         ? await api(`/api/khachhang/${editingKhId}`, 'PUT', body)
         : await api('/api/khachhang', 'POST', body);
       toast(r.message || 'Đã lưu', 'success');
+      const wasNew = !editingKhId;
       editingKhId = null;
       fillKhForm(null);
       await reloadAndNotify();
+      if (returnToCreate && wasNew && r.id) {
+        backToCreate(r.id);
+      }
     } catch (e) { toast(e.message, 'error'); }
   }
+
+  function setReturnNote(on) {
+    returnToCreate = on;
+    const note = document.getElementById('cat-kh-return-note');
+    if (note) note.hidden = !on;
+  }
+
+  /** Quay về tab Lập phiếu, chọn sẵn khách hàng (nếu có) */
+  function backToCreate(khId) {
+    setReturnNote(false);
+    document.querySelector('.tab-btn[data-target="tab-create"]')?.click();
+    if (khId && window.selectCustomer) setTimeout(() => window.selectCustomer(khId), 50);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /** Gọi từ nút "+ Khách hàng mới" ở tab Lập phiếu */
+  window.openNewCustomerForm = async function(opts = {}) {
+    currentSub = 'kh';
+    editingKhId = null;
+    document.querySelector('.tab-btn[data-target="tab-catalog"]')?.click();
+    await Catalog.load();
+    fillKhForm(null);
+    renderAll();
+    setReturnNote(!!opts.returnToCreate);
+    const form = document.getElementById('cat-kh-form');
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => document.getElementById('cat-kh-ten')?.focus(), 300);
+  };
 
   /* ---------------- 2. PO / ĐƠN HÀNG / ĐƠN GIÁ ---------------- */
   function renderPoPane() {
@@ -356,6 +389,7 @@
     document.querySelectorAll('.cat-sub-btn').forEach(b => b.addEventListener('click', () => { currentSub = b.dataset.sub; renderAll(); }));
     document.getElementById('cat-kh-save')?.addEventListener('click', saveKh);
     document.getElementById('cat-kh-new')?.addEventListener('click', () => fillKhForm(null));
+    document.getElementById('cat-kh-back')?.addEventListener('click', () => backToCreate(null));
     document.getElementById('cat-po-kh')?.addEventListener('change', renderPoPane);
     document.getElementById('cat-po-search')?.addEventListener('input', renderPoPane);
     document.getElementById('cat-po-add')?.addEventListener('click', addPoRow);

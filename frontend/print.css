@@ -350,3 +350,116 @@
     font-size: 9.5pt !important;
   }
 }
+
+/* ============================================================
+   BẢN IN THOÁNG & SANG TRỌNG (10/2026)
+   Tự chọn mật độ theo số dòng & số cột size:
+   density-1 (≤12 dòng): chữ 11pt, dòng rộng · density-2 (13–20): 10pt · density-3 (>20): 9pt
+   ============================================================ */
+@media print {
+  .print-page .p-title {
+    font-size: 22pt !important;
+    letter-spacing: 0.06em !important;
+  }
+  .print-page .p-title-box {
+    margin: 4px 0 6px 0 !important;
+  }
+  .print-page .p-sub-info {
+    border-bottom: 3px double #000 !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 6px !important;
+  }
+  .print-page .p-meta { margin: 6px 0 12px 0 !important; }
+
+  .print-page table.p-table {
+    border: 1.6px solid #000 !important;
+    line-height: 1.3 !important;
+  }
+  .print-page table.p-table th {
+    border-bottom: 1.6px solid #000 !important;
+  }
+
+  /* Dòng cộng: kẻ đôi phía trên, chữ to đậm */
+  .print-page .p-total-row td {
+    border-top: 3px double #000 !important;
+    font-weight: bold !important;
+  }
+
+  /* Tiêu đề nhóm "Công cụ, dụng cụ kèm theo" */
+  .print-page .p-sub-head td {
+    text-align: left !important;
+    font-weight: bold !important;
+    font-style: italic !important;
+    padding-left: 8px !important;
+    border-top: 1.6px solid #000 !important;
+  }
+
+  /* ---- Mật độ 1: thoáng, chữ to ---- */
+  .print-page.density-1 table.p-table td,
+  .print-page.density-1 table.p-table td.p-cell-stt,
+  .print-page.density-1 table.p-table td.p-cell-po,
+  .print-page.density-1 table.p-table td.p-cell-ma,
+  .print-page.density-1 table.p-table td.p-cell-chitiet,
+  .print-page.density-1 table.p-table td.p-cell-dvt,
+  .print-page.density-1 table.p-table td.p-cell-size,
+  .print-page.density-1 table.p-table td.p-cell-total {
+    font-size: 11pt !important;
+    padding: 5px 6px !important;
+  }
+  .print-page.density-1 table.p-table th,
+  .print-page.density-1 table.p-table th.p-cell-stt,
+  .print-page.density-1 table.p-table th.p-cell-po,
+  .print-page.density-1 table.p-table th.p-cell-ma,
+  .print-page.density-1 table.p-table th.p-cell-chitiet,
+  .print-page.density-1 table.p-table th.p-cell-dvt,
+  .print-page.density-1 table.p-table th.p-cell-size,
+  .print-page.density-1 table.p-table th.p-cell-total {
+    font-size: 10pt !important;
+    padding: 6px 6px !important;
+  }
+  .print-page.density-1 table.p-table td.p-cell-total,
+  .print-page.density-1 .p-total-row td { font-size: 12pt !important; }
+  .print-page.density-1 .p-sig-title { margin-bottom: 42px !important; }
+
+  /* ---- Mật độ 2: vừa ---- */
+  .print-page.density-2 table.p-table td,
+  .print-page.density-2 table.p-table td.p-cell-stt,
+  .print-page.density-2 table.p-table td.p-cell-po,
+  .print-page.density-2 table.p-table td.p-cell-ma,
+  .print-page.density-2 table.p-table td.p-cell-chitiet,
+  .print-page.density-2 table.p-table td.p-cell-dvt,
+  .print-page.density-2 table.p-table td.p-cell-size,
+  .print-page.density-2 table.p-table td.p-cell-total {
+    font-size: 10pt !important;
+    padding: 3px 5px !important;
+  }
+  .print-page.density-2 table.p-table th,
+  .print-page.density-2 table.p-table th.p-cell-stt,
+  .print-page.density-2 table.p-table th.p-cell-po,
+  .print-page.density-2 table.p-table th.p-cell-ma,
+  .print-page.density-2 table.p-table th.p-cell-chitiet,
+  .print-page.density-2 table.p-table th.p-cell-dvt,
+  .print-page.density-2 table.p-table th.p-cell-size,
+  .print-page.density-2 table.p-table th.p-cell-total {
+    font-size: 9.5pt !important;
+    padding: 4px 5px !important;
+  }
+  .print-page.density-2 table.p-table td.p-cell-total,
+  .print-page.density-2 .p-total-row td { font-size: 11pt !important; }
+
+  /* ---- Mật độ 3: gọn để vừa 1 trang ---- */
+  .print-page.density-3 table.p-table td,
+  .print-page.density-3 table.p-table td.p-cell-stt,
+  .print-page.density-3 table.p-table td.p-cell-po,
+  .print-page.density-3 table.p-table td.p-cell-ma,
+  .print-page.density-3 table.p-table td.p-cell-chitiet,
+  .print-page.density-3 table.p-table td.p-cell-dvt,
+  .print-page.density-3 table.p-table td.p-cell-size,
+  .print-page.density-3 table.p-table td.p-cell-total {
+    font-size: 9pt !important;
+    padding: 2px 4px !important;
+  }
+  .print-page.density-3 table.p-table th { font-size: 8.5pt !important; padding: 3px 4px !important; }
+  .print-page.density-3 table.p-table td.p-cell-total,
+  .print-page.density-3 .p-total-row td { font-size: 10pt !important; }
+}

@@ -271,7 +271,7 @@ export async function handleCatalogApi(path, method, url, request, env) {
     const tuNgay = url.searchParams.get('tu_ngay');
     const denNgay = url.searchParams.get('den_ngay');
     const kh = url.searchParams.get('khach_hang_id');
-    let where = "p.trang_thai != 'cancelled' AND COALESCE(d.loai, '') != 'chi_tiet'";
+    let where = "p.trang_thai != 'cancelled' AND COALESCE(d.loai, '') NOT IN ('chi_tiet', 'khong_size')";
     const params = [];
     if (tuNgay) { where += ' AND p.ngay >= ?'; params.push(tuNgay); }
     if (denNgay) { where += ' AND p.ngay <= ?'; params.push(denNgay); }

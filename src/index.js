@@ -297,7 +297,7 @@ async function handleApi(url, request, env) {
       FROM phieu p
       LEFT JOIN bo_phan b ON p.ma_bo_phan = b.ma
       LEFT JOIN khach_hang k ON p.khach_hang_id = k.id
-      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') != 'chi_tiet'
+      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') NOT IN ('chi_tiet', 'khong_size')
       WHERE 1=1
     `;
     const params = [];
@@ -720,7 +720,7 @@ async function handleApi(url, request, env) {
         COUNT(DISTINCT p.id) as so_luong_phieu
       FROM phieu p
       LEFT JOIN bo_phan b ON p.ma_bo_phan = b.ma
-      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') != 'chi_tiet'
+      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') NOT IN ('chi_tiet', 'khong_size')
       WHERE ${whereClause}
       GROUP BY p.ma_bo_phan
       ORDER BY b.thu_tu ASC
@@ -739,7 +739,7 @@ async function handleApi(url, request, env) {
       FROM phieu p
       JOIN phieu_dong d ON p.id = d.phieu_id
       JOIN phieu_dong_size s ON d.id = s.phieu_dong_id
-      WHERE ${whereClause} AND COALESCE(d.loai, '') != 'chi_tiet'
+      WHERE ${whereClause} AND COALESCE(d.loai, '') NOT IN ('chi_tiet', 'khong_size')
       GROUP BY ma_hang, mau, p.ma_bo_phan, s.size
       ORDER BY ma_hang ASC, mau ASC, s.size ASC
     `;
@@ -752,7 +752,7 @@ async function handleApi(url, request, env) {
         COALESCE(SUM(d.sl_chung_tu), 0) as sl_chung_tu,
         COALESCE(SUM(d.sl_thuc_xuat), 0) as sl_thuc_xuat
       FROM phieu p
-      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') != 'chi_tiet'
+      LEFT JOIN phieu_dong d ON p.id = d.phieu_id AND COALESCE(d.loai, '') NOT IN ('chi_tiet', 'khong_size')
       WHERE ${whereClause}
       GROUP BY p.ngay, p.ma_bo_phan
       ORDER BY p.ngay ASC

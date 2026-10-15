@@ -194,6 +194,11 @@ function initFormControls() {
   // Nút hành động
   document.getElementById('btn-add-row').addEventListener('click', () => addRow());
   document.getElementById('btn-del-row').addEventListener('click', () => deleteLastRow());
+  document.getElementById('btn-add-ks-row')?.addEventListener('click', () => {
+    if (AppState.currentMau !== 3) switchMau(3);
+    window.Grid.insertRow(AppState.rows.length, 'khong_size');
+  });
+  document.getElementById('btn-del-selected-rows')?.addEventListener('click', () => window.Grid.deleteSelectedRows());
   document.getElementById('btn-reset-form').addEventListener('click', resetForm);
   document.getElementById('btn-save-slip').addEventListener('click', saveSlip);
   document.getElementById('btn-print-slip').addEventListener('click', printAndSaveSlip);
@@ -285,6 +290,9 @@ function switchMau(mau) {
       descEl.textContent = 'Nhập số lượng theo từng size. Tổng ngang và tổng dọc tự tính.';
     }
   }
+
+  const ksBtn = document.getElementById('btn-add-ks-row');
+  if (ksBtn) ksBtn.hidden = mau !== 3;
 
   // Hiện/ẩn thanh chọn dải size khi chọn Mẫu 3
   const sizeRangeBox = document.getElementById('size-range-box');
@@ -589,8 +597,9 @@ function renderTableBody() {
     tr.dataset.rowIndex = rIdx;
     if (mau === 3 && row.loai === 'chi_tiet') tr.className = 'row-chitiet';
     if (mau === 3 && row.loai === 'dong_bo') tr.className = 'row-dongbo';
+    if (mau === 3 && row.loai === 'khong_size') tr.className = 'row-khongsize';
 
-    let rowHtml = `<td style="text-align: center; font-weight: 600;">${rIdx + 1}${mau === 3 && row.loai === 'dong_bo'
+    let rowHtml = `<td class="row-head" title="Bấm để chọn cả dòng" style="text-align: center; font-weight: 600;">${rIdx + 1}${mau === 3 && row.loai === 'dong_bo'
       ? `<button type="button" class="btn-del-block" title="Xóa cả bộ chi tiết này" onclick="removeBlock('${row.bo_key}')">Xóa bộ</button>` : ''}</td>`;
 
     if (mau === 1) {
@@ -621,16 +630,31 @@ function renderTableBody() {
         <td><input type="text" class="excel-cell cell-center td-chitiet-cell" data-field="chi_tiet" value="${escapeHtml(row.chi_tiet || '')}"></td>
         <td><input type="text" class="excel-cell cell-center td-dvt-cell" data-field="dvt" value="${escapeHtml(row.dvt)}"></td>
       `;
-      AppState.selectedSizes.forEach(s => {
-        const val = row.sizes[s] !== undefined ? row.sizes[s] : '';
-        rowHtml += `<td><input type="text" class="excel-cell cell-center size-val-cell" data-size="${s}" value="${formatNum(val)}"></td>`;
-      });
-      rowHtml += `
-        <td><input type="text" class="excel-cell cell-center td-total-cell" data-field="sl_chung_tu" value="${formatNum(row.sl_chung_tu)}" readonly style="font-weight: 700;"></td>
+      if (row.loai === 'khong_size') {
+        // Dòng công cụ / dụng cụ: gộp các cột size thành 1 ô số lượng
+        const n = AppState.selectedSizes.length;
+        rowHtml += `<td colspan="${n}" class="td-ks"><input type="text" class="excel-cell cell-center ks-qty-cell" data-field="sl_chung_tu" data-span="${n}" placeholder="Số lượng (không theo size)" value="${formatNum(row.sl_chung_tu)}"></td>`;
+        rowHtml += `
+        <td><input type="text" class="excel-cell cell-center td-total-cell" data-field="ks_total" value="${formatNum(row.sl_chung_tu)}" readonly tabindex="-1" style="font-weight: 700;"></td>
       `;
+      } else {
+        AppState.selectedSizes.forEach(s => {
+          const val = row.sizes[s] !== undefined ? row.sizes[s] : '';
+          rowHtml += `<td><input type="text" class="excel-cell cell-center size-val-cell" data-size="${s}" value="${formatNum(val)}"></td>`;
+        });
+        rowHtml += `
+        <td><input type="text" class="excel-cell cell-center td-total-cell" data-field="sl_chung_tu" value="${formatNum(row.sl_chung_tu)}" readonly tabindex="-1" style="font-weight: 700;"></td>
+      `;
+      }
     }
 
     tr.innerHTML = rowHtml;
+    // Gán cột logic cho từng ô (phục vụ di chuyển, quét khối, copy/dán)
+    let colIdx = 0;
+    tr.querySelectorAll('.excel-cell').forEach(cell => {
+      cell.dataset.col = colIdx;
+      colIdx += parseInt(cell.dataset.span, 10) || 1;
+    });
     tbody.appendChild(tr);
 
     // Cập nhật phản hồi bóc tách size cho mẫu 2
@@ -643,6 +667,7 @@ function renderTableBody() {
 }
 
 function addRow() {
+  if (window.Grid) Grid.snapshot();
   const newRow = createEmptyRowData(AppState.rows.length + 1);
   AppState.rows.push(newRow);
   renderTableBody();
@@ -652,6 +677,7 @@ function addRow() {
 
 function deleteLastRow() {
   if (AppState.rows.length > 1) {
+    if (window.Grid) Grid.snapshot();
     AppState.rows.pop();
     renderTableBody();
     calculateTotals();
@@ -666,11 +692,9 @@ function attachExcelCellEvents() {
   const cells = document.querySelectorAll('.excel-cell');
 
   cells.forEach(cell => {
-    // 1. Xử lý Paste khối từ Excel
-    cell.addEventListener('paste', handleCellPaste);
-
-    // 2. Xử lý di chuyển bằng bàn phím (Mũi tên, Enter, Tab)
-    cell.addEventListener('keydown', handleCellKeyDown);
+    // 1. Dán (từ Excel hoặc trong bảng) & 2. Bàn phím: xử lý trong grid.js
+    cell.addEventListener('paste', (e) => window.Grid ? Grid.onPaste(e) : handleCellPaste(e));
+    cell.addEventListener('keydown', (e) => window.Grid ? Grid.onKeyDown(e) : handleCellKeyDown(e));
 
     // 3. Xử lý thay đổi dữ liệu
     cell.addEventListener('input', handleCellInput);
@@ -685,6 +709,7 @@ function handleCellInput(e) {
 
   const field = cell.dataset.field;
   const sizeKey = cell.dataset.size;
+  if (window.Grid) Grid.beforeEdit();
   const oldVal = field ? row[field] : (sizeKey ? row.sizes[sizeKey] : undefined);
 
   if (field) {
@@ -736,6 +761,12 @@ function recalcRow(rIdx) {
     // Tự động bóc tách size từ Tên hàng
     parseSizesFromText(rIdx);
     updateSizeFeedback(rIdx);
+  } else if (mau === 3 && row.loai === 'khong_size') {
+    const qty = parseVnNumber(row.sl_chung_tu);
+    row.sl_thuc_xuat = qty;
+    const tr = document.querySelector(`tr[data-row-index="${rIdx}"]`);
+    const totalCell = tr && tr.querySelector('[data-field="ks_total"]');
+    if (totalCell) totalCell.value = formatNum(qty);
   } else if (mau === 3) {
     // Tính tổng ngang dải size
     let rowTotal = 0;
@@ -949,9 +980,9 @@ function calculateTotals() {
 
   AppState.selectedSizes.forEach(s => sizeTotals[s] = 0);
 
-  const hasBlocks = mau === 3 && AppState.rows.some(r => r.loai === 'dong_bo');
+  const hasBlocks = mau === 3 && AppState.rows.some(r => r.loai === 'dong_bo' || r.loai === 'khong_size');
   AppState.rows.forEach(r => {
-    if (mau === 3 && r.loai === 'chi_tiet') return; // Chi tiết (miếng) không cộng vào tổng đôi
+    if (mau === 3 && (r.loai === 'chi_tiet' || r.loai === 'khong_size')) return; // Chi tiết (miếng) & công cụ không cộng vào tổng đôi
     totalSlCt += parseVnNumber(r.sl_chung_tu);
     totalSlTx += parseVnNumber(r.sl_thuc_xuat);
     totalThanhTien += parseVnNumber(r.thanh_tien);
@@ -1245,7 +1276,10 @@ function printCurrentSlip() {
   let sttCount = 0;
   let printedNormalRows = 0;
   let printedBlocks = 0;
+  // Dòng công cụ / dụng cụ (không size) được gom xuống cuối phiếu
+  const ksRows = mau === 3 ? AppState.rows.filter(r => r.loai === 'khong_size' && (r.chi_tiet || r.ma_hang || parseVnNumber(r.sl_chung_tu) > 0)) : [];
   AppState.rows.forEach(r => {
+    if (mau === 3 && r.loai === 'khong_size') return;
     const slCt = parseVnNumber(r.sl_chung_tu);
     const slTx = parseVnNumber(r.sl_thuc_xuat);
     if (!r.ten_hang && !r.ma_hang && slCt === 0 && slTx === 0) return;
@@ -1306,6 +1340,33 @@ function printCurrentSlip() {
     }
   });
 
+  if (ksRows.length) {
+    const nCols = 5 + activeSizes.length + 1;
+    tableBodyHtml += `<tr class="p-sub-head"><td colspan="${nCols}">Công cụ, dụng cụ kèm theo</td></tr>`;
+    ksRows.forEach(r => {
+      sttCount++;
+      tableBodyHtml += `
+        <tr class="p-ks-row">
+          <td class="p-cell-stt">${sttCount}</td>
+          <td class="p-cell-po">${escapeHtml(r.ma_hang)}</td>
+          <td class="p-cell-ma">${escapeHtml(r.mau)}</td>
+          <td class="p-cell-chitiet">${escapeHtml(r.chi_tiet || '')}</td>
+          <td class="p-cell-dvt">${escapeHtml(r.dvt)}</td>
+          <td class="p-cell-size p-ks-span" colspan="${activeSizes.length}"></td>
+          <td class="p-cell-total" style="font-weight: bold;">${formatNum(parseVnNumber(r.sl_chung_tu))}</td>
+        </tr>
+      `;
+    });
+  }
+
+  // Mật độ in: phiếu ít dòng in thoáng & chữ to, phiếu nhiều dòng tự thu nhỏ để vừa 1 trang A5
+  const printedRowCount = sttCount + (ksRows.length ? 1 : 0);
+  let densityLevel = printedRowCount <= 12 ? 1 : (printedRowCount <= 20 ? 2 : 3);
+  // Nhiều cột size thì bảng rộng hơn -> thu nhỏ thêm 1 bậc để không tràn khổ A5
+  if (mau === 3 && activeSizes.length > 12) densityLevel = 3;
+  else if (mau === 3 && activeSizes.length > 9) densityLevel = Math.min(3, densityLevel + 1);
+  const densityClass = `density-${densityLevel}`;
+
   // Dòng cộng in
   let tableFootHtml = '';
   if (mau === 1) {
@@ -1330,7 +1391,7 @@ function printCurrentSlip() {
     // Phiếu chỉ có 1 bộ chi tiết thì dòng ĐỒNG BỘ ĐÔI đã là dòng tổng -> không in thêm dòng CỘNG
     tableFootHtml = `
       <tr class="p-total-row">
-        <td colspan="5" class="text-center nowrap">${printedBlocks > 0 ? 'CỘNG (ĐÔI):' : 'CỘNG:'}</td>
+        <td colspan="5" class="text-center nowrap">${printedBlocks > 0 || ksRows.length ? 'CỘNG (ĐÔI):' : 'CỘNG:'}</td>
         ${activeSizes.map(s => {
           const val = sizeTotals[s];
           return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
@@ -1365,7 +1426,7 @@ function printCurrentSlip() {
   }
 
   printArea.innerHTML = `
-    <div class="print-page">
+    <div class="print-page ${densityClass}">
       <div class="p-header">
         ${companyHeaderHtml}
       </div>
@@ -1725,6 +1786,7 @@ function resetForm() {
   } catch (e) {}
 
   AppState.lastAutoDonHang = '';
+  if (window.Grid) { Grid.resetHistory(); Grid.clearSelection(); }
   initDefaultRows();
   if (AppState.khachHangId) {
     selectCustomer(AppState.khachHangId); // giữ khách hàng đang chọn, nạp lại thông tin mặc định
@@ -1750,13 +1812,18 @@ function renderCustomerPills() {
       <span class="kh-name">${escapeHtml(k.ten_ngan)}</span>
       <span class="kh-sub">${escapeHtml(k.ten_day_du || '')}</span>
     </button>
-  `).join('') + `<button type="button" class="pxk-kh-pill pxk-kh-none ${!AppState.khachHangId ? 'active' : ''}" data-kh="" aria-pressed="${!AppState.khachHangId}">
-      <span class="kh-name">Khách khác</span>
-      <span class="kh-sub">Tự nhập thông tin</span>
+  `).join('') + `<button type="button" class="pxk-kh-pill pxk-kh-none" data-new-kh="1">
+      <span class="kh-name">+ Khách hàng mới</span>
+      <span class="kh-sub">Thêm vào danh mục rồi quay lại</span>
     </button>`;
   box.querySelectorAll('[data-kh]').forEach(btn => btn.addEventListener('click', () => {
-    selectCustomer(btn.dataset.kh ? parseInt(btn.dataset.kh, 10) : null);
+    const id = parseInt(btn.dataset.kh, 10);
+    // Bấm lại khách đang chọn -> bỏ chọn (để tự nhập tay)
+    selectCustomer(id === AppState.khachHangId ? null : id);
   }));
+  box.querySelector('[data-new-kh]')?.addEventListener('click', () => {
+    if (window.openNewCustomerForm) window.openNewCustomerForm({ returnToCreate: true });
+  });
 }
 
 function renderDayPills() {
@@ -1869,6 +1936,7 @@ function renderBoPanel() {
 function insertBoBlock(boId) {
   const bo = window.Catalog.bo.find(b => b.id === boId);
   if (!bo) return;
+  if (window.Grid) Grid.snapshot();
   if (AppState.currentMau !== 3) switchMau(3);
 
   // Bỏ các dòng trống ở cuối bảng rồi nối bộ mới vào
@@ -1910,6 +1978,7 @@ function insertBoBlock(boId) {
 
 window.removeBlock = function(key) {
   if (!key) return;
+  if (window.Grid) Grid.snapshot();
   AppState.rows = AppState.rows.filter(r => r.bo_key !== key);
   if (!AppState.rows.length) AppState.rows.push(createEmptyRowData(1));
   renderTableBody();
