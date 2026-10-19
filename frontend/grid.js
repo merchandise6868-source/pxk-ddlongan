@@ -312,6 +312,12 @@
       case 'ArrowRight': {
         const left = e.key === 'ArrowLeft';
         if (e.shiftKey) {
+          // Unikey/EVKey (Telex) sửa dấu bằng Shift+← để bôi đen chữ vừa gõ rồi gõ đè.
+          // Khi ô đang có chữ và chưa bôi đen toàn bộ (đang gõ/sửa) -> để trình duyệt bôi đen chữ,
+          // KHÔNG quét khối sang ô khác. Ô trống hoặc đã bôi đen cả ô -> quét khối như Excel.
+          const v = cell.value || '';
+          const ss = cell.selectionStart, se = cell.selectionEnd;
+          if (v.length && typeof ss === 'number' && !(ss === 0 && se === v.length)) return;
           e.preventDefault();
           const cur = cellAt(base.r, base.c);
           const nc = left ? (cur ? colOf(cur) - 1 : base.c - 1) : (cur ? colOf(cur) + spanOf(cur) : base.c + 1);
