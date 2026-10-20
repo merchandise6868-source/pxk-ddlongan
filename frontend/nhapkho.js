@@ -446,8 +446,9 @@
     document.querySelectorAll('#nk-lines .nk-err').forEach(e => e.classList.remove('nk-err'));
     const errs = [];
     const markErr = (i, field) => {
-      const el = document.querySelector(`#nk-lines .nk-line[data-i="${i}"] [data-f="${field}"]`);
-      if (el) el.classList.add('nk-err');
+      // Dòng có bảng size: tô đỏ các ô size thay cho ô số lượng
+      const sel = field === 'so_luong' && L.size ? '.nk-size-in' : `[data-f="${field}"]`;
+      document.querySelectorAll(`#nk-lines .nk-line[data-i="${i}"] ${sel}`).forEach(el => el.classList.add('nk-err'));
     };
     if (L.po && !f.don_vi_giao_id) { errs.push('Chưa chọn đơn vị giao hàng'); $('nk-dvg')?.classList.add('nk-err'); }
     const lines = [];
@@ -487,6 +488,7 @@
       const id = S.editingId || r.id;
       toast(r.message || 'Đã lưu phiếu nhập', 'success');
       store.set('nk_nguoi_nhap', body.nguoi_nhap || '');
+      clearTimeout(draftTimer); // bỏ lượt lưu nháp đang chờ, kẻo ghi lại nháp sau khi đã lưu
       store.del(draftKey());
       if (andPrint) await printPhieu(id);
       openNewForm(false);
@@ -613,6 +615,7 @@
     const l = S.form.lines[i];
     t.classList.remove('nk-err');
     if (t.dataset.size !== undefined) {
+      t.closest('.nk-sizes')?.querySelectorAll('.nk-err').forEach(el => el.classList.remove('nk-err'));
       l.sizes[t.dataset.size] = t.value;
     } else if (t.dataset.f && t.tagName !== 'SELECT') {
       l[t.dataset.f] = t.value;
