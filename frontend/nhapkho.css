@@ -1,0 +1,185 @@
+/* ============================================================
+   TAB NHẬP KHO — dùng chung bộ màu / nút của ui-v2.css
+   ============================================================ */
+#tab-nhapkho {
+  --nk-1: #3f5f8a;  --nk-1-soft: #e8eef7;
+  --nk-2: #7a4f93;  --nk-2-soft: #f2eaf7;
+  --nk-3: #a5600a;  --nk-3-soft: #fff3df;
+  --nk-4: #0e5a4a;  --nk-4-soft: #e2efea;
+  --nk-5: #a3402c;  --nk-5-soft: #fbebe6;
+  --nk-c: var(--nk-4); --nk-c-soft: var(--nk-4-soft);
+}
+#nk-root[data-loai="1"] { --nk-c: var(--nk-1); --nk-c-soft: var(--nk-1-soft); }
+#nk-root[data-loai="2"] { --nk-c: var(--nk-2); --nk-c-soft: var(--nk-2-soft); }
+#nk-root[data-loai="3"] { --nk-c: var(--nk-3); --nk-c-soft: var(--nk-3-soft); }
+#nk-root[data-loai="4"] { --nk-c: var(--nk-4); --nk-c-soft: var(--nk-4-soft); }
+#nk-root[data-loai="5"] { --nk-c: var(--nk-5); --nk-c-soft: var(--nk-5-soft); }
+
+/* ---------- 5 nút loại hàng ---------- */
+#tab-nhapkho .nk-types { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+#tab-nhapkho .nk-type {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  min-height: 72px; padding: 12px 14px;
+  background: var(--ui-paper); color: var(--ui-ink);
+  border: 2px solid var(--ui-line); border-radius: var(--ui-radius);
+  cursor: pointer; font-family: inherit;
+  transition: border-color .12s, background .12s;
+}
+#tab-nhapkho .nk-type:hover { border-color: var(--ui-line-strong); }
+#tab-nhapkho .nk-type-icon { font-size: 26px; line-height: 1; flex: none; }
+#tab-nhapkho .nk-type-text { display: flex; flex-direction: column; min-width: 0; }
+#tab-nhapkho .nk-type-text b { font-size: 15.5px; line-height: 1.3; }
+#tab-nhapkho .nk-type-text small { font-size: 12.5px; color: var(--ui-muted); line-height: 1.35; margin-top: 2px; }
+#tab-nhapkho .nk-type-1.active { border-color: var(--nk-1); background: var(--nk-1-soft); }
+#tab-nhapkho .nk-type-2.active { border-color: var(--nk-2); background: var(--nk-2-soft); }
+#tab-nhapkho .nk-type-3.active { border-color: var(--nk-3); background: var(--nk-3-soft); }
+#tab-nhapkho .nk-type-4.active { border-color: var(--nk-4); background: var(--nk-4-soft); }
+#tab-nhapkho .nk-type-5.active { border-color: var(--nk-5); background: var(--nk-5-soft); }
+#tab-nhapkho .nk-type.active .nk-type-text b { color: var(--nk-c); }
+
+/* ---------- Tab phụ ---------- */
+#tab-nhapkho .ui-tab {
+  height: 44px; padding: 0 18px; margin: 0;
+  border-radius: 999px; border: 1px solid var(--ui-line-strong);
+  background: var(--ui-paper); color: var(--ui-ink);
+  font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+#tab-nhapkho .ui-tab:hover { border-color: var(--nk-c); color: var(--nk-c); }
+#tab-nhapkho .ui-tab.active { background: var(--nk-c); border-color: var(--nk-c); color: #fff; }
+
+#tab-nhapkho .ui-step-num { background: var(--nk-c); }
+#tab-nhapkho .nk-editing { margin-bottom: 14px; }
+#tab-nhapkho .nk-warn {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: var(--ui-radius-sm);
+  background: var(--ui-amber-soft); border: 1px solid var(--ui-amber-line); color: var(--ui-ink);
+}
+
+/* ---------- Dòng hàng (thẻ) ---------- */
+#tab-nhapkho .nk-line {
+  border: 1px solid var(--ui-line); border-left: 4px solid var(--nk-c);
+  border-radius: var(--ui-radius-sm); padding: 12px 14px 14px; margin-bottom: 12px; background: var(--ui-paper);
+}
+#tab-nhapkho .nk-line:focus-within { border-color: var(--nk-c); box-shadow: 0 0 0 3px var(--nk-c-soft); }
+#tab-nhapkho .nk-line-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+#tab-nhapkho .nk-line-no { font-weight: 700; color: var(--nk-c); font-size: 15px; }
+#tab-nhapkho .nk-line-total { font-weight: 700; font-size: 15px; }
+#tab-nhapkho .nk-line-fields { display: grid; gap: 10px 12px; }
+#tab-nhapkho .nk-cols-po { grid-template-columns: 1.1fr 1.2fr 1.1fr 0.8fr 1.3fr; }
+#tab-nhapkho .nk-cols-po:has([data-f="ten_hang"]) { grid-template-columns: 1fr 1.1fr 1fr 1.4fr 0.7fr 0.8fr 1.1fr; }
+#tab-nhapkho .nk-cols-simple { grid-template-columns: 2fr 0.8fr 0.9fr 1.6fr; }
+#tab-nhapkho .ui-input.nk-err,
+#tab-nhapkho .nk-err { border-color: var(--ui-danger) !important; box-shadow: 0 0 0 3px rgba(180, 35, 24, .15) !important; }
+#tab-nhapkho .ui-input:disabled { background: var(--ui-wash); color: var(--ui-faint); cursor: not-allowed; }
+
+#tab-nhapkho .nk-days { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+#tab-nhapkho .nk-days .ui-chip { height: 36px; }
+#tab-nhapkho .nk-sizes { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; margin-top: 12px; }
+#tab-nhapkho .nk-size { display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
+#tab-nhapkho .nk-size span {
+  text-align: center; font-size: 13.5px; font-weight: 700; color: var(--nk-c);
+  background: var(--nk-c-soft); border-radius: 5px; padding: 2px 0;
+}
+#tab-nhapkho .nk-size-in {
+  height: 44px; width: 100%; text-align: center; font-size: 16px; font-weight: 600;
+  border: 1px solid var(--ui-line-strong); border-radius: var(--ui-radius-sm); outline: none;
+  font-family: inherit; color: var(--ui-ink); background: var(--ui-paper);
+}
+#tab-nhapkho .nk-size-in:focus { border-color: var(--nk-c); box-shadow: 0 0 0 3px var(--nk-c-soft); }
+#tab-nhapkho .nk-size-empty { margin-top: 12px; padding: 12px; text-align: center; color: var(--ui-muted); background: var(--ui-wash); border-radius: var(--ui-radius-sm); }
+#tab-nhapkho .nk-qty { text-align: right; font-weight: 600; }
+
+#tab-nhapkho .nk-add-row { margin-top: 4px; }
+#tab-nhapkho .nk-add-row .ui-btn { width: 100%; border-style: dashed; }
+
+#tab-nhapkho .nk-actionbar {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--ui-paper); border: 1px solid var(--ui-line); border-radius: var(--ui-radius);
+  padding: 12px 16px; box-shadow: 0 -4px 14px rgba(16, 40, 34, .08);
+}
+#tab-nhapkho .nk-grand { font-size: 16px; }
+#tab-nhapkho .nk-grand b { font-size: 22px; color: var(--nk-c); margin-left: 4px; }
+
+/* ---------- Bộ lọc & bảng ---------- */
+#tab-nhapkho .nk-filter { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap: 12px; align-items: end; }
+#tab-nhapkho .nk-filter-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+#tab-nhapkho .nk-table-wrap { overflow: auto; max-height: 640px; }
+#tab-nhapkho .ui-panel-flush { padding: 0; overflow: hidden; }
+#tab-nhapkho .nk-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+#tab-nhapkho .nk-table th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--ui-wash); color: var(--ui-muted); font-size: 13px; font-weight: 700;
+  text-align: left; padding: 10px; border-bottom: 1px solid var(--ui-line); white-space: nowrap;
+}
+#tab-nhapkho .nk-table td { padding: 10px; border-bottom: 1px solid var(--ui-line); vertical-align: top; }
+#tab-nhapkho .nk-table tbody tr:hover td { background: #f7faf8; }
+#tab-nhapkho .nk-table tfoot td { background: var(--ui-wash); font-weight: 600; }
+#tab-nhapkho .nk-table .r { text-align: right; }
+#tab-nhapkho .nk-table .c { text-align: center; }
+#tab-nhapkho .nk-table .nowrap { white-space: nowrap; }
+#tab-nhapkho .nk-row-btns { display: flex; gap: 6px; }
+#tab-nhapkho .nk-row-off td { color: var(--ui-faint); }
+#tab-nhapkho .nk-row-on td { background: var(--nk-c-soft); }
+#tab-nhapkho .nk-empty { padding: 28px 16px; text-align: center; color: var(--ui-muted); }
+#tab-nhapkho .nk-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12.5px; font-weight: 600; margin: 1px 0; white-space: nowrap; }
+#tab-nhapkho .nk-tag-1 { background: var(--nk-1-soft); color: var(--nk-1); }
+#tab-nhapkho .nk-tag-2 { background: var(--nk-2-soft); color: var(--nk-2); }
+#tab-nhapkho .nk-tag-3 { background: var(--nk-3-soft); color: var(--nk-3); }
+#tab-nhapkho .nk-tag-4 { background: var(--nk-4-soft); color: var(--nk-4); }
+#tab-nhapkho .nk-tag-5 { background: var(--nk-5-soft); color: var(--nk-5); }
+#tab-nhapkho .nk-mb { margin-bottom: 12px; }
+
+/* ---------- Thiết lập & vật tư ---------- */
+#tab-nhapkho .nk-checks { display: flex; flex-wrap: wrap; gap: 8px 10px; }
+#tab-nhapkho .nk-check {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 14px;
+  border: 1px solid var(--ui-line-strong); border-radius: var(--ui-radius-sm); background: var(--ui-paper);
+  font-size: 14.5px; cursor: pointer;
+}
+#tab-nhapkho .nk-check input { width: 18px; height: 18px; accent-color: var(--nk-c); }
+#tab-nhapkho .nk-check:has(input:checked) { border-color: var(--nk-c); background: var(--nk-c-soft); font-weight: 600; }
+#tab-nhapkho .nk-form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+#tab-nhapkho .nk-vt-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+#tab-nhapkho .nk-vt-head .ui-panel-title { margin: 0; }
+#tab-nhapkho .nk-vt-add { display: grid; grid-template-columns: 2fr 0.7fr 1.6fr auto; gap: 10px; margin-bottom: 10px; }
+#tab-nhapkho .nk-paste { margin-bottom: 12px; }
+#tab-nhapkho .nk-paste summary { cursor: pointer; color: var(--ui-muted); font-size: 14px; padding: 4px 0; }
+#tab-nhapkho .nk-paste textarea { margin: 8px 0; }
+#tab-nhapkho .nk-table-edit td { padding: 0; vertical-align: middle; }
+#tab-nhapkho .nk-table-edit td.c { padding: 0 8px; }
+#tab-nhapkho .nk-cell {
+  width: 100%; height: 42px; border: none; background: transparent; padding: 0 10px;
+  font-family: inherit; font-size: 14.5px; color: inherit; outline: none;
+}
+#tab-nhapkho .nk-cell:focus { background: var(--nk-c-soft); box-shadow: inset 0 0 0 2px var(--nk-c); }
+
+/* ---------- Màn hình nhỏ (điện thoại / máy tính bảng) ---------- */
+@media (max-width: 1100px) {
+  #tab-nhapkho .nk-types { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #tab-nhapkho .nk-cols-po,
+  #tab-nhapkho .nk-cols-po:has([data-f="ten_hang"]) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #tab-nhapkho .nk-filter { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  #tab-nhapkho .nk-types { grid-template-columns: 1fr 1fr; }
+  #tab-nhapkho .nk-type { min-height: 60px; padding: 10px; }
+  #tab-nhapkho .nk-type-text small { display: none; }
+  #tab-nhapkho .nk-subs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  #tab-nhapkho .nk-subs .ui-tab { flex: none; height: 40px; padding: 0 14px; font-size: 14px; }
+  #tab-nhapkho .nk-cols-po,
+  #tab-nhapkho .nk-cols-po:has([data-f="ten_hang"]),
+  #tab-nhapkho .nk-cols-simple { grid-template-columns: 1fr 1fr; }
+  #tab-nhapkho .nk-f-wide, #tab-nhapkho .nk-f-note { grid-column: 1 / -1; }
+  #tab-nhapkho .nk-filter { grid-template-columns: 1fr 1fr; }
+  #tab-nhapkho .nk-f-search, #tab-nhapkho .nk-filter-btns { grid-column: 1 / -1; }
+  #tab-nhapkho .nk-vt-add { grid-template-columns: 1fr 1fr; }
+  #tab-nhapkho .nk-vt-add .ui-btn { grid-column: 1 / -1; }
+  #tab-nhapkho .nk-actionbar { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 8px; padding: 10px; }
+  #tab-nhapkho .nk-actionbar .ui-flex-fill { display: none; }
+  #tab-nhapkho .nk-actionbar .ui-btn { height: 46px; padding: 0 8px; font-size: 14px; }
+  #tab-nhapkho .nk-grand { grid-column: 1 / -1; font-size: 15px; }
+  #tab-nhapkho .nk-grand b { font-size: 19px; }
+  #tab-nhapkho .ui-fields { grid-template-columns: 1fr 1fr; }
+  #tab-nhapkho .ui-span-2, #tab-nhapkho .ui-span-4 { grid-column: 1 / -1; }
+}

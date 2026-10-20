@@ -19,6 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="ui-v2.css?v=20261015f">
+  <link rel="stylesheet" href="nhapkho.css?v=20261020a">
 </head>
 <body>
 
@@ -40,6 +41,9 @@
       </button>
       <button class="tab-btn" data-target="tab-totruong">
         ⏱️ Sản Lượng Tổ Trưởng (Theo Giờ)
+      </button>
+      <button class="tab-btn" data-target="tab-nhapkho">
+        📥 Nhập Kho
       </button>
       <button class="tab-btn" data-target="tab-catalog">
         ⚙️ Danh Mục
@@ -610,6 +614,11 @@
     <!-- ==========================================
          TAB: DANH MỤC (KHÁCH HÀNG · PO · BỘ CHI TIẾT)
          ========================================== -->
+    <!-- TAB NHẬP KHO (giao diện do nhapkho.js vẽ) -->
+    <section id="tab-nhapkho" class="tab-content ui-scope">
+      <div class="ui-page" id="nk-root"></div>
+    </section>
+
     <section id="tab-catalog" class="tab-content ui-scope">
       <div class="ui-page">
         <header class="ui-page-head">
@@ -797,6 +806,7 @@
   <script src="app.js?v=20261015f"></script>
   <script src="grid.js?v=20261019telex"></script>
   <script src="dashboard.js?v=20261015f"></script>
+  <script src="nhapkho.js?v=20261020a"></script>
   <script src="qc_totruong.js"></script>
   <script src="pwa.js?v=20261015f"></script>
 </body>

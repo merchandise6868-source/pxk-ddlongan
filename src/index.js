@@ -4,6 +4,7 @@
  */
 
 import { ensureSchema, handleCatalogApi, guessKhachHangId } from './catalog.js';
+import { handleNhapKhoApi } from './nhapkho.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -60,6 +61,10 @@ async function handleApi(url, request, env) {
 
   const catalogRes = await handleCatalogApi(path, method, url, request, env);
   if (catalogRes) return catalogRes;
+
+  // Tab Nhập kho (bảng riêng, không đụng phiếu xuất)
+  const nhapKhoRes = await handleNhapKhoApi(path, method, url, request, env);
+  if (nhapKhoRes) return nhapKhoRes;
 
   // -------------------------------------------------------------
   // GET /api/bophan: Danh sách bộ phận/chuyền
