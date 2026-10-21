@@ -47,6 +47,7 @@ const ALTER_STATEMENTS = [
   `ALTER TABLE phieu ADD COLUMN khach_hang_id INTEGER`,
   `ALTER TABLE phieu ADD COLUMN don_hang TEXT DEFAULT ''`,
   `ALTER TABLE phieu ADD COLUMN bo_phan_xuat TEXT DEFAULT ''`,
+  `ALTER TABLE phieu ADD COLUMN nguoi_giao TEXT DEFAULT ''`,
   `ALTER TABLE phieu_dong ADD COLUMN loai TEXT DEFAULT ''`,
   `ALTER TABLE phieu_dong ADD COLUMN he_so REAL DEFAULT 0`,
 ];

@@ -39,6 +39,7 @@ function saveSlipDraft() {
       donhang: document.getElementById('slip-donhang')?.value || '',
       bophanxuat: document.getElementById('slip-bophanxuat')?.value || '',
       nguoilap: document.getElementById('slip-nguoilap')?.value || '',
+      nguoigiao: document.getElementById('slip-nguoigiao')?.value || '',
       diachiCty: document.getElementById('slip-diachi-cty')?.value || '',
       selectedSizes: AppState.selectedSizes,
       rows: AppState.rows,
@@ -90,6 +91,7 @@ function restoreSlipDraft(khId) {
       if (draft.donhang && document.getElementById('slip-donhang')) document.getElementById('slip-donhang').value = draft.donhang;
       if (draft.bophanxuat && document.getElementById('slip-bophanxuat')) document.getElementById('slip-bophanxuat').value = draft.bophanxuat;
       if (draft.nguoilap && document.getElementById('slip-nguoilap')) document.getElementById('slip-nguoilap').value = draft.nguoilap;
+      if (draft.nguoigiao && document.getElementById('slip-nguoigiao')) document.getElementById('slip-nguoigiao').value = draft.nguoigiao;
       if (draft.diachiCty && document.getElementById('slip-diachi-cty')) document.getElementById('slip-diachi-cty').value = draft.diachiCty;
       if (draft.date && document.getElementById('slip-date')) document.getElementById('slip-date').value = draft.date;
 
@@ -204,7 +206,7 @@ function initFormControls() {
   });
 
   // Tự động lưu nháp khi nhập thông tin đầu phiếu
-  ['slip-donvi', 'slip-lydo', 'slip-donhang', 'slip-bophanxuat', 'slip-nguoilap', 'slip-diachi-cty'].forEach(id => {
+  ['slip-donvi', 'slip-lydo', 'slip-donhang', 'slip-bophanxuat', 'slip-nguoilap', 'slip-nguoigiao', 'slip-diachi-cty'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener('input', saveSlipDraft);
@@ -1159,6 +1161,7 @@ async function saveSlip(opts = {}) {
     don_hang: donHang,
     bo_phan_xuat: boPhanXuat,
     nguoi_lap: nguoiLap,
+    nguoi_giao: document.getElementById('slip-nguoigiao')?.value.trim() || '',
     dia_chi_cty: diaChiCty,
     khach_hang_id: AppState.khachHangId,
     lines: validLines,
@@ -1253,6 +1256,7 @@ function printCurrentSlip() {
   const donHang = document.getElementById('slip-donhang')?.value || '';
   const boPhanXuat = document.getElementById('slip-bophanxuat')?.value || (document.getElementById('slip-bophan')?.selectedOptions[0]?.text || '');
   const nguoiLap = document.getElementById('slip-nguoilap').value || '';
+  const nguoiGiao = document.getElementById('slip-nguoigiao')?.value || '';
   const diachiCty = document.getElementById('slip-diachi-cty')?.value?.trim() || DEFAULT_COMPANY_ADDRESS;
 
   const [y, m, d] = ngayStr.split('-');
@@ -1296,14 +1300,20 @@ function printCurrentSlip() {
       </tr>
     `;
   } else if (mau === 3) {
+    // Dãy size nằm 1 hàng riêng phía trên tiêu đề cột, in nghiêng đậm -> không nhầm với số lượng
     tableHeaderHtml = `
+      <tr class="p-size-head">
+        <th class="p-nb" colspan="5"></th>
+        ${activeSizes.map(s => `<th class="p-cell-size p-size-row">${escapeHtml(s)}</th>`).join('')}
+        <th class="p-nb"></th>
+      </tr>
       <tr>
         <th class="p-cell-stt">STT</th>
         <th class="p-cell-po">PO</th>
         <th class="p-cell-ma">Mã hàng</th>
         <th class="p-cell-chitiet">Diễn giải</th>
         <th class="p-cell-dvt">ĐVT</th>
-        ${activeSizes.map(s => `<th class="p-cell-size">${s}</th>`).join('')}
+        ${activeSizes.map(() => '<th class="p-cell-size"></th>').join('')}
         <th class="p-cell-total">Tổng</th>
       </tr>
     `;
@@ -1497,19 +1507,19 @@ function printCurrentSlip() {
 
       <div class="p-signatures">
         <div class="p-sig-col">
-          <div class="p-sig-title">Người lập phiếu</div>
-          <div class="p-sig-name">${nguoiLap || ''}</div>
+          <div class="p-sig-title">Người lập phiếu</div><div class="p-sig-note">(Ký, họ tên)</div>
+          <div class="p-sig-name">${escapeHtml(nguoiLap)}</div>
         </div>
         <div class="p-sig-col">
-          <div class="p-sig-title">Người giao</div>
+          <div class="p-sig-title">Người giao</div><div class="p-sig-note">(Ký, họ tên)</div>
+          <div class="p-sig-name">${escapeHtml(nguoiGiao)}</div>
+        </div>
+        <div class="p-sig-col">
+          <div class="p-sig-title">Người nhận</div><div class="p-sig-note">(Ký, họ tên)</div>
           <div class="p-sig-name"></div>
         </div>
         <div class="p-sig-col">
-          <div class="p-sig-title">Người nhận</div>
-          <div class="p-sig-name"></div>
-        </div>
-        <div class="p-sig-col">
-          <div class="p-sig-title">Giám đốc</div>
+          <div class="p-sig-title">Giám đốc</div><div class="p-sig-note">(Ký, họ tên)</div>
           <div class="p-sig-name"></div>
         </div>
       </div>
@@ -1737,6 +1747,7 @@ window.reprintSlip = async function(id) {
     if (document.getElementById('slip-donhang')) document.getElementById('slip-donhang').value = slip.don_hang || '';
     if (document.getElementById('slip-bophanxuat')) document.getElementById('slip-bophanxuat').value = slip.bo_phan_xuat || '';
     document.getElementById('slip-nguoilap').value = slip.nguoi_lap || '';
+    if (document.getElementById('slip-nguoigiao')) document.getElementById('slip-nguoigiao').value = slip.nguoi_giao || '';
     const diachiInput = document.getElementById('slip-diachi-cty');
     if (diachiInput) diachiInput.value = slip.dia_chi_cty || DEFAULT_COMPANY_ADDRESS;
 
@@ -1808,6 +1819,7 @@ window.editSlip = async function(id) {
     if (document.getElementById('slip-donhang')) document.getElementById('slip-donhang').value = slip.don_hang || '';
     if (document.getElementById('slip-bophanxuat')) document.getElementById('slip-bophanxuat').value = slip.bo_phan_xuat || '';
     document.getElementById('slip-nguoilap').value = slip.nguoi_lap || '';
+    if (document.getElementById('slip-nguoigiao')) document.getElementById('slip-nguoigiao').value = slip.nguoi_giao || '';
     const diachiInput = document.getElementById('slip-diachi-cty');
     if (diachiInput) diachiInput.value = slip.dia_chi_cty || DEFAULT_COMPANY_ADDRESS;
 

@@ -50,6 +50,14 @@ export default {
   },
 };
 
+/** Ghi tên người giao (cột thêm sau, in dưới chữ ký "Người giao") */
+async function saveNguoiGiao(env, phieuId, nguoiGiao) {
+  if (!phieuId) return;
+  try {
+    await env.DB.prepare('UPDATE phieu SET nguoi_giao = ? WHERE id = ?').bind(String(nguoiGiao || '').trim(), phieuId).run();
+  } catch (_) { /* DB chưa có cột */ }
+}
+
 /**
  * Xử lý các endpoint API
  */
@@ -549,6 +557,8 @@ async function handleApi(url, request, env) {
       } catch (e) {}
     }
 
+    await saveNguoiGiao(env, phieuId, body.nguoi_giao);
+
     return Response.json({
       success: true,
       message: 'Tạo phiếu thành công',
@@ -685,6 +695,8 @@ async function handleApi(url, request, env) {
         }
       }
     }
+
+    await saveNguoiGiao(env, id, body.nguoi_giao);
 
     return Response.json({ success: true, message: 'Cập nhật phiếu thành công' });
   }
