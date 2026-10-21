@@ -138,6 +138,7 @@ const RULES = [
   ['*', /^\/api\/(khachhang|bochitiet)(\/|$)/, ['tab-catalog']],
   ['GET', /^\/api\/donhang(\/|$)/, ['tab-donhang', 'tab-chilenh', 'tab-theodoi']],
   ['*', /^\/api\/donhang(\/|$)/, ['tab-donhang']],
+  ['*', /^\/api\/dondat(\/|$)/, ['tab-donhang']], // đơn: nhiều ART · nhiều PO
   ['*', /^\/api\/chilenh(\/|$)/, ['tab-chilenh']],
   ['*', /^\/api\/(theodoi|dieuchinh)(\/|$)/, ['tab-theodoi']],
   ['GET', /^\/api\/phieu\/\d+$/, ['tab-create', 'tab-list', 'tab-theodoi']],

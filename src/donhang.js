@@ -4,11 +4,12 @@
  *   thêm số lượng theo size (don_hang_size) và ngày giao.
  * - Tiến độ theo từng size: Đặt · Đã thả chuyền (chỉ lệnh) · Đã xuất (phiếu xuất kho) · Điều chỉnh · Còn lại.
  * - Phiếu xuất KHÔNG bị sửa: khớp theo chữ PO (phieu_dong.ma_hang) + ART (phieu_dong.mau) của cùng khách hàng.
+ * - Đơn (don_dat): 1 đơn của 1 khách gồm nhiều ART, mỗi ART nhiều PO (po_don_hang.don_id); API /api/dondat.
  * Chỉ thêm bảng mới; chạy được cả D1 lẫn CockroachDB.
  */
 import { isSqlite, ddlTypes, ensureTables, str, int, num, parseJson, ok, bad, todayVN, normKey, normSize } from './ddl.js';
 
-const ID_TABLES = ['don_hang_size', 'don_hang_alias', 'dieu_chinh_xuat', 'chi_lenh', 'chi_lenh_dong', 'chi_lenh_dong_size'];
+const ID_TABLES = ['don_hang_size', 'don_hang_alias', 'dieu_chinh_xuat', 'chi_lenh', 'chi_lenh_dong', 'chi_lenh_dong_size', 'don_dat'];
 export const TABLES = ID_TABLES;
 export function schemaFor(sqlite) {
   const T = ddlTypes(sqlite);
@@ -16,6 +17,18 @@ export function schemaFor(sqlite) {
     ...T.seqs(ID_TABLES),
     sqlite ? `ALTER TABLE po_don_hang ADD COLUMN ngay_giao TEXT DEFAULT ''`
       : `ALTER TABLE po_don_hang ADD COLUMN IF NOT EXISTS ngay_giao TEXT DEFAULT ''`,
+    sqlite ? `ALTER TABLE po_don_hang ADD COLUMN don_id ${T.INT}`
+      : `ALTER TABLE po_don_hang ADD COLUMN IF NOT EXISTS don_id ${T.INT}`,
+    `CREATE TABLE IF NOT EXISTS don_dat (
+      ${T.id('don_dat')},
+      khach_hang_id ${T.INT} NOT NULL,
+      so_don TEXT NOT NULL,
+      ngay_giao TEXT DEFAULT '',
+      ghi_chu TEXT DEFAULT '',
+      nguoi TEXT DEFAULT '',
+      tao_luc ${T.TS}
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_po_don ON po_don_hang(don_id)`,
     `CREATE TABLE IF NOT EXISTS don_hang_size (
       ${T.id('don_hang_size')},
       po_id ${T.INT} NOT NULL,
@@ -79,8 +92,8 @@ export function schemaFor(sqlite) {
     `CREATE INDEX IF NOT EXISTS idx_clds_dong ON chi_lenh_dong_size(dong_id)`,
   ];
 }
-const PROBE = `SELECT p.ngay_giao FROM po_don_hang p, don_hang_size s, don_hang_alias a, dieu_chinh_xuat d,
-  chi_lenh c, chi_lenh_dong cd, chi_lenh_dong_size cs WHERE 1 = 0`;
+const PROBE = `SELECT p.ngay_giao, p.don_id FROM po_don_hang p, don_hang_size s, don_hang_alias a, dieu_chinh_xuat d,
+  chi_lenh c, chi_lenh_dong cd, chi_lenh_dong_size cs, don_dat dd WHERE 1 = 0`;
 export const ensureDonHangSchema = env => ensureTables(env, 'donhang_v1', PROBE, schemaFor(isSqlite(env)));
 
 /* ---------------- Tiện ích ---------------- */
@@ -251,7 +264,7 @@ export async function tienDo(env, o = {}) {
     const t = k => sizes.reduce((a, s) => a + s[k], 0);
     const conPhaiGiao = sizes.reduce((a, s) => a + Math.max(0, s.con), 0);
     const r = {
-      id: od.id, khach_hang_id: od.khach_hang_id, khach_ten: kh?.ten_ngan || '', po: od.po, art: od.art, mau: od.mau,
+      id: od.id, don_id: od.don_id || null, khach_hang_id: od.khach_hang_id, khach_ten: kh?.ten_ngan || '', po: od.po, art: od.art, mau: od.mau,
       don_hang: od.don_hang, don_gia: od.don_gia, ngay_giao: od.ngay_giao || '', ghi_chu: od.ghi_chu,
       sizes, tong_dat: t('dat'), tong_tha: t('tha'), tong_xuat: t('xuat'), tong_dc: t('dc'),
       con_phai_giao: conPhaiGiao, giao_du: sizes.reduce((a, s) => a + Math.max(0, -s.con), 0),
@@ -302,6 +315,160 @@ async function activeChiLenhCount(env, poId) {
   return r.n || 0;
 }
 
+async function deleteOrderRow(env, id) {
+  await env.DB.prepare('DELETE FROM don_hang_size WHERE po_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM don_hang_alias WHERE po_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM dieu_chinh_xuat WHERE po_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM po_don_hang WHERE id = ?').bind(id).run();
+}
+
+/* ---------------- ĐƠN: nhiều ART · nhiều PO ---------------- */
+/** Gộp tiến độ các PO thành 1 dòng tổng của đơn */
+function tongDon(head, rows) {
+  const t = k => rows.reduce((a, r) => a + (r[k] || 0), 0);
+  const con = t('con_phai_giao');
+  return {
+    ...head, so_art: new Set(rows.map(r => normKey(r.art))).size, so_po: rows.length,
+    tong_dat: t('tong_dat'), tong_tha: t('tong_tha'), tong_xuat: t('tong_xuat') + t('tong_dc'), con_phai_giao: con,
+    trang_thai: t('tong_dat') > 0 && con <= 0 ? 'du' : 'con',
+    _search: [head.so_don, ...rows.flatMap(r => [r.po, r.art])].map(normKey).join(' '),
+  };
+}
+
+/**
+ * Kiểm tra đầu đơn + các dòng PO trước khi ghi (lỗi thì không ghi gì).
+ * Dòng trống bị bỏ; ART trống lấy ART dòng trên (Excel hay gộp ô ART).
+ */
+async function checkDon(env, b, donId) {
+  const khId = int(b.khach_hang_id);
+  const soDon = str(b.so_don);
+  const errs = [];
+  if (!khId) errs.push('Chưa chọn khách hàng');
+  if (!soDon) errs.push('Chưa nhập số đơn');
+  if (errs.length) return { errs };
+  const { results: dons } = await env.DB.prepare('SELECT id, so_don FROM don_dat WHERE khach_hang_id = ?').bind(khId).all();
+  if (dons.some(d => d.id !== donId && normKey(d.so_don) === normKey(soDon))) errs.push(`Số đơn ${soDon} đã có rồi`);
+
+  const { results: have } = await env.DB.prepare('SELECT id, po, art, don_id FROM po_don_hang WHERE khach_hang_id = ?').bind(khId).all();
+  const haveById = new Map(have.map(r => [r.id, r]));
+  const lines = [];
+  const seen = new Map();
+  let lastArt = '';
+  (Array.isArray(b.lines) ? b.lines : []).forEach((it, i) => {
+    const d = cleanOrder({ ...it, khach_hang_id: khId });
+    d.id = int(it.id);
+    d.row = i + 1;
+    if (!d.art && !d.po && !Object.keys(d.sizes).length && !d.id) return; // dòng trống
+    if (!d.art) d.art = lastArt;
+    lastArt = d.art;
+    if (!d.ngay_giao) d.ngay_giao = /^\d{4}-\d{2}-\d{2}$/.test(str(b.ngay_giao)) ? str(b.ngay_giao) : '';
+    d.don_hang = soDon;
+    if (!d.art || !d.po) { errs.push(`Dòng ${d.row}: chưa có ${!d.art ? 'ART' : 'PO'}`); return; }
+    if (d.id) {
+      const old = haveById.get(d.id);
+      // Dòng có id phải thuộc đơn này (hoặc PO lẻ chưa thuộc đơn nào của cùng khách)
+      if (!old || (old.don_id && old.don_id !== donId)) { errs.push(`Dòng ${d.row}: PO không thuộc đơn này`); return; }
+    }
+    const k = orderKey(khId, d.po, d.art);
+    if (seen.has(k)) { errs.push(`Dòng ${d.row}: PO ${d.po} · ART ${d.art} trùng dòng ${seen.get(k)}`); return; }
+    seen.set(k, d.row);
+    lines.push(d);
+  });
+  if (!lines.length && !errs.length) errs.push('Đơn chưa có dòng PO nào');
+  const ids = new Set(lines.map(l => l.id).filter(Boolean));
+  lines.forEach(d => {
+    const dup = have.find(r => !ids.has(r.id) && !(donId && r.don_id === donId) && orderKey(khId, r.po, r.art) === orderKey(khId, d.po, d.art));
+    if (dup) errs.push(`Dòng ${d.row}: PO ${d.po} · ART ${d.art} đã có ở đơn khác`);
+  });
+  return { errs, khId, soDon, lines, ids };
+}
+
+async function saveDonLines(env, donId, lines) {
+  for (const d of lines) {
+    let id = d.id;
+    if (id) await updateOrder(env, id, d);
+    else id = await insertOrder(env, d);
+    await env.DB.prepare('UPDATE po_don_hang SET don_id = ? WHERE id = ?').bind(donId, id).run();
+  }
+}
+
+async function handleDonDatApi(path, method, url, request, env, user) {
+  if (path === '/api/dondat' && method === 'GET') {
+    const khId = int(url.searchParams.get('khach_hang_id'));
+    const { orders } = await tienDo(env, { khId });
+    const { results: dons } = await env.DB.prepare(
+      `SELECT * FROM don_dat${khId ? ' WHERE khach_hang_id = ?' : ''} ORDER BY id DESC`).bind(...(khId ? [khId] : [])).all();
+    const khs = await khachMap(env);
+    const list = dons.map(d => tongDon({ id: d.id, so_don: d.so_don, ngay_giao: d.ngay_giao, ghi_chu: d.ghi_chu,
+      khach_hang_id: d.khach_hang_id, khach_ten: khs.get(d.khach_hang_id)?.ten_ngan || '', tao_luc: d.tao_luc },
+    orders.filter(o => o.don_id === d.id)));
+    // PO nhập lẻ trước khi có "đơn" -> 1 nhóm "Chưa thuộc đơn" mỗi khách
+    const le = new Map();
+    orders.filter(o => !o.don_id).forEach(o => { if (!le.has(o.khach_hang_id)) le.set(o.khach_hang_id, []); le.get(o.khach_hang_id).push(o); });
+    le.forEach((rows, kh) => list.push(tongDon({ id: 0, so_don: '(PO chưa thuộc đơn)', ngay_giao: '', ghi_chu: '', khach_hang_id: kh,
+      khach_ten: khs.get(kh)?.ten_ngan || '' }, rows)));
+    const q = normKey(url.searchParams.get('q'));
+    const tt = url.searchParams.get('trang_thai') || '';
+    const data = list.filter(d => (!q || d._search.includes(q)) && (!tt || tt === 'all' || d.trang_thai === tt))
+      .map(({ _search, ...d }) => d);
+    return ok({ data });
+  }
+  const one = path.match(/^\/api\/dondat\/(\d+)$/);
+  if (one && method === 'GET') {
+    const id = int(one[1]);
+    let head;
+    if (id) {
+      head = await env.DB.prepare('SELECT * FROM don_dat WHERE id = ?').bind(id).first();
+      if (!head) return bad('Không tìm thấy đơn', 404);
+    } else {
+      head = { id: 0, so_don: '', ngay_giao: '', ghi_chu: '', khach_hang_id: int(url.searchParams.get('khach_hang_id')) };
+      if (!head.khach_hang_id) return bad('Chưa chọn khách hàng');
+    }
+    const { orders } = await tienDo(env, { khId: head.khach_hang_id });
+    const lines = orders.filter(o => (id ? o.don_id === id : !o.don_id)).sort((a, b) => a.id - b.id);
+    return ok({ data: { ...head, lines } });
+  }
+  if (path === '/api/dondat' && method === 'POST') {
+    const body = await request.json();
+    const c = await checkDon(env, body, 0);
+    if (c.errs.length) return bad(c.errs.slice(0, 12).join('\n'));
+    const r = await env.DB.prepare('INSERT INTO don_dat (khach_hang_id, so_don, ngay_giao, ghi_chu, nguoi) VALUES (?, ?, ?, ?, ?) RETURNING id')
+      .bind(c.khId, c.soDon, str(body.ngay_giao), str(body.ghi_chu), user?.ho_ten || '').first();
+    await saveDonLines(env, r.id, c.lines);
+    return ok({ id: r.id, message: `Đã lưu đơn ${c.soDon} · ${c.lines.length} PO` });
+  }
+  if (one && method === 'PUT') {
+    const id = int(one[1]);
+    const head = await env.DB.prepare('SELECT * FROM don_dat WHERE id = ?').bind(id).first();
+    if (!head) return bad('Không tìm thấy đơn', 404);
+    const body = await request.json();
+    const c = await checkDon(env, { ...body, khach_hang_id: head.khach_hang_id }, id);
+    // Dòng bị bỏ khỏi bảng -> xóa PO, trừ PO đã thả chuyền
+    const { results: cur } = await env.DB.prepare('SELECT id, po, art FROM po_don_hang WHERE don_id = ?').bind(id).all();
+    const bo = cur.filter(r => !c.ids?.has(r.id));
+    if (!c.errs.length) for (const r of bo) {
+      if (await activeChiLenhCount(env, r.id)) c.errs.push(`PO ${r.po} · ART ${r.art} đã có chỉ lệnh thả chuyền, không bỏ khỏi đơn được`);
+    }
+    if (c.errs.length) return bad(c.errs.slice(0, 12).join('\n'));
+    await env.DB.prepare('UPDATE don_dat SET so_don = ?, ngay_giao = ?, ghi_chu = ? WHERE id = ?')
+      .bind(c.soDon, str(body.ngay_giao), str(body.ghi_chu), id).run();
+    await saveDonLines(env, id, c.lines);
+    for (const r of bo) await deleteOrderRow(env, r.id);
+    return ok({ id, message: `Đã lưu đơn ${c.soDon} · ${c.lines.length} PO${bo.length ? ` · bỏ ${bo.length} PO` : ''}` });
+  }
+  if (one && method === 'DELETE') {
+    const id = int(one[1]);
+    const { results: cur } = await env.DB.prepare('SELECT id, po FROM po_don_hang WHERE don_id = ?').bind(id).all();
+    for (const r of cur) {
+      if (await activeChiLenhCount(env, r.id)) return bad(`PO ${r.po} đã có chỉ lệnh thả chuyền. Hủy các chỉ lệnh đó trước khi xóa đơn.`);
+    }
+    for (const r of cur) await deleteOrderRow(env, r.id);
+    await env.DB.prepare('DELETE FROM don_dat WHERE id = ?').bind(id).run();
+    return ok({ message: `Đã xóa đơn · ${cur.length} PO` });
+  }
+  return null;
+}
+
 /** Lọc theo ô tìm (PO / ART / đơn hàng / màu) và trạng thái */
 function filterOrders(list, url) {
   const q = normKey(url.searchParams.get('q'));
@@ -328,9 +495,11 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
   const isDh = path === '/api/donhang' || path.startsWith('/api/donhang/');
   const isTd = path === '/api/theodoi' || path.startsWith('/api/theodoi/');
   const isDc = path === '/api/dieuchinh' || path.startsWith('/api/dieuchinh/');
-  if (!isDh && !isTd && !isDc) return null;
+  const isDd = path === '/api/dondat' || path.startsWith('/api/dondat/');
+  if (!isDh && !isTd && !isDc && !isDd) return null;
   await ensureDonHangSchema(env);
   const nguoi = user?.ho_ten || '';
+  if (isDd) return (await handleDonDatApi(path, method, url, request, env, user)) || bad('Endpoint không tồn tại', 404);
 
   // ---------------- ĐƠN HÀNG ----------------
   if (path === '/api/donhang' && method === 'GET') {
@@ -382,10 +551,7 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
     const id = int(dhM[1]);
     const n = await activeChiLenhCount(env, id);
     if (n) return bad(`Đơn hàng đã có ${n} dòng chỉ lệnh thả chuyền. Hủy các chỉ lệnh đó trước khi xóa.`);
-    await env.DB.prepare('DELETE FROM don_hang_size WHERE po_id = ?').bind(id).run();
-    await env.DB.prepare('DELETE FROM don_hang_alias WHERE po_id = ?').bind(id).run();
-    await env.DB.prepare('DELETE FROM dieu_chinh_xuat WHERE po_id = ?').bind(id).run();
-    await env.DB.prepare('DELETE FROM po_don_hang WHERE id = ?').bind(id).run();
+    await deleteOrderRow(env, id);
     return ok({ message: 'Đã xóa đơn hàng' });
   }
 
