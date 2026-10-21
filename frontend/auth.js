@@ -28,12 +28,17 @@
   };
 
   async function call(path, body) {
-    const res = await rawFetch(path, {
-      method: body ? 'POST' : 'GET',
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: 'same-origin',
-    });
+    let res;
+    try {
+      res = await rawFetch(path, {
+        method: body ? 'POST' : 'GET',
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+        credentials: 'same-origin',
+      });
+    } catch (_) {
+      return { success: false, error: 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.' };
+    }
     let data = {};
     try { data = await res.json(); } catch (_) { data = { success: false, error: 'Máy chủ không phản hồi đúng' }; }
     return data;
@@ -185,12 +190,14 @@
       const err = ov.querySelector('#auth-err');
       const p = ov.querySelector('#auth-p').value;
       if (p !== ov.querySelector('#auth-p2').value) { err.textContent = 'Hai lần nhập mật khẩu không giống nhau'; return; }
-      e.currentTarget.disabled = true;
+      // Giữ lại nút: sau await, e.currentTarget đã thành null
+      const btn = e.currentTarget;
+      btn.disabled = true;
       const r = await call('/api/auth/setup', {
         ma_khoi_tao: ov.querySelector('#auth-k').value.trim(), ten_dang_nhap: ov.querySelector('#auth-u').value.trim(),
         ho_ten: ov.querySelector('#auth-n').value.trim(), mat_khau: p,
       });
-      e.currentTarget.disabled = false;
+      btn.disabled = false;
       if (!r.success) { err.textContent = r.error || 'Không tạo được'; return; }
       start(false);
     });
