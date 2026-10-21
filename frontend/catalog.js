@@ -228,7 +228,9 @@
     const q = document.getElementById('cat-po-search').value.trim().toLowerCase();
 
     const unsaved = poRowsLocal.filter(r => !r.id);
-    poRowsLocal = [...unsaved, ...Catalog.po.filter(p => (!kh || p.khach_hang_id === kh) &&
+    // Chỉ hiện bảng giá (thiếu PO hoặc ART); đơn hàng đủ PO + ART quản lý ở tab Đơn hàng
+    const isOrder = p => String(p.po || '').trim() && String(p.art || '').trim();
+    poRowsLocal = [...unsaved, ...Catalog.po.filter(p => !isOrder(p) && (!kh || p.khach_hang_id === kh) &&
       (!q || [p.po, p.don_hang, p.art, p.mau, p.ghi_chu].join(' ').toLowerCase().includes(q))).map(p => ({ ...p }))];
 
     const tbody = document.getElementById('cat-po-tbody');
@@ -243,7 +245,7 @@
         <td><input class="cat-cell r" data-f="don_gia" value="${fmt(p.don_gia)}"></td>
         <td><input class="cat-cell" data-f="ghi_chu" value="${esc(p.ghi_chu)}"></td>
         <td class="c"><button class="btn btn-danger btn-xs" data-del-po="${i}">Xóa</button></td>
-      </tr>`).join('') || `<tr><td colspan="9" class="c cat-muted">Chưa có PO nào. Bấm "Thêm dòng" hoặc dán từ Excel.</td></tr>`;
+      </tr>`).join('') || `<tr><td colspan="9" class="c cat-muted">Chưa có giá theo ART nào. Đơn hàng có PO + ART xem ở tab 📦 Đơn Hàng.</td></tr>`;
 
     document.getElementById('cat-po-count').textContent = `${poRowsLocal.filter(r => r.id).length} dòng`;
 

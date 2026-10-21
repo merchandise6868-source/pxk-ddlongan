@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="ui-v2.css?v=20261015f">
   <link rel="stylesheet" href="nhapkho.css?v=20261020a">
+  <link rel="stylesheet" href="v3.css?v=20261021a">
 </head>
 <body>
 
@@ -29,34 +30,22 @@
   <header class="app-header no-print">
     <div class="brand-info">
       <h1>CÔNG TY TNHH GIA CÔNG THƯƠNG MẠI D&D LONG AN</h1>
-      <p>Hệ thống Quản lý Phiếu Xuất Kho & Dashboard Sản Lượng Chuyền</p>
+      <p>Đơn hàng · Chỉ lệnh thả chuyền · Phiếu xuất kho · Nhập kho</p>
     </div>
     <button type="button" class="pwa-install-btn" id="btn-install-app" hidden>
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
       Cài ứng dụng
     </button>
     <nav class="nav-tabs">
-      <button class="tab-btn active" data-target="tab-qc">
-        🔍 Sản Lượng QC (KCS)
-      </button>
-      <button class="tab-btn" data-target="tab-totruong">
-        ⏱️ Sản Lượng Tổ Trưởng (Theo Giờ)
-      </button>
-      <button class="tab-btn" data-target="tab-nhapkho">
-        📥 Nhập Kho
-      </button>
-      <button class="tab-btn" data-target="tab-catalog">
-        ⚙️ Danh Mục
-      </button>
-      <button class="tab-btn" data-target="tab-create">
-        📝 Lập Phiếu Xuất
-      </button>
-      <button class="tab-btn" data-target="tab-list">
-        📋 Danh Sách Phiếu
-      </button>
-      <button class="tab-btn" data-target="tab-dashboard">
-        📊 Dashboard Sản Lượng
-      </button>
+      <button class="tab-btn" data-target="tab-donhang" hidden>📦 Đơn Hàng</button>
+      <button class="tab-btn" data-target="tab-chilenh" hidden>🧵 Chỉ Lệnh Thả Chuyền</button>
+      <button class="tab-btn" data-target="tab-create" hidden>📝 Lập Phiếu Xuất</button>
+      <button class="tab-btn" data-target="tab-list" hidden>📋 Danh Sách Phiếu</button>
+      <button class="tab-btn" data-target="tab-theodoi" hidden>📈 Xuất Theo Đơn Hàng</button>
+      <button class="tab-btn" data-target="tab-nhapkho" hidden>📥 Nhập Kho</button>
+      <button class="tab-btn" data-target="tab-dashboard" hidden>📊 Dashboard</button>
+      <button class="tab-btn" data-target="tab-catalog" hidden>⚙️ Danh Mục</button>
+      <button class="tab-btn" data-target="tab-taikhoan" hidden>👤 Tài Khoản</button>
     </nav>
   </header>
 
@@ -64,241 +53,6 @@
        NỘI DUNG CHÍNH (CONTAINER)
        ========================================== -->
   <main class="main-container no-print">
-
-    <!-- ==========================================
-         TAB 1: SẢN LƯỢNG QC (BẢNG KIỂM ĐỊNH MÃ HÀNG X CỠ SIZE)
-         ========================================== -->
-    <section id="tab-qc" class="tab-content active">
-      <div class="qc-station-card">
-        <!-- Banner trạm QC chuyên biệt xưởng sản xuất -->
-        <div class="qc-header-banner">
-          <div class="qc-header-title">
-            <span style="font-size: 26px;">🛡️</span>
-            <div>
-              <h2>BẢNG NHẬP SẢN LƯỢNG KIỂM ĐỊNH QC (KCS)</h2>
-              <span style="font-size: 11px; color: #047857;">Kiểm soát chất lượng thành phẩm đạt chuẩn theo từng mã hàng & cỡ size</span>
-            </div>
-          </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <span class="qc-status-badge">✓ QC PASSED</span>
-            <button type="button" class="btn btn-outline" id="btn-qc-reset" style="padding: 6px 12px; font-size: 12px; border-color: #86efac; color: #166534;">🔄 Làm mới</button>
-            <button type="button" class="qc-btn-save" id="btn-qc-save">💾 LƯU SẢN LƯỢNG QC</button>
-          </div>
-        </div>
-
-        <!-- Thông tin ca trực / đợt kiểm dạng bar gọn nhẹ -->
-        <div class="qc-meta-bar">
-          <div class="form-group">
-            <label>📅 Ngày kiểm (*)</label>
-            <input type="date" id="qc-date" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>🏭 Chuyền / Bộ phận (*)</label>
-            <select id="qc-bophan" class="form-control"></select>
-          </div>
-          <div class="form-group">
-            <label>👷 Nhân viên QC kiểm</label>
-            <input type="text" id="qc-nguoighi" class="form-control" placeholder="Tên nhân viên KCS...">
-          </div>
-          <div class="form-group">
-            <label>📝 Ghi chú ca trực</label>
-            <input type="text" id="qc-ghichu" class="form-control" placeholder="Ghi chú thêm...">
-          </div>
-        </div>
-
-        <!-- Bảng ma trận mã hàng x dải size kiểm đạt -->
-        <div class="qc-matrix-wrapper">
-          <table class="qc-matrix-table" id="qc-matrix-table">
-            <thead>
-              <tr>
-                <th style="width: 40px;">STT</th>
-                <th class="th-style">👟 Mã Hàng (*)</th>
-                <th class="th-color">🎨 Màu sắc</th>
-                <!-- Cột dải size 34 -> 45 với pill style hiện đại -->
-                <th><span class="qc-size-head-badge">34</span></th>
-                <th><span class="qc-size-head-badge">35</span></th>
-                <th><span class="qc-size-head-badge">36</span></th>
-                <th><span class="qc-size-head-badge">37</span></th>
-                <th><span class="qc-size-head-badge">38</span></th>
-                <th><span class="qc-size-head-badge">39</span></th>
-                <th><span class="qc-size-head-badge">40</span></th>
-                <th><span class="qc-size-head-badge">41</span></th>
-                <th><span class="qc-size-head-badge">42</span></th>
-                <th><span class="qc-size-head-badge">43</span></th>
-                <th><span class="qc-size-head-badge">44</span></th>
-                <th><span class="qc-size-head-badge">45</span></th>
-                <th style="width: 90px; text-align: right; padding-right: 10px;">Tổng Đôi</th>
-                <th style="width: 45px;">Xóa</th>
-              </tr>
-            </thead>
-            <tbody id="qc-matrix-tbody">
-              <!-- Render động các dòng mã hàng -->
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3" style="text-align: right; padding-right: 10px; font-weight: 800;">
-                  TỔNG CỘNG THEO SIZE:
-                </td>
-                <td id="qc-col-tot-0" style="text-align: center;">0</td>
-                <td id="qc-col-tot-1" style="text-align: center;">0</td>
-                <td id="qc-col-tot-2" style="text-align: center;">0</td>
-                <td id="qc-col-tot-3" style="text-align: center;">0</td>
-                <td id="qc-col-tot-4" style="text-align: center;">0</td>
-                <td id="qc-col-tot-5" style="text-align: center;">0</td>
-                <td id="qc-col-tot-6" style="text-align: center;">0</td>
-                <td id="qc-col-tot-7" style="text-align: center;">0</td>
-                <td id="qc-col-tot-8" style="text-align: center;">0</td>
-                <td id="qc-col-tot-9" style="text-align: center;">0</td>
-                <td id="qc-col-tot-10" style="text-align: center;">0</td>
-                <td id="qc-col-tot-11" style="text-align: center;">0</td>
-                <td id="qc-grand-total" style="text-align: right; padding-right: 10px; font-size: 15px; color: #047857;">0</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <!-- Thanh điều khiển và KPI nhanh dưới bảng -->
-        <div class="qc-control-bar">
-          <button type="button" class="qc-btn-add" id="btn-qc-add-row">
-            <span>➕</span> Thêm dòng Mã Hàng
-          </button>
-          
-          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <span class="qc-kpi-pill">
-              <span>📦 Số mã hàng:</span>
-              <strong id="qc-kpi-styles-count">1</strong>
-            </span>
-            <span class="qc-kpi-pill">
-              <span>👟 Tổng sản lượng đạt:</span>
-              <strong id="qc-kpi-total-pairs">0 đôi</strong>
-            </span>
-          </div>
-
-          <div style="font-size: 11px; color: #64748b;">
-            💡 <em>Mẹo: Dùng phím <strong>Tab</strong> hoặc <strong>Mũi tên</strong> để nhảy nhanh giữa các ô.</em>
-          </div>
-        </div>
-
-        <!-- Lịch sử ghi nhận QC gần đây -->
-        <div style="margin-top: 24px;">
-          <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #065f46; display: flex; align-items: center; gap: 6px;">
-            <span>📋 LỊCH SỬ KIỂM ĐỊNH CHẤT LƯỢNG QC GẦN ĐÂY</span>
-          </h3>
-          <div style="overflow-x: auto; border: 1px solid #bbf7d0; border-radius: 6px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-              <thead>
-                <tr style="background: #f0fdf4; border-bottom: 2px solid #bbf7d0; color: #166534;">
-                  <th style="padding: 8px; text-align: center; width: 40px;">STT</th>
-                  <th style="padding: 8px; text-align: left;">Ngày</th>
-                  <th style="padding: 8px; text-align: center;">Chuyền</th>
-                  <th style="padding: 8px; text-align: left;">Mã hàng</th>
-                  <th style="padding: 8px; text-align: left;">Màu</th>
-                  <th style="padding: 8px; text-align: left;">Chi tiết các size</th>
-                  <th style="padding: 8px; text-align: right;">Tổng (Đôi)</th>
-                  <th style="padding: 8px; text-align: left;">Người ghi</th>
-                  <th style="padding: 8px; text-align: center; width: 80px;">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody id="qc-history-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ==========================================
-         TAB 2: SẢN LƯỢNG TỔ TRƯỞNG THEO GIỜ
-         ========================================== -->
-    <section id="tab-totruong" class="tab-content">
-      <div class="card">
-        <h2 style="font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-          <span>⏱️ THEO DÕI SẢN LƯỢNG THEO GIỜ - TỔ TRƯỞNG GHI</span>
-        </h2>
-
-        <div class="slip-header-grid">
-          <div class="form-group">
-            <label>Ngày ghi (*)</label>
-            <input type="date" id="tt-date" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>Chuyền / Tổ (*)</label>
-            <select id="tt-bophan" class="form-control"></select>
-          </div>
-          <div class="form-group">
-            <label>Tên Tổ trưởng</label>
-            <input type="text" id="tt-nguoighi" class="form-control" placeholder="Tên tổ trưởng...">
-          </div>
-          <div class="form-group">
-            <label>Mã hàng (nếu có)</label>
-            <input type="text" id="tt-mahang" class="form-control" placeholder="Mã hàng đang làm...">
-          </div>
-        </div>
-
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <div>
-            <span style="font-weight: 700; font-size: 12px; color: #92400e;">⚡ Gợi ý điền nhanh khung giờ tăng ca (click vào để điền tự động):</span>
-            <div style="display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
-              <span class="quick-ot-pill" onclick="quickFillOvertime('16:30 - 18:00 (4h30 - 6h)')">+ 16:30 - 18:00 (4h30 - 6h)</span>
-              <span class="quick-ot-pill" onclick="quickFillOvertime('17:00 - 20:00 (5h - 8h tối)')">+ 17:00 - 20:00 (5h - 8h)</span>
-              <span class="quick-ot-pill" onclick="quickFillOvertime('20:00 - 21:00 (8h - 9h tối)')">+ 20:00 - 21:00</span>
-              <span class="quick-ot-pill" onclick="quickFillOvertime('21:00 - 22:00 (9h - 10h tối)')">+ 21:00 - 22:00</span>
-            </div>
-          </div>
-          <div class="btn-group">
-            <button type="button" class="btn btn-outline" id="btn-tt-reset">🔄 Làm mới form</button>
-            <button type="button" class="btn btn-success" id="btn-tt-save" style="padding: 6px 14px; font-size: 12px;">💾 Lưu Sản Lượng</button>
-          </div>
-        </div>
-
-        <div style="max-width: 650px; margin: 0 auto 20px auto; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: #fff;">
-          <table class="excel-table" id="tt-grid">
-            <thead>
-              <tr style="background: #e2e8f0;">
-                <th style="width: 50px; text-align: center;">STT</th>
-                <th style="text-align: left; padding: 8px 12px;">Khung Giờ</th>
-                <th style="width: 170px; text-align: right; padding: 8px 12px;">Sản Lượng (Đôi)</th>
-              </tr>
-            </thead>
-            <tbody id="tt-grid-tbody"></tbody>
-            <tfoot>
-              <tr style="background: #f1f5f9; font-weight: bold; font-size: 13px;">
-                <td colspan="2" style="text-align: right; padding: 10px 12px; color: var(--text-main);">
-                  TỔNG CỘNG SẢN LƯỢNG TRONG NGÀY:
-                </td>
-                <td style="text-align: right; padding: 10px 12px; color: var(--primary); font-size: 16px;" id="tt-total-qty">
-                  0
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <!-- Lịch sử tổ trưởng -->
-        <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--secondary);">
-          📋 Lịch sử sản lượng theo giờ đã lưu
-        </h3>
-        <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 6px;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            <thead>
-              <tr style="background: #f8fafc; border-bottom: 2px solid var(--border);">
-                <th style="padding: 6px; text-align: center; width: 40px;">STT</th>
-                <th style="padding: 6px; text-align: left;">Ngày</th>
-                <th style="padding: 6px; text-align: center;">Chuyền / Tổ</th>
-                <th style="padding: 6px; text-align: left;">Tổ trưởng</th>
-                <th style="padding: 6px; text-align: left;">Mã hàng</th>
-                <th style="padding: 6px; text-align: right;">Tổng sản lượng</th>
-                <th style="padding: 6px; text-align: left;">Chi tiết các giờ</th>
-                <th style="padding: 6px; text-align: center; width: 80px;">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody id="tt-history-tbody"></tbody>
-          </table>
-        </div>
-
-      </div>
-    </section>
 
     <!-- ==========================================
          TAB 3: LẬP PHIẾU XUẤT KHO
@@ -597,7 +351,7 @@
           <div class="ui-panel ui-panel-flush">
             <div class="ui-panel-head">
               <h3 class="ui-panel-title">Bảng kê công nợ</h3>
-              <span class="ui-hint">Đơn giá lấy từ Danh mục, mục PO, đơn hàng và đơn giá. Dòng tô vàng là chưa có đơn giá.</span>
+              <span class="ui-hint">Đơn giá lấy từ tab Đơn hàng (hoặc Bảng giá theo ART trong Danh mục). Dòng tô vàng là chưa có đơn giá.</span>
             </div>
             <div class="ui-table-wrap">
               <table class="ui-table ui-table-num" id="congno-table">
@@ -611,14 +365,34 @@
       </div>
     </section>
 
-    <!-- ==========================================
-         TAB: DANH MỤC (KHÁCH HÀNG · PO · BỘ CHI TIẾT)
-         ========================================== -->
+    <!-- TAB ĐƠN HÀNG (giao diện do donhang.js vẽ) -->
+    <section id="tab-donhang" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="dh-root"></div>
+    </section>
+
+    <!-- TAB CHỈ LỆNH THẢ CHUYỀN (giao diện do chilenh.js vẽ) -->
+    <section id="tab-chilenh" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="cl-root"></div>
+    </section>
+
+    <!-- TAB XUẤT THEO ĐƠN HÀNG (giao diện do theodoi.js vẽ) -->
+    <section id="tab-theodoi" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="td-root"></div>
+    </section>
+
+    <!-- TAB TÀI KHOẢN (giao diện do taikhoan.js vẽ) -->
+    <section id="tab-taikhoan" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="tk-root"></div>
+    </section>
+
     <!-- TAB NHẬP KHO (giao diện do nhapkho.js vẽ) -->
     <section id="tab-nhapkho" class="tab-content ui-scope">
       <div class="ui-page" id="nk-root"></div>
     </section>
 
+    <!-- ==========================================
+         TAB: DANH MỤC (KHÁCH HÀNG · PO · BỘ CHI TIẾT)
+         ========================================== -->
     <section id="tab-catalog" class="tab-content ui-scope">
       <div class="ui-page">
         <header class="ui-page-head">
@@ -628,7 +402,7 @@
 
         <nav class="ui-tabs" aria-label="Danh mục">
           <button type="button" class="ui-tab cat-sub-btn active" data-sub="kh">Khách hàng</button>
-          <button type="button" class="ui-tab cat-sub-btn" data-sub="po">PO, đơn hàng và đơn giá</button>
+          <button type="button" class="ui-tab cat-sub-btn" data-sub="po">Bảng giá theo ART</button>
           <button type="button" class="ui-tab cat-sub-btn" data-sub="bo">Bộ chi tiết</button>
         </nav>
 
@@ -728,7 +502,7 @@
                 <tbody id="cat-po-tbody"></tbody>
               </table>
             </div>
-            <p class="ui-hint">Sửa trực tiếp trong ô, rời khỏi ô là tự lưu. Để trống PO thì đơn giá áp cho mọi PO cùng ART.</p>
+            <p class="ui-hint">Bảng giá dùng khi đơn hàng chưa có đơn giá: để trống PO thì giá áp cho mọi PO cùng ART. Đơn hàng có đủ PO + ART (kèm số lượng size) nhập ở tab 📦 Đơn Hàng. Sửa trực tiếp trong ô, rời khỏi ô là tự lưu.</p>
           </div>
         </div>
 
@@ -802,12 +576,17 @@
   <div id="toast-container"></div>
 
   <!-- SCRIPTS -->
-  <script src="catalog.js?v=20261015f"></script>
-  <script src="app.js?v=20261015f"></script>
+  <script src="common.js?v=20261021a"></script>
+  <script src="auth.js?v=20261021a"></script>
+  <script src="catalog.js?v=20261021a"></script>
+  <script src="app.js?v=20261021a"></script>
   <script src="grid.js?v=20261019telex"></script>
   <script src="dashboard.js?v=20261015f"></script>
   <script src="nhapkho.js?v=20261020b"></script>
-  <script src="qc_totruong.js"></script>
-  <script src="pwa.js?v=20261015f"></script>
+  <script src="donhang.js?v=20261021a"></script>
+  <script src="chilenh.js?v=20261021a"></script>
+  <script src="theodoi.js?v=20261021a"></script>
+  <script src="taikhoan.js?v=20261021a"></script>
+  <script src="pwa.js?v=20261021a"></script>
 </body>
 </html>

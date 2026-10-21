@@ -38,7 +38,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     // Mở thẳng tab theo lối tắt của app (?tab=tab-create ...)
     const tab = new URLSearchParams(location.search).get('tab');
-    if (tab) setTimeout(() => document.querySelector(`.tab-btn[data-target="${tab}"]`)?.click(), 300);
+    // Chờ đăng nhập xong mới mở (tab không có quyền sẽ bị auth.js chặn)
+    if (tab) (window.AuthReady || Promise.resolve()).then(() => setTimeout(() => document.querySelector(`.tab-btn[data-target="${tab}"]`)?.click(), 300));
 
     if (isStandalone()) return hide();
     if (isIos) show(); // iPhone không có hộp thoại cài tự động -> nút mở hướng dẫn

@@ -5,35 +5,36 @@
 
 import { ensureSchema, handleCatalogApi, guessKhachHangId } from './catalog.js';
 import { handleNhapKhoApi } from './nhapkho.js';
+import { authGate, handleAuthApi, handleTaiKhoanApi } from './auth.js';
+import { handleDonHangApi } from './donhang.js';
+import { handleChiLenhApi } from './chilenh.js';
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // Xử lý CORS nếu cần
     if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      });
+      return new Response(null, { status: 204 });
     }
 
     // ==========================================
     // 1. ROUTER API
     // ==========================================
     if (url.pathname.startsWith('/api/')) {
+      // Chỉ nhận thao tác ghi từ chính trang web này (chống trang lạ gửi lệnh thay người dùng)
+      const origin = request.headers.get('Origin');
+      if (!['GET', 'HEAD'].includes(request.method) && origin && origin !== url.origin) {
+        return Response.json({ success: false, error: 'Yêu cầu không hợp lệ' }, { status: 403 });
+      }
       try {
         const response = await handleApi(url, request, env);
-        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set('Cache-Control', 'no-store');
         return response;
       } catch (err) {
         console.error('API Error:', err);
         return Response.json(
           { success: false, error: err.message || 'Lỗi xử lý máy chủ' },
-          { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } }
+          { status: 500, headers: { 'Cache-Control': 'no-store' } }
         );
       }
     }
@@ -59,12 +60,29 @@ async function handleApi(url, request, env) {
   // Tự nâng cấp database (bảng khách hàng, PO, bộ chi tiết...) ở lần gọi đầu tiên
   await ensureSchema(env);
 
+  // Đăng nhập: /api/auth/* không cần phiên; mọi API khác phải đăng nhập và đúng quyền tab
+  const authRes = await handleAuthApi(path, method, url, request, env);
+  if (authRes) return authRes;
+  const gate = await authGate(path, method, request, env);
+  if (gate.res) return gate.res;
+  const user = gate.user;
+
+  const tkRes = await handleTaiKhoanApi(path, method, url, request, env, user);
+  if (tkRes) return tkRes;
+
+  // Đơn hàng / xuất theo đơn hàng (đứng trước catalog để chặn xóa PO đã có chỉ lệnh)
+  const donHangRes = await handleDonHangApi(path, method, url, request, env, user);
+  if (donHangRes) return donHangRes;
+
   const catalogRes = await handleCatalogApi(path, method, url, request, env);
   if (catalogRes) return catalogRes;
 
   // Tab Nhập kho (bảng riêng, không đụng phiếu xuất)
   const nhapKhoRes = await handleNhapKhoApi(path, method, url, request, env);
   if (nhapKhoRes) return nhapKhoRes;
+
+  const chiLenhRes = await handleChiLenhApi(path, method, url, request, env, user);
+  if (chiLenhRes) return chiLenhRes;
 
   // -------------------------------------------------------------
   // GET /api/bophan: Danh sách bộ phận/chuyền

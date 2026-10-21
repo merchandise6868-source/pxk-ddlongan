@@ -90,14 +90,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   initFormControls();
   initDefaultRows();
+  // Chờ đăng nhập xong (auth.js) rồi mới tải dữ liệu
+  if (window.AuthReady) await window.AuthReady;
   await Promise.all([loadDepartments(), window.Catalog ? window.Catalog.load() : null]);
   renderCustomerPills();
   const hasRestored = restoreSlipDraft();
   if (!hasRestored) {
     renderTableStructure();
   }
-  fetchNextSlipNumber();
-  loadSlipList();
+  const can = tab => !window.Auth || window.Auth.can(tab);
+  if (can('tab-create')) fetchNextSlipNumber();
+  if (can('tab-list')) loadSlipList();
 
   fillSlipListCustomerFilter();
   ['filter-tu-ngay', 'filter-den-ngay', 'filter-bophan', 'filter-khachhang'].forEach(id => {
