@@ -145,6 +145,7 @@ const RULES = [
   ['POST', /^\/api\/phieu$/, ['tab-create']],
   ['PUT', /^\/api\/phieu\/\d+$/, ['tab-create']],
   ['PUT', /^\/api\/phieu\/\d+\/status$/, ['tab-list']],
+  ['PUT', /^\/api\/phieu\/\d+\/khachhang$/, ['tab-list']], // gán khách cho phiếu cũ
   ['*', /^\/api\/(dashboard|congno)(\/|$)/, ['tab-dashboard']],
   ['*', /^\/api\/nhapkho\//, ['tab-nhapkho']],
 ];

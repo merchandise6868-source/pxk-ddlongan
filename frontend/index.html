@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="ui-v2.css?v=20261015f">
   <link rel="stylesheet" href="nhapkho.css?v=20261020a">
-  <link rel="stylesheet" href="v3.css?v=20261021a">
+  <link rel="stylesheet" href="v3.css?v=20261021c">
 </head>
 <body>
 
@@ -52,7 +52,12 @@
   <!-- ==========================================
        NỘI DUNG CHÍNH (CONTAINER)
        ========================================== -->
+  <div class="app-body">
+  <!-- THANH BÊN KHÁCH HÀNG (khsidebar.js vẽ): chọn khách 1 lần, mọi tab đi theo -->
+  <aside id="kh-sidebar" class="kh-side no-print ui-scope" aria-label="Chọn khách hàng"></aside>
+
   <main class="main-container no-print">
+    <div id="kh-current" class="kh-current no-print" aria-live="polite"></div>
 
     <!-- ==========================================
          TAB 3: LẬP PHIẾU XUẤT KHO
@@ -61,7 +66,7 @@
       <div class="ui-page">
         <header class="ui-page-head">
           <h2>Lập phiếu xuất kho</h2>
-          <p>Chọn khách hàng, kiểm tra thông tin phiếu, rồi nhập số lượng. Phiếu đang nhập được tự lưu nháp.</p>
+          <p>Khách hàng theo thanh bên trái. Kiểm tra thông tin phiếu rồi nhập số lượng. Phiếu đang nhập được tự lưu nháp riêng cho từng khách.</p>
         </header>
 
         <!-- BƯỚC 1: KHÁCH HÀNG -->
@@ -69,7 +74,7 @@
           <div class="ui-step-num">1</div>
           <div class="ui-step-body">
             <h3 class="ui-step-title">Khách hàng</h3>
-            <p class="ui-step-help">Bấm vào tên khách. Đơn vị nhận, bộ phận, lý do xuất và dãy size sẽ tự điền.</p>
+            <p class="ui-step-help">Đổi khách ở thanh bên trái. Đơn vị nhận, bộ phận, lý do xuất và dãy size tự điền theo khách.</p>
             <div class="ui-kh-list" id="kh-pills"></div>
             <div class="ui-day-list" id="kh-day-pills"></div>
           </div>
@@ -243,12 +248,6 @@
               <option value="all">Tất cả bộ phận</option>
             </select>
           </label>
-          <label class="ui-field">
-            <span class="ui-label">Khách hàng</span>
-            <select id="filter-khachhang" class="ui-input">
-              <option value="all">Tất cả khách hàng</option>
-            </select>
-          </label>
           <label class="ui-field ui-filter-search">
             <span class="ui-label">Tìm kiếm</span>
             <input type="search" id="filter-search" class="ui-input" placeholder="Số phiếu, đơn vị nhận, đơn hàng">
@@ -310,12 +309,6 @@
             <span class="ui-label">Chuyền</span>
             <select id="dash-bophan" class="ui-input">
               <option value="all">Tất cả chuyền</option>
-            </select>
-          </label>
-          <label class="ui-field">
-            <span class="ui-label">Khách hàng</span>
-            <select id="dash-khachhang" class="ui-input">
-              <option value="all">Tất cả khách hàng</option>
             </select>
           </label>
           <button type="button" class="ui-btn ui-btn-primary" id="btn-filter-dashboard">Xem báo cáo</button>
@@ -477,7 +470,7 @@
         <div class="cat-pane" id="cat-pane-po">
           <div class="ui-panel">
             <div class="cat-toolbar">
-              <select id="cat-po-kh" class="ui-input"></select>
+              <select id="cat-po-kh" class="ui-input" hidden aria-hidden="true"></select>
               <input type="search" id="cat-po-search" class="ui-input" placeholder="Tìm PO, đơn hàng, ART">
               <span class="cat-muted" id="cat-po-count"></span>
               <div class="ui-flex-fill"></div>
@@ -487,7 +480,7 @@
             <details class="ui-more cat-paste">
               <summary>Dán nhiều dòng từ Excel</summary>
               <div class="ui-more-body">
-                <p class="ui-hint">Copy các cột theo đúng thứ tự: PO, Đơn hàng, ART, Màu, Đơn giá, Ghi chú. Khách hàng lấy theo ô chọn phía trên.</p>
+                <p class="ui-hint">Copy các cột theo đúng thứ tự: PO, Đơn hàng, ART, Màu, Đơn giá, Ghi chú. Khách hàng lấy theo thanh bên trái.</p>
                 <textarea id="cat-po-paste" class="ui-input cat-textarea" rows="4"></textarea>
                 <div><button type="button" class="ui-btn ui-btn-dark" id="cat-po-import">Nhập vào danh mục</button></div>
               </div>
@@ -508,9 +501,7 @@
 
         <!-- 3. BỘ CHI TIẾT -->
         <div class="cat-pane" id="cat-pane-bo">
-          <div class="cat-toolbar">
-            <select id="cat-bo-kh" class="ui-input"></select>
-          </div>
+          <select id="cat-bo-kh" class="ui-input" hidden aria-hidden="true"></select>
           <div class="cat-bo-layout">
             <div id="cat-bo-list" class="cat-bo-list"></div>
             <div class="ui-panel cat-form">
@@ -542,6 +533,7 @@
       </div>
     </section>
   </main>
+  </div>
 
   <!-- ==========================================
        KHU VỰC IN KHỔ A5 NGANG TRÊN MÁY IN KIM
@@ -578,14 +570,15 @@
   <!-- SCRIPTS -->
   <script src="common.js?v=20261021a"></script>
   <script src="auth.js?v=20261021b"></script>
-  <script src="catalog.js?v=20261021a"></script>
-  <script src="app.js?v=20261021a"></script>
+  <script src="catalog.js?v=20261021c"></script>
+  <script src="khsidebar.js?v=20261021c"></script>
+  <script src="app.js?v=20261021c"></script>
   <script src="grid.js?v=20261019telex"></script>
-  <script src="dashboard.js?v=20261015f"></script>
-  <script src="nhapkho.js?v=20261020b"></script>
-  <script src="donhang.js?v=20261021a"></script>
-  <script src="chilenh.js?v=20261021a"></script>
-  <script src="theodoi.js?v=20261021a"></script>
+  <script src="dashboard.js?v=20261021c"></script>
+  <script src="nhapkho.js?v=20261021c"></script>
+  <script src="donhang.js?v=20261021c"></script>
+  <script src="chilenh.js?v=20261021c"></script>
+  <script src="theodoi.js?v=20261021c"></script>
   <script src="taikhoan.js?v=20261021a"></script>
   <script src="pwa.js?v=20261021a"></script>
 </body>

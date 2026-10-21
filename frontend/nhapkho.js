@@ -63,13 +63,15 @@
     editingId: null,
     vtNhom: 1,
     editingDvgId: null,
-    filter: { tu: firstOfMonth(), den: today(), dvg: '', kh: '', q: '' },
+    filter: { tu: firstOfMonth(), den: today(), dvg: '', q: '' },
     loaded: false,
   };
+  const khId = () => (window.KH ? window.KH.one() : null); // khách đang chọn ở thanh bên
 
   function emptyLine(prev) {
     const l = { khach_hang_id: '', po: '', ma_hang: '', ten_hang: '', dvt: '', so_luong: '', ghi_chu: '', day: 0, sizes: {} };
     if (prev && LOAI[S.loai].po) { l.khach_hang_id = prev.khach_hang_id; l.dvt = prev.dvt; l.day = prev.day || 0; }
+    else if (!prev && LOAI[S.loai].po && khId()) setLineKhach(l, khId()); // dòng đầu: theo thanh bên
     return l;
   }
   function emptyForm() {
@@ -695,16 +697,12 @@
      ============================================================ */
   function filterBar(withAction) {
     const f = S.filter;
-    const khs = C().khach;
     return `
       <div class="ui-panel nk-filter">
         <label class="ui-field"><span class="ui-label">Từ ngày</span><input type="date" class="ui-input" id="nk-f-tu" value="${esc(f.tu)}"></label>
         <label class="ui-field"><span class="ui-label">Đến ngày</span><input type="date" class="ui-input" id="nk-f-den" value="${esc(f.den)}"></label>
         <label class="ui-field"><span class="ui-label">Đơn vị giao</span>
           <select class="ui-input" id="nk-f-dvg">${dvgOptions(f.dvg, S.dvg.filter(d => (d.muc || []).includes(S.loai) || parseInt(f.dvg, 10) === d.id), 'Tất cả')}</select></label>
-        ${LOAI[S.loai].po ? `<label class="ui-field"><span class="ui-label">Khách hàng</span>
-          <select class="ui-input" id="nk-f-kh"><option value="">Tất cả</option>${khs.map(k =>
-            `<option value="${k.id}" ${parseInt(f.kh, 10) === k.id ? 'selected' : ''}>${esc(k.ten_ngan)}</option>`).join('')}</select></label>` : ''}
         <label class="ui-field nk-f-search"><span class="ui-label">Tìm</span>
           <input type="search" class="ui-input" id="nk-f-q" value="${esc(f.q)}" placeholder="${LOAI[S.loai].po ? 'PO, mã hàng, số phiếu' : 'Tên vật tư, số phiếu'}"></label>
         <div class="nk-filter-btns">
@@ -717,7 +715,6 @@
     S.filter.tu = $('nk-f-tu')?.value || '';
     S.filter.den = $('nk-f-den')?.value || '';
     S.filter.dvg = $('nk-f-dvg')?.value || '';
-    S.filter.kh = $('nk-f-kh')?.value || '';
     S.filter.q = $('nk-f-q')?.value || '';
   }
   function filterQuery() {
@@ -726,11 +723,12 @@
     if (f.tu) p.set('tu_ngay', f.tu);
     if (f.den) p.set('den_ngay', f.den);
     if (f.dvg) p.set('don_vi_giao_id', f.dvg);
-    if (f.kh && LOAI[S.loai].po) p.set('khach_hang_id', f.kh);
+    if (khId() && LOAI[S.loai].po) p.set('khach_hang_id', khId());
     if (f.q) p.set('q', f.q);
     return p.toString();
   }
   const khName = id => (C().byId(id) || {}).ten_ngan || '';
+  const khNote = () => (LOAI[S.loai].po && window.KH ? window.KH.emptyNote() : '');
 
   async function renderList(pane) {
     pane.innerHTML = filterBar() + `<div class="ui-panel ui-panel-flush"><div class="nk-table-wrap" id="nk-list-box"><div class="nk-empty">Đang tải...</div></div></div>`;
@@ -738,7 +736,7 @@
     try {
       const { data } = await api('/api/nhapkho/phieu?' + filterQuery());
       if (S.sub !== 'ds') return;
-      if (!data.length) { box.innerHTML = `<div class="nk-empty">Chưa có phiếu nhập ${esc(LOAI[S.loai].dai)} nào trong khoảng ngày này.</div>`; return; }
+      if (!data.length) { box.innerHTML = `<div class="nk-empty">Chưa có phiếu nhập ${esc(LOAI[S.loai].dai)} nào trong khoảng ngày này.${khNote()}</div>`; return; }
       const L = LOAI[S.loai];
       const total = data.reduce((a, r) => a + (r.tong_sl || 0), 0);
       box.innerHTML = `
@@ -788,7 +786,7 @@
       if (S.sub !== 'th') return;
       summaryRows = data;
       const L = LOAI[S.loai];
-      if (!data.length) { box.innerHTML = `<div class="nk-empty">Chưa có số liệu nhập trong khoảng ngày này.</div>`; return; }
+      if (!data.length) { box.innerHTML = `<div class="nk-empty">Chưa có số liệu nhập trong khoảng ngày này.${khNote()}</div>`; return; }
       const total = data.reduce((a, r) => a + (r.tong_sl || 0), 0);
       box.innerHTML = `
         <table class="nk-table">
@@ -1087,6 +1085,16 @@
     if (btn) btn.addEventListener('click', () => show());
     if (document.getElementById('tab-nhapkho')?.classList.contains('active')) show();
     window.addEventListener('catalog-changed', () => {
+      if (document.getElementById('tab-nhapkho')?.classList.contains('active')) render();
+    });
+    // Thanh bên đổi khách: dòng còn trống của phiếu đang lập lấy khách mới; danh sách / tổng hợp lọc lại
+    window.addEventListener('kh-changed', () => {
+      if (!S.form || !LOAI[S.loai].po) return;
+      const choices = khachChoices().map(k => k.id);
+      S.form.lines.forEach(l => {
+        const blank = !l.po && !l.ma_hang && !l.ten_hang && !lineTotal(l);
+        if (blank && (!khId() || choices.includes(khId()))) setLineKhach(l, khId() || '');
+      });
       if (document.getElementById('tab-nhapkho')?.classList.contains('active')) render();
     });
   }

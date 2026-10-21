@@ -11,6 +11,8 @@ const DEFAULT_COMPANY_ADDRESS = 'A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HC
 const ALT_COMPANY_ADDRESS = 'Lô C, Đường số 1, KCN Hòa Bình, H. Thủ Thừa, Long An';
 
 const SLIP_DRAFT_KEY = 'DD_SLIP_DRAFT_V1';
+/** Mỗi khách hàng giữ 1 nháp riêng (đổi khách ở thanh bên không mất phiếu đang nhập); 0 = phiếu không gán khách */
+const draftKey = khId => `${SLIP_DRAFT_KEY}:${khId || 0}`;
 
 // State của ứng dụng
 const AppState = {
@@ -44,24 +46,41 @@ function saveSlipDraft() {
       dayIdx: AppState.dayIdx,
       lastAutoDonHang: AppState.lastAutoDonHang,
     };
-    localStorage.setItem(SLIP_DRAFT_KEY, JSON.stringify(draft));
+    localStorage.setItem(draftKey(AppState.khachHangId), JSON.stringify(draft));
   } catch (err) {
     console.error('Lỗi lưu nháp phiếu:', err);
   }
 }
 
-function restoreSlipDraft() {
+/** Bản cũ chỉ có 1 nháp chung -> chuyển sang nháp của đúng khách trong nháp */
+function migrateOldDraft() {
   try {
     const raw = localStorage.getItem(SLIP_DRAFT_KEY);
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    const key = draftKey(draft && draft.khachHangId);
+    if (!localStorage.getItem(key)) localStorage.setItem(key, raw);
+    localStorage.removeItem(SLIP_DRAFT_KEY);
+  } catch (e) {}
+}
+
+function removeSlipDraft(khId) {
+  try { localStorage.removeItem(draftKey(khId)); } catch (e) {}
+}
+
+function restoreSlipDraft(khId) {
+  try {
+    const raw = localStorage.getItem(draftKey(khId));
     if (!raw) return false;
     const draft = JSON.parse(raw);
     if (draft && Array.isArray(draft.rows) && draft.rows.length > 0) {
+      clearSlipFields();
       if (draft.mau) AppState.currentMau = draft.mau;
       if (draft.selectedSizes && Array.isArray(draft.selectedSizes)) {
         AppState.selectedSizes = draft.selectedSizes;
       }
       AppState.rows = draft.rows;
-      AppState.khachHangId = draft.khachHangId || null;
+      AppState.khachHangId = khId || null;
       AppState.dayIdx = draft.dayIdx || 0;
       AppState.lastAutoDonHang = draft.lastAutoDonHang || '';
       assignBlockKeys(AppState.rows);
@@ -74,7 +93,7 @@ function restoreSlipDraft() {
       if (draft.diachiCty && document.getElementById('slip-diachi-cty')) document.getElementById('slip-diachi-cty').value = draft.diachiCty;
       if (draft.date && document.getElementById('slip-date')) document.getElementById('slip-date').value = draft.date;
 
-      if (AppState.khachHangId) selectCustomer(AppState.khachHangId, { fromLoad: true });
+      selectCustomer(AppState.khachHangId, { fromLoad: true });
       if (draft.bophan) setDeptValue(draft.bophan);
       switchMau(AppState.currentMau);
       return true;
@@ -94,27 +113,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.AuthReady) await window.AuthReady;
   await Promise.all([loadDepartments(), window.Catalog ? window.Catalog.load() : null]);
   renderCustomerPills();
-  const hasRestored = restoreSlipDraft();
+  migrateOldDraft();
+  // Khách hàng theo thanh bên (khsidebar.js)
+  const khStart = window.KH ? window.KH.one() : null;
+  const hasRestored = restoreSlipDraft(khStart);
   if (!hasRestored) {
-    renderTableStructure();
+    if (khStart && currentCustomerById(khStart)) selectCustomer(khStart, { quiet: true });
+    else renderTableStructure();
   }
+  AppState.ready = true;
   const can = tab => !window.Auth || window.Auth.can(tab);
   if (can('tab-create')) fetchNextSlipNumber();
   if (can('tab-list')) loadSlipList();
 
-  fillSlipListCustomerFilter();
-  ['filter-tu-ngay', 'filter-den-ngay', 'filter-bophan', 'filter-khachhang'].forEach(id => {
+  ['filter-tu-ngay', 'filter-den-ngay', 'filter-bophan'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', loadSlipList);
   });
   document.getElementById('filter-search')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadSlipList(); });
 
   // Danh mục thay đổi (thêm khách / PO / bộ chi tiết) -> cập nhật lại nút & gợi ý
   window.addEventListener('catalog-changed', () => {
-    fillSlipListCustomerFilter();
     renderCustomerPills();
     renderDayPills();
     renderBoPanel();
     refreshPoDatalist();
+  });
+
+  // Thanh bên đổi khách -> Lập phiếu đổi theo (cất nháp khách cũ), Danh sách phiếu lọc lại
+  window.addEventListener('kh-changed', e => {
+    if (!AppState.ready || AppState.syncingKh) return;
+    if (can('tab-create')) switchSlipCustomer(window.KH.one(), e.detail && e.detail.carry);
+    if (document.getElementById('tab-list')?.classList.contains('active')) loadSlipList();
+  });
+  // Đang sửa phiếu đã lưu -> hỏi trước khi đổi khách (đổi khách = bỏ sửa)
+  if (window.KH) window.KH.guard(id => {
+    if (!AppState.currentEditingId) return '';
+    if ((typeof id === 'number' ? id : null) === (AppState.khachHangId || null)) return '';
+    return `Đang sửa phiếu ${document.getElementById('slip-so')?.value || ''} – chuyển khách sẽ bỏ sửa (phiếu đã lưu không mất).`;
   });
 });
 
@@ -1044,6 +1079,11 @@ function calculateTotals() {
  */
 async function saveSlip(opts = {}) {
   if (opts && opts.type) opts = {}; // được gọi trực tiếp từ sự kiện click
+  // Lấy khách hàng làm chuẩn: phiếu mới bắt buộc có khách (chọn ở thanh bên)
+  if (!AppState.khachHangId && !AppState.currentEditingId) {
+    showToast('Chọn khách hàng ở thanh bên trái để lập phiếu', 'error');
+    return false;
+  }
   const soPhieu = document.getElementById('slip-so').value.trim();
   const maBoPhan = document.getElementById('slip-bophan').value;
   const ngay = document.getElementById('slip-date').value;
@@ -1499,10 +1539,11 @@ async function loadSlipList() {
   const tuNgay = document.getElementById('filter-tu-ngay').value;
   const denNgay = document.getElementById('filter-den-ngay').value;
   const boPhan = document.getElementById('filter-bophan').value;
-  const khach = document.getElementById('filter-khachhang')?.value || 'all';
+  const khach = window.KH && window.KH.id !== '' ? window.KH.id : 'all'; // thanh bên: số id | 'none' (chưa gán)
   const search = document.getElementById('filter-search').value.trim();
 
-  let query = `?tu_ngay=${tuNgay}&den_ngay=${denNgay}`;
+  // "Chưa gán khách hàng": hiện mọi phiếu chưa gán (không lọc ngày) để gán hết phiếu cũ
+  let query = khach === 'none' ? '?all=1' : `?tu_ngay=${tuNgay}&den_ngay=${denNgay}`;
   if (boPhan) query += `&bo_phan=${boPhan}`;
   if (khach && khach !== 'all') query += `&khach_hang_id=${khach}`;
   if (search) query += `&search=${encodeURIComponent(search)}`;
@@ -1512,22 +1553,56 @@ async function loadSlipList() {
     const data = await res.json();
     if (data.success) {
       renderSlipListTable(data.data);
+      if (khach === 'none' && window.KH) window.KH.refreshCount();
     }
   } catch (err) {
     console.error('Lỗi tải danh sách phiếu:', err);
   }
 }
 
-/** Đổ danh sách khách hàng vào ô lọc của Danh sách phiếu */
-function fillSlipListCustomerFilter() {
-  const sel = document.getElementById('filter-khachhang');
-  if (!sel || !window.Catalog) return;
-  const cur = sel.value;
-  sel.innerHTML = '<option value="all">Tất cả khách hàng</option>' +
-    window.Catalog.khachAll.map(k => `<option value="${k.id}">${escapeHtml(k.ten_ngan)}</option>`).join('') +
-    '<option value="none">Chưa gán khách hàng</option>';
-  sel.value = Array.from(sel.options).some(o => o.value === cur) ? cur : 'all';
-}
+/** Gán khách hàng cho phiếu cũ chưa gán (hộp chọn khách) */
+window.assignSlipCustomer = function(id) {
+  const s = (AppState.slipList || []).find(x => x.id === id);
+  if (!s || !window.Catalog) return;
+  document.getElementById('kh-assign')?.remove();
+  const box = document.createElement('div');
+  box.id = 'kh-assign';
+  box.className = 'kh-assign ui-scope';
+  box.innerHTML = `<div class="kh-assign-card" role="dialog" aria-modal="true" aria-label="Gán khách hàng">
+      <h3>Gán khách hàng cho phiếu ${escapeHtml(s.so_phieu)}</h3>
+      <p>Ngày ${formatDateVn(s.ngay)} · Đơn vị nhận: <b>${escapeHtml(s.don_vi_nhan || '(trống)')}</b>${s.don_hang ? ` · ĐH ${escapeHtml(s.don_hang)}` : ''}</p>
+      <div class="kh-assign-list">${window.Catalog.khach.map(k => `<button type="button" class="kh-assign-btn" data-kh="${k.id}">
+        <b>${escapeHtml(k.ten_ngan)}</b><small>${escapeHtml(k.ten_day_du || '')}</small></button>`).join('')}</div>
+      <div class="kh-assign-foot"><button type="button" class="ui-btn ui-btn-ghost" data-close>Đóng</button></div>
+    </div>`;
+  document.body.appendChild(box);
+  const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  box.addEventListener('click', async e => {
+    if (e.target === box || e.target.closest('[data-close]')) { close(); return; }
+    const b = e.target.closest('[data-kh]');
+    if (!b || b.disabled) return;
+    box.querySelectorAll('[data-kh]').forEach(x => { x.disabled = true; });
+    try {
+      const res = await fetch(`/api/phieu/${id}/khachhang`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ khach_hang_id: parseInt(b.dataset.kh, 10) }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Lỗi máy chủ');
+      showToast(data.message || 'Đã gán khách hàng', 'success');
+      close();
+      loadSlipList();
+      if (window.KH) window.KH.refreshCount();
+    } catch (err) {
+      showToast('Không gán được: ' + err.message, 'error');
+      box.querySelectorAll('[data-kh]').forEach(x => { x.disabled = false; });
+    }
+  });
+  box.querySelector('[data-kh]')?.focus();
+};
 
 function formatDateVn(iso) {
   if (!iso) return '';
@@ -1536,6 +1611,7 @@ function formatDateVn(iso) {
 }
 
 function renderSlipListTable(slips) {
+  AppState.slipList = slips || [];
   const tbody = document.getElementById('slip-list-tbody');
   const summary = document.getElementById('slip-list-summary');
 
@@ -1546,12 +1622,15 @@ function renderSlipListTable(slips) {
     summary.innerHTML = (slips || []).length
       ? `<span><strong>${active.length}</strong> phiếu</span>
          <span><strong>${formatNum(totalPairs) || 0}</strong> đôi</span>
-         ${cancelled ? `<span class="ui-summary-muted">${cancelled} phiếu đã hủy (không tính)</span>` : ''}`
+         ${cancelled ? `<span class="ui-summary-muted">${cancelled} phiếu đã hủy (không tính)</span>` : ''}
+         ${window.KH && window.KH.id === 'none' ? '<span class="ui-summary-muted">Phiếu chưa gán khách hàng · không lọc theo ngày</span>' : ''}`
       : '';
   }
 
   if (!slips || slips.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="ui-empty">Không có phiếu nào trong khoảng thời gian này. Thử đổi ngày hoặc bỏ bớt điều kiện lọc.</td></tr>';
+    tbody.innerHTML = window.KH && window.KH.id === 'none'
+      ? '<tr><td colspan="9" class="ui-empty">Không còn phiếu nào chưa gán khách hàng.</td></tr>'
+      : `<tr><td colspan="9" class="ui-empty">Không có phiếu nào trong khoảng thời gian này. Thử đổi ngày hoặc bỏ bớt điều kiện lọc.${window.KH ? window.KH.emptyNote() : ''}</td></tr>`;
     return;
   }
 
@@ -1572,12 +1651,13 @@ function renderSlipListTable(slips) {
         <td class="c ui-muted">${idx + 1}</td>
         <td><span class="ui-slip-no">${escapeHtml(s.so_phieu)}</span> ${warn}</td>
         <td class="nowrap">${formatDateVn(s.ngay)}</td>
-        <td>${escapeHtml(khach)}${s.don_hang ? `<div class="ui-sub">ĐH ${escapeHtml(s.don_hang)}</div>` : ''}</td>
+        <td>${escapeHtml(khach)}${s.khach_hang_id ? '' : ' <span class="ui-badge ui-badge-warn">chưa gán khách</span>'}${s.don_hang ? `<div class="ui-sub">ĐH ${escapeHtml(s.don_hang)}</div>` : ''}</td>
         <td class="c"><span class="ui-tag">${escapeHtml(s.ma_bo_phan)}</span></td>
         <td>${mauText(s.mau_phieu)}</td>
         <td class="r ui-num-strong">${formatNum(s.tong_sl_chung_tu) || 0}</td>
         <td class="c">${status}</td>
         <td class="r nowrap">
+          ${s.khach_hang_id ? '' : `<button type="button" class="ui-btn-sm ui-btn-sm-primary" onclick="assignSlipCustomer(${s.id})">Gán khách</button>`}
           <button type="button" class="ui-btn-sm ui-btn-sm-primary" onclick="reprintSlip(${s.id})">In lại</button>
           <button type="button" class="ui-btn-sm" onclick="editSlip(${s.id})">Sửa</button>
           ${!cancelled ? `<button type="button" class="ui-btn-sm ui-btn-sm-danger" onclick="cancelSlip(${s.id})">Hủy</button>` : ''}
@@ -1679,6 +1759,15 @@ window.editSlip = async function(id) {
     if (!data.success) return;
 
     const slip = data.data;
+    // Thanh bên chuyển theo khách của phiếu (phiếu chưa gán khách: Tất cả / giữ Chưa gán)
+    if (window.KH) {
+      const target = slip.khach_hang_id || (typeof window.KH.id === 'number' ? '' : window.KH.id);
+      if (!AppState.currentEditingId) saveSlipDraft(); // cất phiếu đang nhập dở trước khi mở phiếu cũ
+      AppState.syncingKh = true;
+      const ok = window.KH.set(target);
+      AppState.syncingKh = false;
+      if (!ok) return;
+    }
     AppState.currentEditingId = slip.id;
 
     if (slip.mau_phieu === 3) {
@@ -1775,27 +1864,58 @@ window.cancelSlip = async function(id) {
   }
 };
 
+/**
+ * Làm mới phiếu (nút "Làm mới phiếu" / sau khi lưu)
+ * - Đang sửa phiếu cũ -> thoát sửa, mở lại nháp phiếu mới của khách đó (nếu có)
+ * - Phiếu mới -> xóa nháp của khách đang chọn
+ */
 function resetForm() {
+  const kh = AppState.khachHangId || null;
+  const wasEditing = !!AppState.currentEditingId;
   AppState.currentEditingId = null;
+  if (!wasEditing) removeSlipDraft(kh);
+  if (!wasEditing || !restoreSlipDraft(kh)) blankSlip(kh);
+  fetchNextSlipNumber();
+}
+
+/** Xóa các ô thông tin phiếu (không đụng nháp) */
+function clearSlipFields() {
   document.getElementById('slip-donvi').value = '';
   document.getElementById('slip-lydo').value = '';
   if (document.getElementById('slip-donhang')) document.getElementById('slip-donhang').value = '';
   if (document.getElementById('slip-bophanxuat')) document.getElementById('slip-bophanxuat').value = '';
   const diachiInput = document.getElementById('slip-diachi-cty');
   if (diachiInput) diachiInput.value = DEFAULT_COMPANY_ADDRESS;
-
-  try {
-    localStorage.removeItem(SLIP_DRAFT_KEY);
-  } catch (e) {}
-
   AppState.lastAutoDonHang = '';
   if (window.Grid) { Grid.resetHistory(); Grid.clearSelection(); }
+}
+
+/** Phiếu trống cho khách khId (null = phiếu nhập tay, không gán khách) */
+function blankSlip(khId) {
+  AppState.currentEditingId = null;
+  clearSlipFields();
   initDefaultRows();
-  if (AppState.khachHangId) {
-    selectCustomer(AppState.khachHangId); // giữ khách hàng đang chọn, nạp lại thông tin mặc định
+  if (khId && currentCustomerById(khId)) {
+    selectCustomer(khId, { quiet: true }); // nạp thông tin mặc định của khách
   } else {
+    selectCustomer(null, { fromLoad: true });
     switchMau(2);
   }
+}
+
+/** Thanh bên đổi khách: cất nháp khách cũ, mở nháp khách mới (chưa có thì phiếu trống theo mặc định khách) */
+function switchSlipCustomer(khId, carry) {
+  khId = khId || null;
+  if (khId === (AppState.khachHangId || null)) return;
+  if (carry && !AppState.currentEditingId) {
+    // Vừa thêm khách mới từ nút "+ Khách hàng mới": giữ nguyên phiếu đang nhập, gán cho khách mới
+    removeSlipDraft(AppState.khachHangId);
+    selectCustomer(khId);
+    return;
+  }
+  if (AppState.currentEditingId) AppState.currentEditingId = null; // bỏ sửa phiếu cũ (phiếu đã lưu không đổi)
+  else saveSlipDraft();
+  if (!restoreSlipDraft(khId)) blankSlip(khId);
   fetchNextSlipNumber();
 }
 
@@ -1805,25 +1925,30 @@ function resetForm() {
 function currentCustomer() {
   return AppState.khachHangId && window.Catalog ? window.Catalog.byId(AppState.khachHangId) : null;
 }
+function currentCustomerById(id) {
+  return id && window.Catalog ? window.Catalog.byId(id) : null;
+}
 
+/** Bước 1: khách hàng đi theo thanh bên trái (đổi khách ở đó) */
 function renderCustomerPills() {
   const box = document.getElementById('kh-pills');
   if (!box || !window.Catalog) return;
-  const list = window.Catalog.khach;
-  box.innerHTML = list.map(k => `
-    <button type="button" class="pxk-kh-pill ${k.id === AppState.khachHangId ? 'active' : ''}" data-kh="${k.id}" aria-pressed="${k.id === AppState.khachHangId}">
-      <span class="kh-name">${escapeHtml(k.ten_ngan)}</span>
-      <span class="kh-sub">${escapeHtml(k.ten_day_du || '')}</span>
-    </button>
-  `).join('') + `<button type="button" class="pxk-kh-pill pxk-kh-none" data-new-kh="1">
+  const kh = currentCustomer();
+  // Chưa chọn khách (đang xem Tất cả) -> khóa lập phiếu mới; sửa phiếu cũ chưa gán khách vẫn được
+  const needKh = !kh && !AppState.currentEditingId;
+  document.getElementById('tab-create')?.classList.toggle('pxk-need-kh', needKh);
+  box.innerHTML = (kh
+    ? `<div class="pxk-kh-pill active pxk-kh-current">
+        <span class="kh-name">${escapeHtml(kh.ten_ngan)}</span>
+        <span class="kh-sub">${escapeHtml(kh.ten_day_du || '')}</span>
+      </div>`
+    : needKh
+      ? `<div class="pxk-kh-warn"><b>Chọn khách hàng ở thanh bên trái để lập phiếu.</b> Khách chưa có trong danh sách thì bấm <b>+ Khách hàng mới</b>.</div>`
+      : `<div class="pxk-kh-warn">Phiếu này chưa gán khách hàng nên <b>không được tính</b> vào Xuất theo đơn hàng. Gán khách ở tab Danh sách phiếu (nút <b>Gán khách</b>).</div>`)
+    + `<button type="button" class="pxk-kh-pill pxk-kh-none" data-new-kh="1">
       <span class="kh-name">+ Khách hàng mới</span>
       <span class="kh-sub">Thêm vào danh mục rồi quay lại</span>
     </button>`;
-  box.querySelectorAll('[data-kh]').forEach(btn => btn.addEventListener('click', () => {
-    const id = parseInt(btn.dataset.kh, 10);
-    // Bấm lại khách đang chọn -> bỏ chọn (để tự nhập tay)
-    selectCustomer(id === AppState.khachHangId ? null : id);
-  }));
   box.querySelector('[data-new-kh]')?.addEventListener('click', () => {
     if (window.openNewCustomerForm) window.openNewCustomerForm({ returnToCreate: true });
   });
@@ -1881,6 +2006,7 @@ function setDeptValue(ma) {
 /**
  * Chọn khách hàng
  * - fromLoad = true: chỉ đồng bộ giao diện (khi nạp nháp / sửa phiếu cũ), không ghi đè dữ liệu
+ * - quiet = true: không hiện thông báo (đổi khách từ thanh bên)
  */
 function selectCustomer(id, opts = {}) {
   AppState.khachHangId = id || null;
@@ -1906,7 +2032,7 @@ function selectCustomer(id, opts = {}) {
       updateCustomSizeInputText();
     }
     switchMau(3);
-    showToast(`Đã chọn khách hàng ${kh.ten_ngan}`, 'info');
+    if (!opts.quiet) showToast(`Đã chọn khách hàng ${kh.ten_ngan}`, 'info');
   }
 
   renderDayPills();

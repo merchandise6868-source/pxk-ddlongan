@@ -1,20 +1,22 @@
 /**
  * TAB ĐƠN HÀNG (dữ liệu gốc): Khách hàng → ART → PO → số lượng theo size
  * Dùng chung bảng PO với Phiếu xuất / Nhập kho / Công nợ. Tiến độ: Đặt · Đã thả · Đã xuất · Còn lại.
+ * Khách hàng lấy theo thanh bên (window.KH); "Tất cả khách hàng" thì chỉ xem, không thêm / dán được.
  * Quy tắc gõ Telex: input chỉ cập nhật dữ liệu, không vẽ lại ô đang gõ; keydown bỏ qua khi isComposing.
  */
 (function () {
-  const { esc, toNum, fmt, fmt0, api, store, toast, normSize, normKey, khSizes, enterToNext, $ } = window.U;
+  const { esc, toNum, fmt, fmt0, api, toast, normSize, normKey, khSizes, enterToNext, $ } = window.U;
   const C = () => window.Catalog || { khach: [], khachAll: [], po: [], byId: () => null };
 
   const S = {
-    kh: store.get('dh_kh', ''), q: '', tt: 'con',
+    q: '', tt: 'con',
     list: [], sel: new Set(), form: null, paste: null, loaded: false,
   };
+  const khId = () => (window.KH ? window.KH.one() : null);
   const qtyNum = v => parseInt(String(v ?? '').replace(/[^\d]/g, ''), 10) || 0; // số lượng dán từ Excel (1,000 / 1.000)
 
   function emptyForm(prev) {
-    const kh = prev?.khach_hang_id || parseInt(S.kh, 10) || (C().khach[0]?.id ?? '');
+    const kh = prev?.khach_hang_id || khId() || '';
     return { id: null, khach_hang_id: kh, day: prev?.day || 0, art: prev?.art || '', po: '', mau: prev?.mau || '', don_hang: prev?.don_hang || '',
       don_gia: prev?.don_gia || '', ngay_giao: prev?.ngay_giao || '', ghi_chu: '', sizes: {} };
   }
@@ -26,8 +28,7 @@
     return [...base, ...extra];
   }
   const formTotal = f => formSizes(f).reduce((a, s) => a + toNum(f.sizes[s]), 0);
-  const khOpts = (sel, withAll) => (withAll ? '<option value="">Tất cả khách hàng</option>' : '<option value="">Chọn khách hàng</option>')
-    + C().khach.map(k => `<option value="${k.id}" ${parseInt(sel, 10) === k.id ? 'selected' : ''}>${esc(k.ten_ngan)}</option>`).join('');
+  const khFixed = id => `<div class="ui-field"><span class="ui-label">Khách hàng</span><div class="v3-fixed">${esc((C().byId(id) || {}).ten_ngan || '')}</div></div>`;
   const artsOf = khId => [...new Set(C().po.filter(p => p.khach_hang_id === parseInt(khId, 10)).map(p => String(p.art || '').trim()).filter(Boolean))];
 
   /* ---------------- KHUNG ---------------- */
@@ -37,27 +38,34 @@
       <header class="ui-page-head"><h2>Đơn hàng</h2>
         <p>Dữ liệu gốc: khách hàng → ART → PO → số lượng theo size. Chỉ lệnh thả chuyền và theo dõi xuất hàng đều lấy từ đây.</p></header>
       <div class="ui-panel v3-filter">
-        <label class="ui-field"><span class="ui-label">Khách hàng</span><select class="ui-input" id="dh-f-kh">${khOpts(S.kh, true)}</select></label>
         <label class="ui-field v3-grow"><span class="ui-label">Tìm</span><input type="search" class="ui-input" id="dh-f-q" value="${esc(S.q)}" placeholder="ART, PO, đơn hàng, màu"></label>
         <label class="ui-field"><span class="ui-label">Trạng thái</span><select class="ui-input" id="dh-f-tt">
           <option value="con" ${S.tt === 'con' ? 'selected' : ''}>Còn phải giao</option>
           <option value="du" ${S.tt === 'du' ? 'selected' : ''}>Đã giao đủ</option>
           <option value="all" ${S.tt === 'all' ? 'selected' : ''}>Tất cả</option></select></label>
         <div class="v3-filter-btns">
-          <button type="button" class="ui-btn ui-btn-primary" data-act="add">＋ Thêm đơn hàng</button>
-          <button type="button" class="ui-btn ui-btn-ghost" data-act="paste-open">📋 Dán từ Excel</button>
+          <button type="button" class="ui-btn ui-btn-primary" data-act="add" data-need-kh>＋ Thêm đơn hàng</button>
+          <button type="button" class="ui-btn ui-btn-ghost" data-act="paste-open" data-need-kh>📋 Dán từ Excel</button>
         </div>
+        <p class="ui-hint" id="dh-need-kh" hidden>Muốn thêm hoặc dán đơn hàng, hãy chọn 1 khách hàng ở thanh bên trái.</p>
       </div>
       <div id="dh-form-box"></div>
       <div id="dh-paste-box"></div>
       <div class="v3-selbar" id="dh-selbar" hidden></div>
       <div class="ui-panel ui-panel-flush"><div class="v3-table-wrap" id="dh-list"><div class="v3-empty">Đang tải...</div></div></div>`;
+    syncKh();
+  }
+  /** Khóa nút Thêm / Dán khi đang xem Tất cả khách hàng */
+  function syncKh() {
+    const one = !!khId();
+    document.querySelectorAll('#dh-root [data-need-kh]').forEach(b => { b.disabled = !one; });
+    const hint = $('dh-need-kh'); if (hint) hint.hidden = one;
   }
 
   /* ---------------- DANH SÁCH ---------------- */
   async function loadList() {
     const p = new URLSearchParams({ trang_thai: S.tt });
-    if (S.kh) p.set('khach_hang_id', S.kh);
+    if (khId()) p.set('khach_hang_id', khId());
     if (S.q) p.set('q', S.q);
     const box = $('dh-list');
     try {
@@ -72,11 +80,11 @@
     const box = $('dh-list');
     if (!box) return;
     if (!S.list.length) {
-      box.innerHTML = `<div class="v3-empty">${S.tt === 'con' ? 'Không có đơn hàng nào còn phải giao.' : 'Chưa có đơn hàng.'} Bấm <b>＋ Thêm đơn hàng</b> hoặc <b>📋 Dán từ Excel</b>.</div>`;
+      box.innerHTML = `<div class="v3-empty">${S.tt === 'con' ? 'Không có đơn hàng nào còn phải giao.' : 'Chưa có đơn hàng.'}${khId() ? ' Bấm <b>＋ Thêm đơn hàng</b> hoặc <b>📋 Dán từ Excel</b>.' : ''}${window.KH ? window.KH.emptyNote() : ''}</div>`;
       renderSelBar();
       return;
     }
-    const kh = S.kh ? C().byId(S.kh) : null;
+    const kh = khId() ? C().byId(khId()) : null;
     const cols = kh ? (() => { const c = khSizes(kh); S.list.forEach(o => o.sizes.forEach(s => { if (s.dat && !c.includes(s.size)) c.push(s.size); })); return c; })() : [];
     const groups = [];
     S.list.forEach(o => {
@@ -93,7 +101,7 @@
         <th class="r">Đặt</th><th class="r">Đã thả</th><th class="r">Đã xuất</th><th class="r">Còn lại</th><th></th></tr></thead>
       <tbody>${groups.map(g => {
         const t = k => g.rows.reduce((a, o) => a + o[k], 0);
-        return `<tr class="v3-group"><td colspan="${nCols + (canTha ? 1 : 0) - 5}"><b>ART ${esc(g.art)}</b> <span class="ui-muted">· ${esc(g.kh)} · ${g.rows.length} PO</span>
+        return `<tr class="v3-group"><td colspan="${nCols + (canTha ? 1 : 0) - 5}"><b>ART ${esc(g.art)}</b> <span class="ui-muted">${kh ? '' : '· ' + esc(g.kh) + ' '}· ${g.rows.length} PO</span>
             ${canTha ? `<button type="button" class="ui-btn-sm" data-act="tha-art" data-key="${esc(g.key)}">🧵 Thả chuyền cả ART</button>` : ''}</td>
           <td class="r"><b>${fmt0(t('tong_dat'))}</b></td><td class="r">${fmt0(t('tong_tha'))}</td><td class="r">${fmt0(t('tong_xuat'))}</td><td class="r"><b>${fmt0(t('con_phai_giao'))}</b></td><td></td></tr>`
           + g.rows.map(o => {
@@ -112,7 +120,7 @@
                 <button type="button" class="ui-btn-sm ui-btn-sm-danger" data-act="del" data-id="${o.id}">Xóa</button></td></tr>`;
           }).join('');
       }).join('')}</tbody></table>
-      ${kh ? '' : '<p class="ui-hint v3-pad">Chọn 1 khách hàng ở ô lọc để xem số lượng theo từng size.</p>'}`;
+      ${kh ? '' : '<p class="ui-hint v3-pad">Chọn 1 khách hàng ở thanh bên trái để xem số lượng theo từng size.</p>'}`;
     renderSelBar();
   }
 
@@ -147,8 +155,7 @@
       <section class="ui-panel v3-form" id="dh-form">
         <h3 class="ui-panel-title">${f.id ? 'Sửa đơn hàng PO ' + esc(f.po) : 'Thêm đơn hàng'}</h3>
         <div class="ui-fields">
-          <label class="ui-field"><span class="ui-label">Khách hàng <b class="ui-req">*</b></span>
-            <select class="ui-input" id="dh-kh">${khOpts(f.khach_hang_id, false)}</select></label>
+          ${khFixed(f.khach_hang_id)}
           <label class="ui-field"><span class="ui-label">ART (mã hàng) <b class="ui-req">*</b></span>
             <input type="text" class="ui-input ui-input-strong" data-f="art" list="dh-dl-art" autocomplete="off" value="${esc(f.art)}" placeholder="vd: DA-260-A"></label>
           <label class="ui-field"><span class="ui-label">PO <b class="ui-req">*</b></span>
@@ -217,7 +224,7 @@
       <section class="ui-panel v3-form" id="dh-paste">
         <h3 class="ui-panel-title">Dán đơn hàng từ Excel</h3>
         <div class="ui-fields">
-          <label class="ui-field"><span class="ui-label">Khách hàng <b class="ui-req">*</b></span><select class="ui-input" id="dh-p-kh">${khOpts(P.khach_hang_id, false)}</select></label>
+          ${khFixed(P.khach_hang_id)}
           ${days.length > 1 ? `<div class="ui-field ui-span-2"><span class="ui-label">Dãy size</span><span class="v3-days">${days.map((d, i) =>
             `<button type="button" class="ui-chip ${i === P.day ? 'active' : ''}" data-act="p-day" data-day="${i}">${esc(d.ten)}</button>`).join('')}</span></div>` : ''}
           <div class="ui-field ui-span-2"><span class="ui-label">Dòng trùng (đã có PO + ART)</span>
@@ -279,8 +286,6 @@
       const r = await api('/api/donhang', 'POST', { khach_hang_id: P.khach_hang_id, items, mode: P.mode });
       toast(r.message + (r.loi.length ? ` · ${r.loi.length} dòng lỗi` : ''), r.loi.length ? 'info' : 'success');
       S.paste = null; renderPaste();
-      S.kh = String(P.khach_hang_id); store.set('dh_kh', S.kh);
-      const sel = $('dh-f-kh'); if (sel) sel.value = S.kh;
       await afterChange();
     } catch (err) { toast('Không lưu được: ' + err.message, 'error'); }
   }
@@ -301,10 +306,7 @@
   let qTimer = null;
   function onChange(e) {
     const t = e.target;
-    if (t.id === 'dh-f-kh') { S.kh = t.value; store.set('dh_kh', S.kh); S.sel.clear(); loadList(); return; }
     if (t.id === 'dh-f-tt') { S.tt = t.value; loadList(); return; }
-    if (t.id === 'dh-kh' && S.form) { S.form.khach_hang_id = parseInt(t.value, 10) || ''; S.form.day = 0; renderForm(); return; }
-    if (t.id === 'dh-p-kh' && S.paste) { S.paste.khach_hang_id = parseInt(t.value, 10) || ''; S.paste.day = 0; S.paste.rows = null; renderPaste(); return; }
     if (t.name === 'dh-p-mode' && S.paste) { S.paste.mode = t.value; if (S.paste.rows) renderPaste(); return; }
     if (t.classList.contains('dh-sel')) {
       const id = parseInt(t.dataset.id, 10);
@@ -325,10 +327,15 @@
     if (!b) return;
     const act = b.dataset.act;
     const id = parseInt(b.dataset.id, 10);
-    if (act === 'add') { S.paste = null; renderPaste(); S.form = emptyForm(); renderForm(); document.querySelector('#dh-form [data-f="art"]')?.focus(); }
+    if (act === 'add') {
+      if (!khId()) { toast('Chọn 1 khách hàng ở thanh bên trái trước', 'error'); return; }
+      S.paste = null; renderPaste(); S.form = emptyForm(); renderForm(); document.querySelector('#dh-form [data-f="art"]')?.focus();
+    }
     if (act === 'edit') {
       const o = S.list.find(x => x.id === id);
       if (!o) return;
+      // Đang xem Tất cả -> thanh bên chuyển sang khách của đơn hàng này
+      if (window.KH && !window.KH.set(o.khach_hang_id)) return;
       const sizes = Object.fromEntries(o.sizes.filter(s => s.dat).map(s => [s.size, s.dat]));
       const kh = C().byId(o.khach_hang_id);
       const keys = Object.keys(sizes);
@@ -349,8 +356,9 @@
     if (act === 'save') saveForm(false);
     if (act === 'save-next') saveForm(true);
     if (act === 'paste-open') {
+      if (!khId()) { toast('Chọn 1 khách hàng ở thanh bên trái trước', 'error'); return; }
       S.form = null; renderForm();
-      S.paste = { khach_hang_id: parseInt(S.kh, 10) || (C().khach[0]?.id ?? ''), day: 0, mode: 'skip', text: '', rows: null };
+      S.paste = { khach_hang_id: khId(), day: 0, mode: 'skip', text: '', rows: null };
       renderPaste(); $('dh-p-text')?.focus();
     }
     if (act === 'p-day' && S.paste) { S.paste.day = parseInt(b.dataset.day, 10) || 0; S.paste.rows = null; renderPaste(); }
@@ -385,11 +393,24 @@
     }
     loadList();
   }
+  /** Form / dán đang có dữ liệu chưa lưu -> hỏi trước khi thanh bên đổi khách */
+  function dirtyMsg(id) {
+    const f = S.form;
+    const formDirty = f && (f.id || String(f.art).trim() || String(f.po).trim() || formTotal(f));
+    const pasteDirty = S.paste && String(S.paste.text).trim();
+    if (!(formDirty || pasteDirty) || id === (f || S.paste).khach_hang_id) return '';
+    return f ? `Đơn hàng đang ${f.id ? 'sửa' : 'nhập'} (${f.po ? 'PO ' + f.po : 'ART ' + (f.art || '…')}) chưa lưu sẽ bị bỏ.` : 'Dữ liệu dán từ Excel chưa lưu sẽ bị bỏ.';
+  }
   function init() {
     document.querySelector('.tab-btn[data-target="tab-donhang"]')?.addEventListener('click', show);
-    window.addEventListener('catalog-changed', () => {
-      const sel = $('dh-f-kh');
-      if (sel && !S.form && !S.paste) sel.innerHTML = khOpts(S.kh, true);
+    if (window.KH) window.KH.guard(dirtyMsg);
+    window.addEventListener('kh-changed', () => {
+      if (!$('dh-root')?.dataset.ready) return;
+      S.sel.clear();
+      const kh = (S.form || S.paste || {}).khach_hang_id;
+      if (kh && kh !== khId()) { S.form = null; S.paste = null; renderForm(); renderPaste(); }
+      syncKh();
+      if ($('tab-donhang')?.classList.contains('active')) loadList(); // tab khác: show() tự tải khi mở
     });
   }
   window.DonHang = { reload: () => { if ($('dh-root')?.dataset.ready) loadList(); } };

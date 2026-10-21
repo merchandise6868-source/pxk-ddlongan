@@ -36,21 +36,27 @@
     bo: [],
     bophan: [],
     loaded: false,
-    async load() {
-      try {
-        const [kh, po, bo, bp] = await Promise.all([
-          api('/api/khachhang?all=1'), api('/api/po'), api('/api/bochitiet'), api('/api/bophan'),
-        ]);
-        this.khachAll = kh.data;
-        this.khach = kh.data.filter(k => !k.an);
-        this.po = po.data;
-        this.bo = bo.data;
-        this.bophan = bp.data;
-        this.loaded = true;
-      } catch (err) {
-        console.error('Lỗi tải danh mục:', err);
-      }
-      return this;
+    load() {
+      // Nhiều phần gọi cùng lúc khi mở app (thanh bên, Lập phiếu, tab đầu tiên) -> dùng chung 1 lần tải
+      if (this._loading) return this._loading;
+      this._loading = (async () => {
+        try {
+          const [kh, po, bo, bp] = await Promise.all([
+            api('/api/khachhang?all=1'), api('/api/po'), api('/api/bochitiet'), api('/api/bophan'),
+          ]);
+          this.khachAll = kh.data;
+          this.khach = kh.data.filter(k => !k.an);
+          this.po = po.data;
+          this.bo = bo.data;
+          this.bophan = bp.data;
+          this.loaded = true;
+        } catch (err) {
+          console.error('Lỗi tải danh mục:', err);
+        }
+        this._loading = null;
+        return this;
+      })();
+      return this._loading;
     },
     byId(id) {
       id = parseInt(id, 10);
@@ -197,11 +203,12 @@
     if (note) note.hidden = !on;
   }
 
-  /** Quay về tab Lập phiếu, chọn sẵn khách hàng (nếu có) */
+  /** Quay về tab Lập phiếu, chọn sẵn khách hàng (nếu có) – thanh bên chuyển sang khách mới, giữ phiếu đang nhập */
   function backToCreate(khId) {
     setReturnNote(false);
     document.querySelector('.tab-btn[data-target="tab-create"]')?.click();
-    if (khId && window.selectCustomer) setTimeout(() => window.selectCustomer(khId), 50);
+    if (khId && window.KH) setTimeout(() => window.KH.set(khId, { carry: true }), 50);
+    else if (khId && window.selectCustomer) setTimeout(() => window.selectCustomer(khId), 50);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -222,7 +229,7 @@
   /* ---------------- 2. PO / ĐƠN HÀNG / ĐƠN GIÁ ---------------- */
   function renderPoPane() {
     const filterSel = document.getElementById('cat-po-kh');
-    const curKh = filterSel.value;
+    const curKh = window.KH ? (window.KH.one() || '') : filterSel.value;
     filterSel.innerHTML = khOptions(curKh, true);
     const kh = parseInt(filterSel.value, 10) || null;
     const q = document.getElementById('cat-po-search').value.trim().toLowerCase();
@@ -296,7 +303,7 @@
 
   async function importPoFromExcel() {
     const kh = parseInt(document.getElementById('cat-po-kh').value, 10) || null;
-    if (!kh) { toast('Chọn khách hàng ở ô lọc trước khi dán từ Excel', 'error'); return; }
+    if (!kh) { toast('Chọn 1 khách hàng ở thanh bên trái trước khi dán từ Excel', 'error'); return; }
     const text = document.getElementById('cat-po-paste').value;
     const items = text.split(/\r?\n/).filter(l => l.trim()).map(l => {
       const c = l.split('\t');
@@ -324,7 +331,7 @@
 
   function renderBoPane() {
     const filterSel = document.getElementById('cat-bo-kh');
-    const cur = filterSel.value || (Catalog.khachAll.find(k => k.co_bo_chi_tiet)?.id ?? '');
+    const cur = window.KH ? (window.KH.one() || '') : (filterSel.value || (Catalog.khachAll.find(k => k.co_bo_chi_tiet)?.id ?? ''));
     filterSel.innerHTML = khOptions(cur, true);
     const kh = parseInt(filterSel.value, 10) || null;
     const formKh = document.getElementById('cat-bo-form-kh');
@@ -399,6 +406,8 @@
     document.getElementById('cat-bo-kh')?.addEventListener('change', renderBoPane);
     document.getElementById('cat-bo-save')?.addEventListener('click', saveBo);
     document.getElementById('cat-bo-new')?.addEventListener('click', () => fillBoForm(null));
+
+    window.addEventListener('kh-changed', () => { if (currentSub !== 'kh') renderAll(); }); // renderAll tự bỏ qua khi tab không mở
 
     document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
       if (btn.dataset.target === 'tab-catalog') Catalog.load().then(() => {

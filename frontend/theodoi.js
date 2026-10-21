@@ -2,21 +2,22 @@
  * TAB XUẤT THEO ĐƠN HÀNG
  * Mỗi PO: Đặt · Đã thả chuyền · Đã xuất (từ phiếu xuất kho) · Điều chỉnh · Còn phải giao, theo từng size.
  * Điều chỉnh khi giao sai size / giao dư / thiếu: ghi dòng +/− có lý do, phiếu xuất gốc giữ nguyên.
+ * Khách hàng lấy theo thanh bên (window.KH).
  */
 (function () {
-  const { esc, toNum, fmt, fmt0, api, store, toast, normSize, viDate, downloadCsv, today, $ } = window.U;
+  const { esc, toNum, fmt, fmt0, api, toast, viDate, downloadCsv, today, $ } = window.U;
   const C = () => window.Catalog || { khach: [], khachAll: [], byId: () => null };
   const LY_DO = ['Giao sai size', 'Giao dư', 'Giao thiếu', 'Khác'];
   const CACH = { dong_bo: 'dòng đồng bộ', dong_bo_chi_tiet: 'đồng bộ (nhỏ nhất các chi tiết)', cong: '' };
 
-  const S = { kh: store.get('td_kh', ''), q: '', tt: 'con', data: [], unmatched: [], open: new Set(), adj: null, ganSel: {} };
+  const S = { q: '', tt: 'con', data: [], unmatched: [], open: new Set(), adj: null, ganSel: {} };
+  const khId = () => (window.KH ? window.KH.one() : null);
 
   function renderShell() {
     $('td-root').innerHTML = `
       <header class="ui-page-head"><h2>Xuất theo đơn hàng</h2>
         <p>Số đã xuất lấy tự động từ phiếu xuất kho (khớp PO + ART của cùng khách hàng). Giao sai size thì ghi điều chỉnh, không cần sửa phiếu.</p></header>
       <div class="ui-panel v3-filter">
-        <label class="ui-field"><span class="ui-label">Khách hàng</span><select class="ui-input" id="td-f-kh"></select></label>
         <label class="ui-field v3-grow"><span class="ui-label">Tìm</span><input type="search" class="ui-input" id="td-f-q" placeholder="ART, PO, số phiếu"></label>
         <label class="ui-field"><span class="ui-label">Trạng thái</span><select class="ui-input" id="td-f-tt">
           <option value="con">Còn phải giao</option><option value="du">Đã giao đủ</option><option value="all">Tất cả</option></select></label>
@@ -28,8 +29,6 @@
     fillFilter();
   }
   function fillFilter() {
-    const sel = $('td-f-kh');
-    if (sel) sel.innerHTML = '<option value="">Tất cả khách hàng</option>' + C().khach.map(k => `<option value="${k.id}" ${parseInt(S.kh, 10) === k.id ? 'selected' : ''}>${esc(k.ten_ngan)}</option>`).join('');
     const tt = $('td-f-tt'); if (tt) tt.value = S.tt;
     const q = $('td-f-q'); if (q) q.value = S.q;
   }
@@ -37,7 +36,7 @@
   async function load() {
     // Lấy đủ mọi trạng thái (để ô "Gán vào đơn hàng" có cả PO đã giao đủ), lọc trạng thái ở máy
     const p = new URLSearchParams({ trang_thai: 'all' });
-    if (S.kh) p.set('khach_hang_id', S.kh);
+    if (khId()) p.set('khach_hang_id', khId());
     if (S.q) p.set('q', S.q);
     try {
       const r = await api('/api/theodoi?' + p);
@@ -53,7 +52,7 @@
 
   function renderList() {
     const box = $('td-list');
-    if (!S.data.length) { box.innerHTML = `<div class="ui-panel"><div class="v3-empty">${S.tt === 'con' ? 'Không có PO nào còn phải giao.' : 'Không có đơn hàng phù hợp.'}</div></div>`; return; }
+    if (!S.data.length) { box.innerHTML = `<div class="ui-panel"><div class="v3-empty">${S.tt === 'con' ? 'Không có PO nào còn phải giao.' : 'Không có đơn hàng phù hợp.'}${window.KH ? window.KH.emptyNote() : ''}</div></div>`; return; }
     box.innerHTML = S.data.map(cardHtml).join('');
   }
 
@@ -148,11 +147,11 @@
           return `<tr><td class="nowrap">${viDate(u.ngay)}</td><td class="nowrap"><b>${esc(u.so_phieu)}</b></td><td>${esc(khName(u.khach_hang_id)) || '<span class="v3-neg">Chưa chọn khách</span>'}</td>
             <td>${esc(u.po)}</td><td>${esc(u.art)}</td>
             <td><small>${Object.entries(u.sizes).map(([s, v]) => `${esc(s)}: ${fmt0(v)}`).join(' · ')}</small></td><td class="r"><b>${fmt0(u.tong)}</b></td>
-            <td class="nowrap">${!u.khach_hang_id ? '<small class="ui-muted">Mở phiếu, chọn khách hàng</small>'
+            <td class="nowrap">${!u.khach_hang_id ? '<small class="ui-muted">Gán khách cho phiếu ở tab Danh sách phiếu</small>'
               : opts.length ? `<select class="ui-input v3-sel-sm" data-gan="${u.dong_id}"><option value="">Chọn PO</option>${opts.map(o =>
                 `<option value="${o.id}" ${S.ganSel[u.dong_id] === o.id ? 'selected' : ''}>${esc(o.po)} · ${esc(o.art)}</option>`).join('')}</select>
                 <button type="button" class="ui-btn-sm" data-act="gan" data-dong="${u.dong_id}">Gán</button>`
-              : '<small class="ui-muted">Khách chưa có đơn hàng (chọn khách ở ô lọc để hiện)</small>'}</td></tr>`;
+              : '<small class="ui-muted">Khách chưa có đơn hàng</small>'}</td></tr>`;
         }).join('')}</tbody></table></div>
     </section>`;
   }
@@ -172,7 +171,6 @@
   }
   function onChange(e) {
     const t = e.target;
-    if (t.id === 'td-f-kh') { S.kh = t.value; store.set('td_kh', S.kh); load(); return; }
     if (t.id === 'td-f-tt') { S.tt = t.value; render(); return; }
     if (t.name === 'td-kieu' && S.adj) { S.adj.kieu = t.value; renderList(); return; }
     if (S.adj && t.dataset.a) { S.adj[t.dataset.a] = t.value; return; }
@@ -240,7 +238,11 @@
   }
   function init() {
     document.querySelector('.tab-btn[data-target="tab-theodoi"]')?.addEventListener('click', show);
-    window.addEventListener('catalog-changed', () => { if ($('td-root')?.dataset.ready) fillFilter(); });
+    window.addEventListener('kh-changed', () => {
+      if (!$('td-root')?.dataset.ready) return;
+      S.adj = null; S.open.clear(); S.ganSel = {};
+      if ($('tab-theodoi')?.classList.contains('active')) load(); // tab khác: show() tự tải khi mở
+    });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

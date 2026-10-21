@@ -3,6 +3,7 @@
  * - Theo Tổ / Chuyền: thẻ tổng, biểu đồ theo ngày, ma trận Mã hàng × Size
  * - Theo Khách hàng: tổng đôi, thành tiền (công nợ), bảng kê theo phiếu · PO · ART
  * Lưu ý: dòng chi tiết (miếng) của bộ JiaYu không cộng vào sản lượng — chỉ tính dòng ĐỒNG BỘ ĐÔI
+ * Khách hàng lấy theo thanh bên (window.KH): số id | '' (tất cả) | 'none' (phiếu chưa gán khách)
  */
 
 const DEPT_COLORS = ['#0e5a4a', '#2f74b5', '#c47f17', '#7a5bb5', '#b4475b', '#3f8f6b'];
@@ -22,6 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dash-view-khach').style.display = dashView === 'khach' ? '' : 'none';
     loadDashboard();
   }));
+  window.addEventListener('kh-changed', () => {
+    if (document.getElementById('tab-dashboard')?.classList.contains('active')) loadDashboard();
+  });
 });
 
 function setDefaultDashDates() {
@@ -39,7 +43,6 @@ function setDefaultDashDates() {
 async function fillDashFilters() {
   setDefaultDashDates();
   const bpSel = document.getElementById('dash-bophan');
-  const khSel = document.getElementById('dash-khachhang');
   if (!dashDepts.length) {
     try {
       const r = await (await fetch('/api/bophan')).json();
@@ -48,15 +51,8 @@ async function fillDashFilters() {
   }
   if (bpSel && bpSel.options.length <= 1) {
     dashDepts.forEach(d => bpSel.add(new Option(`${d.ten} (${d.ma})`, d.ma)));
-    ['dash-tu-ngay', 'dash-den-ngay', 'dash-bophan', 'dash-khachhang'].forEach(id =>
+    ['dash-tu-ngay', 'dash-den-ngay', 'dash-bophan'].forEach(id =>
       document.getElementById(id)?.addEventListener('change', () => window.loadDashboard()));
-  }
-  if (khSel && window.Catalog) {
-    const cur = khSel.value;
-    khSel.innerHTML = '<option value="all">Tất cả khách hàng</option>' +
-      window.Catalog.khachAll.map(k => `<option value="${k.id}">${escapeStr(k.ten_ngan)}</option>`).join('') +
-      '<option value="none">Chưa gán khách hàng</option>';
-    khSel.value = Array.from(khSel.options).some(o => o.value === cur) ? cur : 'all';
   }
 }
 
@@ -65,13 +61,13 @@ window.loadDashboard = async function() {
   const tuNgay = document.getElementById('dash-tu-ngay').value;
   const denNgay = document.getElementById('dash-den-ngay').value;
   const boPhan = document.getElementById('dash-bophan').value;
-  const khach = document.getElementById('dash-khachhang')?.value || 'all';
+  const khach = window.KH && window.KH.id !== '' ? window.KH.id : 'all';
 
   if (dashView === 'khach') return loadCongNo(tuNgay, denNgay, khach);
 
   let query = `?tu_ngay=${tuNgay}&den_ngay=${denNgay}`;
   if (boPhan && boPhan !== 'all') query += `&bo_phan=${boPhan}`;
-  if (khach && khach !== 'all' && khach !== 'none') query += `&khach_hang_id=${khach}`;
+  if (khach && khach !== 'all') query += `&khach_hang_id=${khach}`;
 
   try {
     const res = await fetch(`/api/dashboard${query}`);

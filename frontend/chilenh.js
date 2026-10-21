@@ -2,19 +2,24 @@
  * TAB CHỈ LỆNH THẢ CHUYỀN
  * 1 chỉ lệnh = 1 khách hàng + 1 ART + 1 chuyền / tổ, nhiều PO, số lượng theo size.
  * Số gợi ý mỗi size = Đặt − Đã thả ở các chỉ lệnh khác. In theo mẫu "CHỈ LỆNH CHUYỀN MAY".
+ * Khách hàng lấy theo thanh bên (window.KH); danh sách cũng lọc theo thanh bên.
  */
 (function () {
   const { esc, toNum, fmt, fmt0, api, store, toast, normSize, normKey, khSizes, bpName, printHtml, enterToNext, today, firstOfMonth, viDate, $ } = window.U;
   const C = () => window.Catalog || { khach: [], khachAll: [], po: [], bophan: [], byId: () => null };
 
   const S = {
-    sub: 'lap', form: null, editingId: null, list: [],
-    filter: { tu: firstOfMonth(), den: today(), bp: '', kh: '', tt: 'mo', q: '' },
+    sub: 'lap', form: null, editingId: null, list: [], dirty: false,
+    filter: { tu: firstOfMonth(), den: today(), bp: '', tt: 'mo', q: '' },
   };
+  const khId = () => (window.KH ? window.KH.one() : null);
 
-  function emptyForm(khId) {
-    const kh = khId || store.get('cl_kh', '') || (C().khach[0]?.id ?? '');
-    return { ngay: today(), so_cl: '', khach_hang_id: parseInt(kh, 10) || '', art: '', ma_bo_phan: store.get('cl_bp', ''), ghi_chu: '', rows: [] };
+  function emptyForm() {
+    const kh = khId() || '';
+    const bps = kh ? bpOfKh(kh) : [];
+    const saved = store.get('cl_bp', '');
+    const bp = bps.some(b => b.ma === saved) ? saved : (bps.length === 1 ? bps[0].ma : '');
+    return { ngay: today(), so_cl: '', khach_hang_id: kh, art: '', ma_bo_phan: bp, ghi_chu: '', rows: [] };
   }
   const bpOfKh = khId => {
     const k = C().byId(khId);
@@ -37,7 +42,7 @@
   function renderShell() {
     $('cl-root').innerHTML = `
       <header class="ui-page-head"><h2>Chỉ lệnh thả chuyền</h2>
-        <p>Chọn khách hàng, ART và chuyền. Số lượng mỗi size điền sẵn bằng số <b>còn chưa thả</b> của từng PO, sửa được để thả từng đợt.</p></header>
+        <p>Chọn ART và chuyền của khách đang chọn ở thanh bên. Số lượng mỗi size điền sẵn bằng số <b>còn chưa thả</b> của từng PO, sửa được để thả từng đợt.</p></header>
       <nav class="ui-tabs v3-subs">
         <button type="button" class="ui-tab" data-sub="lap">📝 Lập chỉ lệnh</button>
         <button type="button" class="ui-tab" data-sub="ds">📋 Danh sách chỉ lệnh</button>
@@ -51,10 +56,12 @@
 
   /* ---------------- LẬP CHỈ LỆNH ---------------- */
   async function refreshSoCl() {
-    if (S.editingId || !S.form.ma_bo_phan) return;
+    const f = S.form;
+    if (S.editingId || !f.ma_bo_phan) return;
     try {
-      const r = await api(`/api/chilenh/sophieu?bo_phan=${encodeURIComponent(S.form.ma_bo_phan)}&ngay=${encodeURIComponent(S.form.ngay)}`);
-      S.form.so_cl = r.so_cl;
+      const r = await api(`/api/chilenh/sophieu?bo_phan=${encodeURIComponent(f.ma_bo_phan)}&ngay=${encodeURIComponent(f.ngay)}`);
+      if (S.form !== f || S.editingId) return; // form đã đổi trong lúc chờ (đổi khách / mở chỉ lệnh khác)
+      f.so_cl = r.so_cl;
       const el = $('cl-so'); if (el) el.value = r.so_cl;
     } catch (_) { /* giữ số cũ */ }
   }
@@ -85,6 +92,10 @@
   function renderForm() {
     const f = S.form;
     const pane = $('cl-pane');
+    if (!f.khach_hang_id) {
+      pane.innerHTML = '<section class="ui-panel"><p class="v3-need-kh">Chọn <b>1 khách hàng</b> ở thanh bên trái để lập chỉ lệnh.</p></section>';
+      return;
+    }
     const bps = bpOfKh(f.khach_hang_id);
     pane.innerHTML = `
       ${S.editingId ? `<div class="ui-return-note v3-editing"><span>Đang sửa chỉ lệnh <b>${esc(f.so_cl)}</b>. Bấm <b>Lưu chỉ lệnh</b> để cập nhật.</span>
@@ -92,8 +103,7 @@
       <section class="ui-panel v3-form" id="cl-form">
         <div class="ui-fields">
           <label class="ui-field"><span class="ui-label">Ngày <b class="ui-req">*</b></span><input type="date" class="ui-input" id="cl-ngay" value="${esc(f.ngay)}"></label>
-          <label class="ui-field"><span class="ui-label">Khách hàng <b class="ui-req">*</b></span><select class="ui-input" id="cl-kh">
-            <option value="">Chọn khách hàng</option>${C().khach.map(k => `<option value="${k.id}" ${f.khach_hang_id === k.id ? 'selected' : ''}>${esc(k.ten_ngan)}</option>`).join('')}</select></label>
+          <div class="ui-field"><span class="ui-label">Khách hàng</span><div class="v3-fixed">${esc((C().byId(f.khach_hang_id) || {}).ten_ngan || '')}</div></div>
           <label class="ui-field"><span class="ui-label">ART <b class="ui-req">*</b><span class="ui-label-note">gõ để tìm</span></span>
             <input type="text" class="ui-input ui-input-strong" id="cl-art" list="cl-dl-art" autocomplete="off" value="${esc(f.art)}" placeholder="vd: DA-260-A"></label>
           <label class="ui-field"><span class="ui-label">Chuyền / bộ phận <b class="ui-req">*</b></span><select class="ui-input" id="cl-bp">
@@ -118,7 +128,7 @@
     const box = $('cl-rows');
     if (!box) return;
     const f = S.form;
-    if (!f.khach_hang_id || !f.art) { box.innerHTML = '<p class="v3-empty">Chọn khách hàng và ART để hiện danh sách PO.</p>'; updateTotals(); return; }
+    if (!f.khach_hang_id || !f.art) { box.innerHTML = '<p class="v3-empty">Chọn ART để hiện danh sách PO.</p>'; updateTotals(); return; }
     if (!f.rows.length) { box.innerHTML = `<p class="v3-empty">ART <b>${esc(f.art)}</b> chưa có đơn hàng. Thêm ở tab 📦 Đơn Hàng.</p>`; updateTotals(); return; }
     const cols = sizeCols(f);
     box.innerHTML = `<div class="v3-table-wrap"><table class="v3-table v3-cl-table">
@@ -176,16 +186,17 @@
       const r = S.editingId ? await api(`/api/chilenh/${S.editingId}`, 'PUT', body) : await api('/api/chilenh', 'POST', body);
       const id = S.editingId || r.id;
       toast(r.message || 'Đã lưu chỉ lệnh', 'success');
-      store.set('cl_kh', f.khach_hang_id); store.set('cl_bp', f.ma_bo_phan);
+      store.set('cl_bp', f.ma_bo_phan);
       if (andPrint) await printCl(id);
-      newForm(f.khach_hang_id);
+      newForm();
       if (window.DonHang) window.DonHang.reload();
     } catch (err) { toast('Không lưu được: ' + err.message, 'error'); }
   }
 
-  function newForm(khId) {
+  function newForm() {
     S.editingId = null;
-    S.form = emptyForm(khId);
+    S.dirty = false;
+    S.form = emptyForm();
     S.sub = 'lap';
     render();
     refreshSoCl();
@@ -195,7 +206,10 @@
     try {
       const { data } = await api(`/api/chilenh/${id}`);
       if (data.trang_thai === 'huy') { toast('Chỉ lệnh đã hủy. Khôi phục trước khi sửa.', 'info'); return; }
+      // Đang xem Tất cả -> thanh bên chuyển sang khách của chỉ lệnh này
+      if (window.KH && !window.KH.set(data.khach_hang_id)) return;
       S.editingId = data.id;
+      S.dirty = false;
       S.form = { ngay: data.ngay, so_cl: data.so_cl, khach_hang_id: data.khach_hang_id, art: data.art, ma_bo_phan: data.ma_bo_phan, ghi_chu: data.ghi_chu || '', rows: [] };
       const keep = {};
       data.lines.forEach(l => { keep[l.po_id] = Object.fromEntries(l.sizes.map(s => [normSize(s.size), s.so_luong])); });
@@ -215,8 +229,6 @@
         <label class="ui-field"><span class="ui-label">Đến ngày</span><input type="date" class="ui-input" id="cl-f-den" value="${esc(f.den)}"></label>
         <label class="ui-field"><span class="ui-label">Chuyền</span><select class="ui-input" id="cl-f-bp"><option value="">Tất cả</option>${(C().bophan || []).map(b =>
           `<option value="${esc(b.ma)}" ${f.bp === b.ma ? 'selected' : ''}>${esc(b.ten)}</option>`).join('')}</select></label>
-        <label class="ui-field"><span class="ui-label">Khách hàng</span><select class="ui-input" id="cl-f-kh"><option value="">Tất cả</option>${C().khach.map(k =>
-          `<option value="${k.id}" ${parseInt(f.kh, 10) === k.id ? 'selected' : ''}>${esc(k.ten_ngan)}</option>`).join('')}</select></label>
         <label class="ui-field"><span class="ui-label">Trạng thái</span><select class="ui-input" id="cl-f-tt">
           <option value="mo" ${f.tt === 'mo' ? 'selected' : ''}>Đang dùng</option><option value="huy" ${f.tt === 'huy' ? 'selected' : ''}>Đã hủy</option>
           <option value="" ${f.tt === '' ? 'selected' : ''}>Tất cả</option></select></label>
@@ -228,7 +240,7 @@
     if (f.tu) p.set('tu_ngay', f.tu);
     if (f.den) p.set('den_ngay', f.den);
     if (f.bp) p.set('bo_phan', f.bp);
-    if (f.kh) p.set('khach_hang_id', f.kh);
+    if (khId()) p.set('khach_hang_id', khId());
     if (f.tt) p.set('trang_thai', f.tt);
     if (f.q) p.set('q', f.q);
     const box = $('cl-list');
@@ -236,13 +248,14 @@
       const { data } = await api('/api/chilenh?' + p);
       if (S.sub !== 'ds') return;
       S.list = data;
-      if (!data.length) { box.innerHTML = '<div class="v3-empty">Không có chỉ lệnh nào trong khoảng này.</div>'; return; }
+      if (!data.length) { box.innerHTML = `<div class="v3-empty">Không có chỉ lệnh nào trong khoảng này.${window.KH ? window.KH.emptyNote() : ''}</div>`; return; }
       const khName = id => (C().byId(id) || {}).ten_ngan || '';
+      const allKh = !khId(); // Tất cả khách hàng -> thêm cột khách hàng
       box.innerHTML = `<table class="v3-table">
-        <thead><tr><th>Ngày</th><th>Số chỉ lệnh</th><th>Chuyền</th><th>Khách hàng</th><th>ART</th><th>PO</th><th class="r">Tổng SL</th><th>Người lập</th><th></th></tr></thead>
+        <thead><tr><th>Ngày</th><th>Số chỉ lệnh</th><th>Chuyền</th>${allKh ? '<th>Khách hàng</th>' : ''}<th>ART</th><th>PO</th><th class="r">Tổng SL</th><th>Người lập</th><th></th></tr></thead>
         <tbody>${data.map(r => `<tr class="${r.trang_thai === 'huy' ? 'v3-row-off' : ''}">
           <td class="nowrap">${viDate(r.ngay)}</td><td class="nowrap"><b>${esc(r.so_cl)}</b>${r.trang_thai === 'huy' ? ' <span class="ui-badge ui-badge-off">Đã hủy</span>' : ''}</td>
-          <td>${esc(bpName(r.ma_bo_phan))}</td><td>${esc(khName(r.khach_hang_id))}</td><td><b>${esc(r.art)}</b></td>
+          <td>${esc(bpName(r.ma_bo_phan))}</td>${allKh ? `<td>${esc(khName(r.khach_hang_id))}</td>` : ''}<td><b>${esc(r.art)}</b></td>
           <td>${r.dong.slice(0, 3).map(d => `${esc(d.po)} <span class="ui-muted">(${fmt0(d.so_luong)})</span>`).join('<br>')}${r.dong.length > 3 ? `<br><span class="ui-muted">+ ${r.dong.length - 3} PO khác</span>` : ''}</td>
           <td class="r"><b>${fmt0(r.tong_sl)}</b></td><td>${esc(r.nguoi_lap)}</td>
           <td class="nowrap">${r.trang_thai === 'huy'
@@ -250,7 +263,7 @@
             : `<button type="button" class="ui-btn-sm" data-act="edit" data-id="${r.id}">Xem / Sửa</button>
                <button type="button" class="ui-btn-sm" data-act="print" data-id="${r.id}">In</button>
                <button type="button" class="ui-btn-sm ui-btn-sm-danger" data-act="cancel" data-id="${r.id}" data-so="${esc(r.so_cl)}">Hủy</button>`}</td></tr>`).join('')}</tbody>
-        <tfoot><tr><td colspan="6">${data.length} chỉ lệnh</td><td class="r"><b>${fmt0(data.filter(r => r.trang_thai !== 'huy').reduce((a, r) => a + r.tong_sl, 0))}</b></td><td colspan="2"></td></tr></tfoot>
+        <tfoot><tr><td colspan="${allKh ? 6 : 5}">${data.length} chỉ lệnh</td><td class="r"><b>${fmt0(data.filter(r => r.trang_thai !== 'huy').reduce((a, r) => a + r.tong_sl, 0))}</b></td><td colspan="2"></td></tr></tfoot>
       </table>`;
     } catch (err) { box.innerHTML = `<div class="v3-empty">Lỗi tải danh sách: ${esc(err.message)}</div>`; }
   }
@@ -322,6 +335,7 @@
   function onInput(e) {
     const t = e.target;
     if (S.sub !== 'lap' || !S.form) return;
+    S.dirty = true;
     if (t.dataset.h) { S.form[t.dataset.h] = t.value; return; }
     if (t.id === 'cl-art') { S.form.art = t.value; return; }
     if (t.classList.contains('cl-sz')) {
@@ -335,12 +349,6 @@
     if (S.sub === 'lap' && S.form) {
       const f = S.form;
       if (t.id === 'cl-ngay') { f.ngay = t.value; refreshSoCl(); return; }
-      if (t.id === 'cl-kh') {
-        f.khach_hang_id = parseInt(t.value, 10) || ''; f.art = ''; f.rows = [];
-        const bps = bpOfKh(f.khach_hang_id);
-        if (!bps.some(b => b.ma === f.ma_bo_phan)) f.ma_bo_phan = bps.length === 1 ? bps[0].ma : '';
-        renderForm(); refreshSoCl(); $('cl-art')?.focus(); return;
-      }
       if (t.id === 'cl-art') {
         const v = String(t.value).trim();
         const hit = artsOf(f.khach_hang_id).find(a => normKey(a) === normKey(v));
@@ -352,6 +360,7 @@
         const i = parseInt(t.closest('tr').dataset.i, 10);
         const r = f.rows[i];
         r.chon = t.checked;
+        S.dirty = true;
         if (r.chon && !rowTotal(r)) Object.values(r.info).forEach(s => { if (s.chua_tha > 0) r.sizes[s.size] = s.chua_tha; });
         renderRows(); return;
       }
@@ -362,7 +371,7 @@
   }
   function readFilterAndList() {
     const g = id => $(id)?.value || '';
-    S.filter = { tu: g('cl-f-tu'), den: g('cl-f-den'), bp: g('cl-f-bp'), kh: g('cl-f-kh'), tt: g('cl-f-tt'), q: g('cl-f-q').trim() };
+    S.filter = { tu: g('cl-f-tu'), den: g('cl-f-den'), bp: g('cl-f-bp'), tt: g('cl-f-tt'), q: g('cl-f-q').trim() };
     renderList();
   }
   function onKeydown(e) {
@@ -380,8 +389,8 @@
     const id = parseInt(b.dataset.id, 10);
     if (act === 'save') save(false);
     if (act === 'save-print') save(true);
-    if (act === 'new') { if (grand(S.form) && !S.editingId && !confirm('Bỏ chỉ lệnh đang nhập dở?')) return; newForm(S.form.khach_hang_id); }
-    if (act === 'cancel-edit') newForm(S.form.khach_hang_id);
+    if (act === 'new') { if (grand(S.form) && !S.editingId && !confirm('Bỏ chỉ lệnh đang nhập dở?')) return; newForm(); }
+    if (act === 'cancel-edit') newForm();
     if (act === 'filter') readFilterAndList();
     if (act === 'edit') editCl(id);
     if (act === 'print') printCl(id);
@@ -417,19 +426,19 @@
     if (!S.form) { S.form = emptyForm(); render(); refreshSoCl(); } else render();
   }
   /** Mở từ tab Đơn hàng: khách + ART + các PO đã chọn */
-  async function openFromOrders(khId, art, poIds) {
+  async function openFromOrders(kh, art, poIds) {
     const btn = document.querySelector('.tab-btn[data-target="tab-chilenh"]');
     if (!btn || !window.Auth.can('tab-chilenh')) { toast('Tài khoản không có quyền tab Chỉ lệnh', 'error'); return; }
+    if (window.KH && !window.KH.set(kh)) return; // chọn PO lúc đang xem Tất cả -> thanh bên theo khách của PO
     S.openingFromOrders = true;
     btn.click();
     await ensure();
     S.openingFromOrders = false;
     S.editingId = null;
-    S.form = emptyForm(khId);
-    S.form.khach_hang_id = khId;
+    S.dirty = false;
+    S.form = emptyForm();
+    S.form.khach_hang_id = kh;
     S.form.art = art;
-    const bps = bpOfKh(khId);
-    if (!bps.some(b => b.ma === S.form.ma_bo_phan)) S.form.ma_bo_phan = bps.length === 1 ? bps[0].ma : '';
     S.sub = 'lap';
     render();
     refreshSoCl();
@@ -438,6 +447,19 @@
   }
   function init() {
     document.querySelector('.tab-btn[data-target="tab-chilenh"]')?.addEventListener('click', () => { if (!S.openingFromOrders) show(); });
+    // Chỉ lệnh đang lập / sửa dở -> hỏi trước khi thanh bên đổi khách
+    if (window.KH) window.KH.guard(id => {
+      const f = S.form;
+      if (!f || !f.khach_hang_id || id === f.khach_hang_id || !(S.editingId || (S.dirty && grand(f)))) return '';
+      return S.editingId ? `Đang sửa chỉ lệnh ${f.so_cl} – chưa lưu sẽ bị bỏ.` : `Chỉ lệnh đang lập dở (ART ${f.art}) sẽ bị bỏ.`;
+    });
+    window.addEventListener('kh-changed', () => {
+      if (!$('cl-root')?.dataset.ready) return;
+      if (S.form && S.form.khach_hang_id !== (khId() || '')) { S.editingId = null; S.dirty = false; S.form = emptyForm(); }
+      if (!$('tab-chilenh')?.classList.contains('active')) return; // tab khác: show() tự vẽ khi mở
+      render();
+      if (S.sub === 'lap') refreshSoCl();
+    });
   }
   window.ChiLenh = { openFromOrders, print: printCl };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

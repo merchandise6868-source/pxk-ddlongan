@@ -706,6 +706,27 @@ async function handleApi(url, request, env) {
   }
 
   // -------------------------------------------------------------
+  // PUT /api/phieu/:id/khachhang: Gán khách hàng cho phiếu cũ chưa gán khách
+  // (để phiếu được tính vào "Xuất theo đơn hàng" và lọc đúng theo khách)
+  // -------------------------------------------------------------
+  const khachMatch = path.match(/^\/api\/phieu\/(\d+)\/khachhang$/);
+  if (khachMatch && method === 'PUT') {
+    const id = parseInt(khachMatch[1], 10);
+    const body = await request.json();
+    const khId = parseInt(body.khach_hang_id, 10);
+    const kh = khId ? await env.DB.prepare('SELECT id, ten_ngan FROM khach_hang WHERE id = ?').bind(khId).first() : null;
+    if (!kh) return Response.json({ success: false, error: 'Không tìm thấy khách hàng' }, { status: 400 });
+    const phieu = await env.DB.prepare('SELECT id, so_phieu FROM phieu WHERE id = ?').bind(id).first();
+    if (!phieu) return Response.json({ success: false, error: 'Không tìm thấy phiếu' }, { status: 404 });
+
+    await env.DB.prepare('UPDATE phieu SET khach_hang_id = ?, cap_nhat_luc = CURRENT_TIMESTAMP WHERE id = ?')
+      .bind(khId, id)
+      .run();
+
+    return Response.json({ success: true, message: `Đã gán phiếu ${phieu.so_phieu} cho khách ${kh.ten_ngan}` });
+  }
+
+  // -------------------------------------------------------------
   // GET /api/dashboard: Dữ liệu tổng hợp sản lượng
   // Không tính phiếu có trạng thái 'cancelled'
   // -------------------------------------------------------------
@@ -716,7 +737,10 @@ async function handleApi(url, request, env) {
 
     let whereClause = "p.trang_thai != 'cancelled'";
     const khachHang = url.searchParams.get('khach_hang_id');
-    if (khachHang && khachHang !== 'all') {
+    const khachMot = khachHang && khachHang !== 'all' && khachHang !== 'none';
+    if (khachHang === 'none') {
+      whereClause += ' AND p.khach_hang_id IS NULL'; // phiếu chưa gán khách hàng
+    } else if (khachMot) {
       whereClause += ' AND p.khach_hang_id = ?';
     }
     const params = [];
@@ -733,7 +757,7 @@ async function handleApi(url, request, env) {
       whereClause += ' AND p.ma_bo_phan = ?';
       params.push(boPhan);
     }
-    if (khachHang && khachHang !== 'all') params.unshift(parseInt(khachHang, 10));
+    if (khachMot) params.unshift(parseInt(khachHang, 10));
 
     // 1. Thẻ tổng sản lượng theo từng bộ phận
     const sumDeptSql = `
