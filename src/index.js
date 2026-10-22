@@ -517,7 +517,7 @@ async function handleApi(url, request, env) {
 
       const insertLineRes = await env.DB.prepare(`
         INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
       `).bind(
         phieuId,
         stt,
@@ -532,9 +532,10 @@ async function handleApi(url, request, env) {
         line.ghi_chu || '',
         line.loai || '',
         parseFloat(line.he_so) || 0
-      ).run();
+      ).first();
 
-      const phieuDongId = insertLineRes.meta.last_row_id;
+      // Lấy id bằng RETURNING (meta.last_row_id trên D1 có lúc trả sai sau khi xóa dòng cũ -> lỗi FOREIGN KEY)
+      const phieuDongId = insertLineRes.id;
 
       // Lưu size
       if (Array.isArray(line.sizes) && line.sizes.length > 0) {
@@ -672,7 +673,7 @@ async function handleApi(url, request, env) {
 
       const insertLineRes = await env.DB.prepare(`
         INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
       `).bind(
         id,
         stt,
@@ -687,9 +688,10 @@ async function handleApi(url, request, env) {
         line.ghi_chu || '',
         line.loai || '',
         parseFloat(line.he_so) || 0
-      ).run();
+      ).first();
 
-      const phieuDongId = insertLineRes.meta.last_row_id;
+      // Lấy id bằng RETURNING (meta.last_row_id trên D1 có lúc trả sai sau khi xóa dòng cũ -> lỗi FOREIGN KEY)
+      const phieuDongId = insertLineRes.id;
 
       if (Array.isArray(line.sizes)) {
         for (const s of line.sizes) {
