@@ -4,7 +4,7 @@
  *   Phải chặt (miếng) = số đôi × miếng/đôi (hệ số), sửa được từng PO (bảng chat_dinh_muc).
  * - Xuất nội bộ: tổ chặt giao bán thành phẩm cho tổ may theo PO · chi tiết · size; còn lại = phải chặt − đã xuất.
  */
-import { isSqlite, ddlTypes, ensureTables, str, int, num, parseJson, ok, bad, todayVN, normKey, normSize } from './ddl.js';
+import { isSqlite, ddlTypes, ensureTables, str, int, num, parseJson, ok, bad, todayVN, normKey, normSize, runBatch } from './ddl.js';
 import { ensureDonHangSchema, tienDo } from './donhang.js';
 
 const ID_TABLES = ['chat_dinh_muc', 'xuat_noi_bo', 'xuat_noi_bo_dong'];
@@ -143,13 +143,13 @@ async function readXuat(env, b) {
   return { h, lines };
 }
 async function saveXuatLines(env, id, lines) {
-  await env.DB.prepare('DELETE FROM xuat_noi_bo_dong WHERE phieu_id = ?').bind(id).run();
-  for (const l of lines) {
-    await env.DB.prepare('INSERT INTO xuat_noi_bo_dong (phieu_id, po_id, po, chi_tiet, size, so_luong) VALUES (?, ?, ?, ?, ?, ?) RETURNING id')
-      .bind(id, l.po_id, l.po, l.chi_tiet, l.size, l.so_luong).first();
-  }
   const tong = lines.reduce((a, l) => a + l.so_luong, 0);
-  await env.DB.prepare('UPDATE xuat_noi_bo SET tong_sl = ? WHERE id = ?').bind(tong, id).run();
+  await runBatch(env, [
+    env.DB.prepare('DELETE FROM xuat_noi_bo_dong WHERE phieu_id = ?').bind(id),
+    ...lines.map(l => env.DB.prepare('INSERT INTO xuat_noi_bo_dong (phieu_id, po_id, po, chi_tiet, size, so_luong) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(id, l.po_id, l.po, l.chi_tiet, l.size, l.so_luong)),
+    env.DB.prepare('UPDATE xuat_noi_bo SET tong_sl = ? WHERE id = ?').bind(tong, id),
+  ], 1000);
 }
 
 /* ============================================================

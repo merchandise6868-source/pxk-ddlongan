@@ -38,8 +38,10 @@
     const p = new URLSearchParams({ trang_thai: 'all' });
     if (khId()) p.set('khach_hang_id', khId());
     if (S.q) p.set('q', S.q);
+    const n = U.seq('td-load');
     try {
       const r = await api('/api/theodoi?' + p);
+      if (!U.latest('td-load', n)) return;
       S.all = r.data; S.unmatched = r.unmatched;
       render();
     } catch (err) { $('td-list').innerHTML = `<div class="v3-empty">Lỗi tải: ${esc(err.message)}</div>`; }
@@ -192,11 +194,13 @@
       if (act === 'adj') { S.adj = { id, kieu: 'doi_size', tu_size: '', sang_size: '', size: '', so_luong: '', ly_do: 'Giao sai size', so_phieu: '', ngay: today(), ghi_chu: '' }; renderList(); $('td-adj')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       if (act === 'adj-close') { S.adj = null; renderList(); }
       if (act === 'adj-save') {
+        if (S.savingAdj) return;
         const a = S.adj;
         const body = { po_id: a.id, kieu: a.kieu, ly_do: a.ly_do, so_phieu: a.so_phieu, ngay: a.ngay, ghi_chu: a.ghi_chu,
           so_luong: a.kieu === 'doi_size' ? Math.abs(toNum(a.so_luong)) : (String(a.so_luong).trim().startsWith('-') ? -1 : 1) * Math.abs(toNum(String(a.so_luong).replace('-', ''))),
           tu_size: a.tu_size, sang_size: a.sang_size, size: a.size };
-        await api('/api/dieuchinh', 'POST', body);
+        S.savingAdj = true;
+        try { await api('/api/dieuchinh', 'POST', body); } finally { S.savingAdj = false; }
         toast('Đã ghi điều chỉnh', 'success');
         S.open.add(a.id); S.adj = null; await load();
       }

@@ -5,7 +5,7 @@
  * Quy tắc gõ Telex: input chỉ cập nhật dữ liệu, không vẽ lại ô đang gõ; keydown bỏ qua khi isComposing.
  */
 (function () {
-  const { esc, fmt, fmt0, api, toast, normSize, normKey, khSizes, viDate, today, $ } = window.U;
+  const { esc, fmt, fmt0, api, toast, normSize, normKey, khSizes, viDate, today, once, seq, latest, priceNum, $ } = window.U;
   const C = () => window.Catalog || { khach: [], khachAll: [], po: [], byId: () => null };
   const khId = () => (window.KH ? window.KH.one() : null);
   /** Số dán từ Excel: "1.000" / "1,000" / "1 000" -> 1000 */
@@ -57,8 +57,10 @@
     const p = new URLSearchParams({ trang_thai: S.tt });
     if (khId()) p.set('khach_hang_id', khId());
     if (S.q) p.set('q', S.q);
+    const n = seq('dh-list');
     try {
       const { data } = await api('/api/dondat?' + p);
+      if (!latest('dh-list', n)) return; // đã đổi khách / bộ lọc trong lúc chờ
       S.list = data;
       renderList();
     } catch (err) { const box = $('dh-list'); if (box) box.innerHTML = `<div class="v3-empty">Lỗi tải đơn hàng: ${esc(err.message)}</div>`; }
@@ -147,7 +149,7 @@
     return S.don.lines.map(l => { if (String(l.art).trim()) last = String(l.art).trim(); return last; });
   }
   const rowTotal = l => Object.values(l.sizes).reduce((a, v) => a + qtyNum(v), 0);
-  const cellVal = (l, c) => (c.k === 'sz' ? (qtyNum(l.sizes[c.s]) ? fmt(qtyNum(l.sizes[c.s])) : '') : c.k === 'don_gia' ? (qtyNum(l.don_gia) ? fmt(qtyNum(l.don_gia)) : '') : (l[c.k] ?? ''));
+  const cellVal = (l, c) => (c.k === 'sz' ? (qtyNum(l.sizes[c.s]) ? fmt(qtyNum(l.sizes[c.s])) : '') : c.k === 'don_gia' ? (priceNum(l.don_gia) ? fmt(priceNum(l.don_gia)) : '') : (l[c.k] ?? ''));
 
   function renderDon() {
     const D = S.don;
@@ -187,6 +189,7 @@
   function renderGrid() {
     const D = S.don;
     const cols = columns();
+    S.cols = cols; // cột cố định theo lần vẽ (gõ xóa số không làm lệch chỉ số cột)
     const arts = effArts();
     const saved = !D.isNew;
     $('dd-grid').innerHTML = `<table class="v3-table dd-grid">
@@ -239,7 +242,7 @@
 
   /** Dán khối từ Excel bắt đầu tại ô (r, c) */
   function pasteBlock(r0, c0, text) {
-    const cols = columns();
+    const cols = S.cols || columns();
     let rows = String(text).replace(/\r/g, '').split('\n');
     if (rows.length && rows[rows.length - 1] === '') rows.pop();
     rows = rows.map(l => l.split('\t'));
@@ -256,7 +259,7 @@
         if (!c) return;
         v = String(v ?? '').trim();
         if (c.k === 'sz') { const n = qtyNum(v); if (n) l.sizes[c.s] = n; else delete l.sizes[c.s]; }
-        else if (c.k === 'don_gia') l.don_gia = qtyNum(v) || '';
+        else if (c.k === 'don_gia') l.don_gia = priceNum(v) || '';
         else l[c.k] = v;
       });
     });
@@ -272,12 +275,13 @@
     if (el) { el.focus(); if (el.select) el.select(); }
   }
 
-  async function saveDon() {
+  function saveDon() { return once('dh-save', saveDonCore); }
+  async function saveDonCore() {
     const D = S.don;
     document.querySelectorAll('#dd-grid tr.dd-err').forEach(tr => { tr.classList.remove('dd-err'); tr.removeAttribute('title'); });
     const body = {
       khach_hang_id: D.khach_hang_id, so_don: D.so_don, ngay_giao: D.ngay_giao, ghi_chu: D.ghi_chu,
-      lines: D.lines.map(l => ({ id: l.id, art: l.art, po: l.po, mau: l.mau, don_gia: qtyNum(l.don_gia),
+      lines: D.lines.map(l => ({ id: l.id, art: l.art, po: l.po, mau: l.mau, don_gia: priceNum(l.don_gia),
         sizes: Object.entries(l.sizes).filter(([, v]) => qtyNum(v)).map(([size, v]) => ({ size, so_luong: qtyNum(v) })) })),
     };
     try {
@@ -309,7 +313,7 @@
     if (!S.don) return;
     if (t.dataset.h) { S.don[t.dataset.h] = t.value; S.dirty = true; return; }
     if (!t.classList.contains('dd-cell')) return;
-    const r = +t.dataset.r, c = columns()[+t.dataset.c];
+    const r = +t.dataset.r, c = (S.cols || columns())[+t.dataset.c];
     const l = S.don.lines[r];
     if (!l || !c) return;
     if (c.k === 'sz') l.sizes[c.s] = t.value; else l[c.k] = t.value;
@@ -326,8 +330,11 @@
       if (t.checked) S.sel.add(l.id); else S.sel.delete(l.id);
       renderSelNote(); return;
     }
-    if (t.classList.contains('dd-num')) { const n = qtyNum(t.value); t.value = n ? fmt(n) : ''; }
-    if (t.classList.contains('dd-cell') && columns()[+t.dataset.c]?.k === 'art') {
+    if (t.classList.contains('dd-num')) {
+      const isGia = (S.cols || columns())[+t.dataset.c]?.k === 'don_gia';
+      const n = isGia ? priceNum(t.value) : qtyNum(t.value); t.value = n ? fmt(n) : '';
+    }
+    if (t.classList.contains('dd-cell') && (S.cols || columns())[+t.dataset.c]?.k === 'art') {
       // ART đổi -> cập nhật chữ mờ "cùng ART dòng trên" của các dòng dưới
       const arts = effArts();
       document.querySelectorAll('#dd-grid .dd-cell[data-c="0"]').forEach(el => {

@@ -161,7 +161,8 @@
     const gr = $('cl-grand'); if (gr) gr.textContent = fmt0(g);
   }
 
-  async function save(andPrint) {
+  function save(andPrint) { return U.once('cl-save', () => saveCore(andPrint)); }
+  async function saveCore(andPrint) {
     const f = S.form;
     const errs = [];
     if (!f.ngay) errs.push('Chưa chọn ngày');
@@ -244,9 +245,10 @@
     if (f.tt) p.set('trang_thai', f.tt);
     if (f.q) p.set('q', f.q);
     const box = $('cl-list');
+    const n = U.seq('cl-list');
     try {
       const { data } = await api('/api/chilenh?' + p);
-      if (S.sub !== 'ds') return;
+      if (S.sub !== 'ds' || !U.latest('cl-list', n)) return;
       S.list = data;
       if (!data.length) { box.innerHTML = `<div class="v3-empty">Không có chỉ lệnh nào trong khoảng này.${window.KH ? window.KH.emptyNote() : ''}</div>`; return; }
       const khName = id => (C().byId(id) || {}).ten_ngan || '';

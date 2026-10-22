@@ -134,7 +134,8 @@ export async function guessKhachHangId(env, donViNhan) {
 }
 
 const parseJson = (s, fallback) => { try { return JSON.parse(s || ''); } catch (_) { return fallback; } };
-const num = v => parseFloat(String(v ?? '').replace(/\./g, '').replace(',', '.')) || 0;
+// num: số đã là number giữ nguyên (tránh 12.5 -> "125" khi lưu lại đơn giá thập phân), chuỗi đọc theo kiểu Việt Nam
+import { num } from './ddl.js';
 
 function khachFromRow(r) {
   return { ...r, day_size: parseJson(r.day_size, []), bo_phan: parseJson(r.bo_phan, []) };
@@ -176,9 +177,9 @@ export async function handleCatalogApi(path, method, url, request, env) {
     if (dup) return Response.json({ success: false, error: `Mã khách hàng ${ma} đã tồn tại` }, { status: 400 });
     const res = await env.DB.prepare(`
       INSERT INTO khach_hang (ten_ngan, ten_day_du, day_size, bo_phan, bo_phan_xuat, ly_do_xuat, dvt, co_bo_chi_tiet, thu_tu, an, ma)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(...khachBind(b), ma).run();
-    return Response.json({ success: true, id: res.meta.last_row_id, message: 'Đã thêm khách hàng' });
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+    `).bind(...khachBind(b), ma).first();
+    return Response.json({ success: true, id: res.id, message: 'Đã thêm khách hàng' });
   }
 
   const khMatch = path.match(/^\/api\/khachhang\/(\d+)$/);
@@ -209,10 +210,10 @@ export async function handleCatalogApi(path, method, url, request, env) {
     for (const it of items) {
       if (!it.po && !it.art && !it.don_hang) continue;
       const res = await env.DB.prepare(`
-        INSERT INTO po_don_hang (khach_hang_id, po, don_hang, art, mau, don_gia, ghi_chu) VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO po_don_hang (khach_hang_id, po, don_hang, art, mau, don_gia, ghi_chu) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
       `).bind(parseInt(it.khach_hang_id, 10) || null, String(it.po || '').trim(), String(it.don_hang || '').trim(),
-        String(it.art || '').trim(), String(it.mau || '').trim(), num(it.don_gia), String(it.ghi_chu || '').trim()).run();
-      ids.push(res.meta.last_row_id);
+        String(it.art || '').trim(), String(it.mau || '').trim(), num(it.don_gia), String(it.ghi_chu || '').trim()).first();
+      ids.push(res.id);
     }
     return Response.json({ success: true, ids, message: `Đã thêm ${ids.length} dòng PO` });
   }
@@ -246,10 +247,10 @@ export async function handleCatalogApi(path, method, url, request, env) {
     const b = await request.json();
     if (!b.ten_bo) return Response.json({ success: false, error: 'Vui lòng nhập tên bộ' }, { status: 400 });
     const res = await env.DB.prepare(`
-      INSERT INTO bo_chi_tiet (khach_hang_id, ten_bo, art, chi_tiet, thu_tu) VALUES (?, ?, ?, ?, ?)
+      INSERT INTO bo_chi_tiet (khach_hang_id, ten_bo, art, chi_tiet, thu_tu) VALUES (?, ?, ?, ?, ?) RETURNING id
     `).bind(parseInt(b.khach_hang_id, 10) || null, String(b.ten_bo).trim(), String(b.art || '').trim(),
-      JSON.stringify(b.chi_tiet || []), parseInt(b.thu_tu, 10) || 0).run();
-    return Response.json({ success: true, id: res.meta.last_row_id, message: 'Đã thêm bộ chi tiết' });
+      JSON.stringify(b.chi_tiet || []), parseInt(b.thu_tu, 10) || 0).first();
+    return Response.json({ success: true, id: res.id, message: 'Đã thêm bộ chi tiết' });
   }
 
   const boMatch = path.match(/^\/api\/bochitiet\/(\d+)$/);

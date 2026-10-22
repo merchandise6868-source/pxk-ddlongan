@@ -87,6 +87,25 @@
     if (nxt) { nxt.focus(); if (nxt.select) nxt.select(); }
     return true;
   }
+  /** Chống bấm Lưu 2 lần: đang chạy việc `key` thì bỏ qua lần bấm sau */
+  const busy = new Set();
+  async function once(key, fn) {
+    if (busy.has(key)) return undefined;
+    busy.add(key);
+    try { return await fn(); } finally { busy.delete(key); }
+  }
+  /** Bỏ kết quả tải cũ về muộn: n = U.seq('k') trước khi gọi, sau await kiểm tra U.latest('k', n) */
+  const seqs = {};
+  const seq = k => (seqs[k] = (seqs[k] || 0) + 1);
+  const latest = (k, n) => seqs[k] === n;
+  /** Đơn giá: "12.500" / "12,500" (nghìn) -> 12500; "12,5" -> 12.5; số giữ nguyên */
+  const priceNum = v => {
+    if (typeof v === 'number') return v;
+    const s = String(v ?? '').trim().replace(/\s/g, '');
+    if (/^\d{1,3}([.,]\d{3})+$/.test(s)) return parseInt(s.replace(/[.,]/g, ''), 10);
+    return toNum(s);
+  };
   window.U = { esc, toNum, fmt, fmt0, api, store, today, firstOfMonth, viDate, normKey, normSize, toast, khSizes, bpName, printHtml, downloadCsv, enterToNext,
+    once, seq, latest, priceNum,
     $: id => document.getElementById(id) };
 })();

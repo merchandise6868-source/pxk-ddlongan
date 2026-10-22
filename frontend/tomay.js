@@ -6,7 +6,7 @@
  * Khách hàng theo thanh bên (window.KH). Quy tắc Telex: keydown bỏ qua isComposing, không vẽ lại ô đang gõ.
  */
 (function () {
-  const { esc, fmt, fmt0, api, toast, normKey, normSize, khSizes, viDate, today, downloadCsv, $ } = window.U;
+  const { esc, fmt, fmt0, api, toast, normKey, normSize, khSizes, viDate, today, downloadCsv, once, seq, latest, $ } = window.U;
   const C = () => window.Catalog || { khach: [], po: [], byId: () => null };
   const khId = () => (window.KH ? window.KH.one() : null);
   const qty = v => parseInt(String(v ?? '').replace(/[^\d]/g, ''), 10) || 0;
@@ -75,6 +75,7 @@
 
   function renderGrid() {
     const C2 = COLS();
+    S.cols = C2; // cột cố định theo lần vẽ
     const arts = effArts();
     $('tmk-grid').innerHTML = `<table class="v3-table dd-grid">
       <thead><tr><th class="c">#</th>${C2.map(c => `<th class="${c.k === 'sz' ? 'c v3-sz' : ''}">${c.k === 'sz' ? `<i>${esc(c.t)}</i>` : esc(c.t)}</th>`).join('')}<th class="r">Tổng</th><th></th></tr></thead>
@@ -91,7 +92,7 @@
   function focusCell(r, c) { const el = document.querySelector(`#tmk-grid .dd-cell[data-r="${r}"][data-c="${c}"]`); if (el) { el.focus(); el.select?.(); } }
 
   function pasteBlock(r0, c0, text) {
-    const C2 = COLS();
+    const C2 = S.cols || COLS();
     let rows = String(text).replace(/\r/g, '').split('\n');
     if (rows.length && rows[rows.length - 1] === '') rows.pop();
     rows = rows.map(l => l.split('\t')).filter(cells => !cells.some(x => /^(po|art|m[aã] h[aà]ng|size)$/i.test(String(x).trim())));
@@ -116,8 +117,11 @@
     const to = S.coDinh || S.to;
     const p = new URLSearchParams({ ngay: S.ngay });
     if (to) p.set('ma_bo_phan', to);
+    const n = seq('tm-list');
     try {
-      S.list = (await api('/api/tomay/xuat?' + p)).data;
+      const data = (await api('/api/tomay/xuat?' + p)).data;
+      if (!latest('tm-list', n)) return;
+      S.list = data;
       const box = $('tmk-list');
       if (!box) return;
       if (!S.list.length) { box.innerHTML = '<div class="v3-empty">Chưa nhập lần nào trong ngày này.</div>'; return; }
@@ -134,7 +138,8 @@
     } catch (err) { const box = $('tmk-list'); if (box) box.innerHTML = `<div class="v3-empty">Lỗi tải: ${esc(err.message)}</div>`; }
   }
 
-  async function save() {
+  function save() { return once('tm-save', saveCore); }
+  async function saveCore() {
     const to = S.coDinh || S.to;
     if (!to) { toast('Chọn tổ may trước', 'error'); return; }
     document.querySelectorAll('#tmk-grid tr.dd-err').forEach(tr => tr.classList.remove('dd-err'));
@@ -175,8 +180,11 @@
     const p = new URLSearchParams({ ngay: S.ngay });
     if (S.coDinh || S.to) p.set('ma_bo_phan', S.coDinh || S.to);
     if (khId()) p.set('khach_hang_id', khId());
+    const n = seq('tm-dc');
     try {
-      S.dc = (await api('/api/tomay/doichieu?' + p)).data;
+      const data = (await api('/api/tomay/doichieu?' + p)).data;
+      if (!latest('tm-dc', n)) return;
+      S.dc = data;
       renderDc();
     } catch (err) { pane.innerHTML = `<div class="v3-empty">Lỗi: ${esc(err.message)}</div>`; }
   }
@@ -208,7 +216,7 @@
   function onInput(e) {
     const t = e.target;
     if (!t.classList.contains('dd-cell')) return;
-    const r = S.rows[+t.dataset.r], c = COLS()[+t.dataset.c];
+    const r = S.rows[+t.dataset.r], c = (S.cols || COLS())[+t.dataset.c];
     if (!r || !c) return;
     if (c.k === 'sz') r.sizes[c.s] = t.value; else r[c.k] = t.value;
     S.dirty = true;
@@ -221,7 +229,7 @@
     if (t.id === 'tmk-ngay') { S.ngay = t.value || today(); if (S.sub === 'nhap') { const h = document.querySelector('#tmk-pane .ui-panel-title'); if (h) h.textContent = `Đã nhập ngày ${viDate(S.ngay)}`; loadList(); } else loadDc(); return; }
     if (t.id === 'tmk-to') { S.to = t.value; if (S.sub === 'nhap') loadList(); else loadDc(); return; }
     if (t.classList.contains('dd-num')) { const n = qty(t.value); t.value = n ? fmt(n) : ''; }
-    if (t.classList.contains('dd-cell') && COLS()[+t.dataset.c]?.k === 'po') {
+    if (t.classList.contains('dd-cell') && (S.cols || COLS())[+t.dataset.c]?.k === 'po') {
       // Gõ PO có trong đơn hàng -> tự điền ART nếu ô ART trống
       const r = S.rows[+t.dataset.r];
       const hit = C().po.find(p => p.khach_hang_id === khId() && normKey(p.po) === normKey(t.value));

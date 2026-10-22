@@ -34,8 +34,10 @@
     box.innerHTML = '<div class="ui-panel ui-panel-flush"><div class="v3-table-wrap" id="dhc-list"><div class="v3-empty">Đang tải...</div></div></div>';
     const kh = C().byId(khId());
     if (kh && !(kh.bo_phan || []).includes('TC')) box.insertAdjacentHTML('afterbegin', `<p class="ui-hint v3-mb">Khách ${esc(kh.ten_ngan)} chưa khai báo giao tổ chặt (Danh mục → Khách hàng → Bộ phận).</p>`);
+    const n = U.seq('dhc-list');
     try {
       const { data } = await api(`/api/tochat/donhang?khach_hang_id=${khId()}`);
+      if (!U.latest('dhc-list', n)) return;
       D.list = data;
       const el = $('dhc-list');
       if (!el) return;
@@ -128,7 +130,7 @@
           return { ten: x[0], he_so: toNum(x[1]) || 2, dvt: (x[2] || 'Miếng').trim() };
         }).filter(c => c.ten);
         if (!chi_tiet.length) { toast('Chưa nhập chi tiết nào', 'error'); return; }
-        await api('/api/bochitiet', 'POST', { khach_hang_id: khId(), ten_bo: b.dataset.art, art: b.dataset.art, chi_tiet });
+        await api('/api/bochitiet', 'POST', { khach_hang_id: D.don.khach_hang_id || khId(), ten_bo: b.dataset.art, art: b.dataset.art, chi_tiet });
         toast('Đã lưu bộ chi tiết', 'success');
         if (window.Catalog) { await window.Catalog.load(); window.dispatchEvent(new Event('catalog-changed')); }
         D.bo = null; dOpen(D.don.id);
@@ -184,11 +186,14 @@
 
   async function xLoadPos() {
     X.pos = [];
-    if (!khId() || !X.f.art) { xRenderRows(); return; }
+    if (!khId() || !X.f || !X.f.art) { xRenderRows(); return; }
+    const f = X.f;
     try {
-      const p = new URLSearchParams({ khach_hang_id: khId(), art: X.f.art });
+      const p = new URLSearchParams({ khach_hang_id: khId(), art: f.art });
       if (X.editingId) p.set('tru_id', X.editingId);
-      X.pos = (await api('/api/tochat/xuat/goiy?' + p)).data;
+      const data = (await api('/api/tochat/xuat/goiy?' + p)).data;
+      if (X.f !== f) return; // đã đổi khách / phiếu trong lúc chờ
+      X.pos = data;
       if (!X.pos.length) toast(`ART ${X.f.art} chưa có PO nào`, 'info');
       // Sửa phiếu "theo đôi": đổi số miếng đã lưu về số đôi (nhỏ nhất miếng ÷ miếng/đôi)
       if (X.f.raw) {
@@ -294,7 +299,8 @@
     const gr = $('xnb-grand'); if (gr) gr.textContent = fmt0(g);
   }
 
-  async function xSave(andPrint) {
+  function xSave(andPrint) { return U.once('xnb-save', () => xSaveCore(andPrint)); }
+  async function xSaveCore(andPrint) {
     const f = X.f;
     if (!f.ma_bo_phan_nhan) { toast('Chưa chọn tổ may nhận', 'error'); return; }
     const lines = [];
@@ -542,6 +548,7 @@
     document.querySelector('.tab-btn[data-target="tab-donhangchat"]')?.addEventListener('click', showD);
     document.querySelector('.tab-btn[data-target="tab-xuatchat"]')?.addEventListener('click', showX);
     if (window.KH) window.KH.guard(id => (X.dirty && X.f && id !== khId() ? `Phiếu xuất nội bộ đang nhập (ART ${X.f.art || '…'}) chưa lưu sẽ bị bỏ.` : ''));
+    if (window.KH) window.KH.guard(id => (D.edit && id !== khId() ? 'Số phải chặt đang sửa chưa lưu sẽ bị bỏ.' : ''));
     window.addEventListener('kh-changed', () => {
       D.don = null; D.edit = null;
       X.editingId = null; X.dirty = false; X.f = null; X.pos = [];

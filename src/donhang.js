@@ -7,7 +7,7 @@
  * - Đơn (don_dat): 1 đơn của 1 khách gồm nhiều ART, mỗi ART nhiều PO (po_don_hang.don_id); API /api/dondat.
  * Chỉ thêm bảng mới; chạy được cả D1 lẫn CockroachDB.
  */
-import { isSqlite, ddlTypes, ensureTables, str, int, num, parseJson, ok, bad, todayVN, normKey, normSize } from './ddl.js';
+import { isSqlite, ddlTypes, ensureTables, str, int, num, parseJson, ok, bad, todayVN, normKey, normSize, runBatch } from './ddl.js';
 
 const ID_TABLES = ['don_hang_size', 'don_hang_alias', 'dieu_chinh_xuat', 'chi_lenh', 'chi_lenh_dong', 'chi_lenh_dong_size', 'don_dat'];
 export const TABLES = ID_TABLES;
@@ -305,10 +305,10 @@ async function insertOrder(env, d) {
   await writeSizes(env, r.id, d.sizes);
   return r.id;
 }
-async function updateOrder(env, id, d) {
+async function updateOrder(env, id, d, giuSize) {
   await env.DB.prepare(`UPDATE po_don_hang SET khach_hang_id = ?, po = ?, don_hang = ?, art = ?, mau = ?, don_gia = ?, ghi_chu = ?, ngay_giao = ? WHERE id = ?`)
     .bind(d.khach_hang_id, d.po, d.don_hang, d.art, d.mau, d.don_gia, d.ghi_chu, d.ngay_giao, id).run();
-  await writeSizes(env, id, d.sizes);
+  if (!giuSize) await writeSizes(env, id, d.sizes); // không gửi sizes -> giữ số lượng size cũ
 }
 async function activeChiLenhCount(env, poId) {
   const r = await env.DB.prepare(`SELECT COUNT(*) AS n FROM chi_lenh_dong d JOIN chi_lenh c ON c.id = d.chi_lenh_id
@@ -321,6 +321,7 @@ async function deleteOrderRow(env, id) {
   await env.DB.prepare('DELETE FROM don_hang_alias WHERE po_id = ?').bind(id).run();
   await env.DB.prepare('DELETE FROM dieu_chinh_xuat WHERE po_id = ?').bind(id).run();
   await env.DB.prepare('DELETE FROM po_don_hang WHERE id = ?').bind(id).run();
+  try { await env.DB.prepare('DELETE FROM chat_dinh_muc WHERE po_id = ?').bind(id).run(); } catch (_) { /* bảng tổ chặt chưa tạo */ }
 }
 
 /* ---------------- ĐƠN: nhiều ART · nhiều PO ---------------- */
@@ -384,13 +385,26 @@ async function checkDon(env, b, donId) {
   return { errs, khId, soDon, lines, ids };
 }
 
+/** Ghi các dòng PO của đơn theo lô: lô 1 = thêm / sửa dòng (+ xóa size cũ), lô 2 = ghi size */
 async function saveDonLines(env, donId, lines) {
-  for (const d of lines) {
-    let id = d.id;
-    if (id) await updateOrder(env, id, d);
-    else id = await insertOrder(env, d);
-    await env.DB.prepare('UPDATE po_don_hang SET don_id = ? WHERE id = ?').bind(donId, id).run();
-  }
+  const stmts = [];
+  lines.forEach(d => {
+    if (d.id) {
+      stmts.push(env.DB.prepare(`UPDATE po_don_hang SET khach_hang_id = ?, po = ?, don_hang = ?, art = ?, mau = ?, don_gia = ?, ghi_chu = ?, ngay_giao = ?, don_id = ? WHERE id = ? RETURNING id`)
+        .bind(d.khach_hang_id, d.po, d.don_hang, d.art, d.mau, d.don_gia, d.ghi_chu, d.ngay_giao, donId, d.id));
+    } else {
+      stmts.push(env.DB.prepare(`INSERT INTO po_don_hang (khach_hang_id, po, don_hang, art, mau, don_gia, ghi_chu, ngay_giao, don_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`).bind(d.khach_hang_id, d.po, d.don_hang, d.art, d.mau, d.don_gia, d.ghi_chu, d.ngay_giao, donId));
+    }
+  });
+  const res = await runBatch(env, stmts);
+  const ids = res.map(r => r.results[0].id);
+  const sz = [];
+  lines.forEach((d, i) => {
+    sz.push(env.DB.prepare('DELETE FROM don_hang_size WHERE po_id = ?').bind(ids[i]));
+    Object.entries(d.sizes).forEach(([size, sl]) => sz.push(env.DB.prepare('INSERT INTO don_hang_size (po_id, size, so_luong) VALUES (?, ?, ?)').bind(ids[i], size, sl)));
+  });
+  await runBatch(env, sz);
 }
 
 async function handleDonDatApi(path, method, url, request, env, user) {
@@ -541,11 +555,17 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
   const dhM = path.match(/^\/api\/donhang\/(\d+)$/);
   if (dhM && method === 'PUT') {
     const id = int(dhM[1]);
-    const d = cleanOrder(await request.json());
+    const b = await request.json();
+    const d = cleanOrder(b);
     const err = checkOrder(d);
     if (err) return bad(err);
     if (await findDuplicate(env, d.khach_hang_id, d.po, d.art, id)) return bad(`Đã có đơn hàng PO ${d.po} · ART ${d.art} của khách này`);
-    await updateOrder(env, id, d);
+    // PO đã thả chuyền: không cho đổi khách / ART (chỉ lệnh đang trỏ vào PO này)
+    const cu = await env.DB.prepare('SELECT khach_hang_id, art FROM po_don_hang WHERE id = ?').bind(id).first();
+    if (cu && (cu.khach_hang_id !== d.khach_hang_id || normKey(cu.art) !== normKey(d.art)) && await activeChiLenhCount(env, id)) {
+      return bad('PO này đã có chỉ lệnh thả chuyền, không đổi khách hàng / ART được');
+    }
+    await updateOrder(env, id, d, b.sizes === undefined);
     return ok({ id, message: 'Đã lưu đơn hàng' });
   }
   if (dhM && method === 'DELETE') {

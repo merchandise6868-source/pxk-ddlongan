@@ -217,9 +217,11 @@
 
   async function refreshSoPhieu() {
     if (S.editingId) return;
+    const f = S.form, loai = S.loai;
     try {
-      const r = await api(`/api/nhapkho/sophieu?loai=${S.loai}&ngay=${encodeURIComponent(S.form.ngay || today())}`);
-      S.form.so_phieu = r.so_phieu;
+      const r = await api(`/api/nhapkho/sophieu?loai=${loai}&ngay=${encodeURIComponent(f.ngay || today())}`);
+      if (S.form !== f || S.loai !== loai || S.editingId) return; // đã đổi phiếu / loại trong lúc chờ
+      f.so_phieu = r.so_phieu;
       const el = $('nk-so');
       if (el) el.value = r.so_phieu;
     } catch (_) { /* giữ số cũ */ }

@@ -4,7 +4,7 @@
  * - Đối chiếu cuối ngày: số tổ may báo so với phiếu xuất kho thật cùng ngày của chuyền đó (phiếu không hủy,
  *   khớp PO = phieu_dong.ma_hang, ART = phieu_dong.mau; bỏ dòng chi tiết / không size như tab Xuất theo đơn hàng).
  */
-import { isSqlite, ddlTypes, ensureTables, str, int, num, ok, bad, normKey, normSize } from './ddl.js';
+import { isSqlite, ddlTypes, ensureTables, str, int, num, ok, bad, normKey, normSize, runBatch } from './ddl.js';
 
 const ID_TABLES = ['tm_xuat', 'tm_xuat_dong'];
 export const TABLES = ID_TABLES;
@@ -63,12 +63,11 @@ function readLines(b) {
   return { lines };
 }
 async function saveLines(env, id, lines) {
-  await env.DB.prepare('DELETE FROM tm_xuat_dong WHERE phieu_id = ?').bind(id).run();
-  for (const l of lines) {
-    await env.DB.prepare('INSERT INTO tm_xuat_dong (phieu_id, po, art, size, so_luong) VALUES (?, ?, ?, ?, ?) RETURNING id')
-      .bind(id, l.po, l.art, l.size, l.so_luong).first();
-  }
-  await env.DB.prepare('UPDATE tm_xuat SET tong_sl = ? WHERE id = ?').bind(lines.reduce((a, l) => a + l.so_luong, 0), id).run();
+  await runBatch(env, [
+    env.DB.prepare('DELETE FROM tm_xuat_dong WHERE phieu_id = ?').bind(id),
+    ...lines.map(l => env.DB.prepare('INSERT INTO tm_xuat_dong (phieu_id, po, art, size, so_luong) VALUES (?, ?, ?, ?, ?)').bind(id, l.po, l.art, l.size, l.so_luong)),
+    env.DB.prepare('UPDATE tm_xuat SET tong_sl = ? WHERE id = ?').bind(lines.reduce((a, l) => a + l.so_luong, 0), id),
+  ], 1000);
 }
 
 export async function handleToMayApi(path, method, url, request, env, user) {
@@ -125,10 +124,11 @@ export async function handleToMayApi(path, method, url, request, env, user) {
     const b = await request.json();
     const to = ep || str(b.ma_bo_phan).toUpperCase() || old.ma_bo_phan;
     if (!okDate(b.ngay)) return bad('Chưa chọn ngày');
-    if (!isToMay(to)) return bad('Chưa chọn tổ may');
+    if (!isToMay(to) || !toList.some(t => t.ma === to)) return bad('Chưa chọn tổ may');
     const r = readLines(b);
     if (r.err) return bad(r.err);
-    await env.DB.prepare('UPDATE tm_xuat SET ngay = ?, ma_bo_phan = ?, ghi_chu = ? WHERE id = ?').bind(str(b.ngay), to, str(b.ghi_chu), id).run();
+    await env.DB.prepare('UPDATE tm_xuat SET ngay = ?, ma_bo_phan = ?, khach_hang_id = ?, ghi_chu = ? WHERE id = ?')
+      .bind(str(b.ngay), to, int(b.khach_hang_id) || old.khach_hang_id, str(b.ghi_chu), id).run();
     await saveLines(env, id, r.lines);
     return ok({ id, message: 'Đã lưu' });
   }

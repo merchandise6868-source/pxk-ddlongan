@@ -4,7 +4,7 @@
  * Thả từng đợt: số gợi ý = Đặt − Đã thả ở các chỉ lệnh khác (chưa hủy).
  * Bảng chi_lenh* được tạo trong donhang.js (dùng chung để tính "Đã thả").
  */
-import { str, int, num, ok, bad, todayVN, normKey, normSize } from './ddl.js';
+import { str, int, num, ok, bad, todayVN, normKey, normSize, runBatch } from './ddl.js';
 import { ensureDonHangSchema, tienDo } from './donhang.js';
 
 async function nextSoCl(env, bp, ngay) {
@@ -51,18 +51,19 @@ async function readBody(env, b) {
 }
 
 async function saveLines(env, clId, lines) {
-  await env.DB.prepare('DELETE FROM chi_lenh_dong_size WHERE dong_id IN (SELECT id FROM chi_lenh_dong WHERE chi_lenh_id = ?)').bind(clId).run();
-  await env.DB.prepare('DELETE FROM chi_lenh_dong WHERE chi_lenh_id = ?').bind(clId).run();
-  let tong = 0;
-  for (const [i, l] of lines.entries()) {
-    const d = await env.DB.prepare('INSERT INTO chi_lenh_dong (chi_lenh_id, po_id, po, thu_tu, so_luong) VALUES (?, ?, ?, ?, ?) RETURNING id')
-      .bind(clId, l.po_id, l.po, i + 1, l.tong).first();
-    for (const [size, sl] of Object.entries(l.sizes)) {
-      await env.DB.prepare('INSERT INTO chi_lenh_dong_size (dong_id, size, so_luong) VALUES (?, ?, ?) RETURNING id').bind(d.id, size, sl).first();
-    }
-    tong += l.tong;
-  }
-  await env.DB.prepare('UPDATE chi_lenh SET tong_sl = ? WHERE id = ?').bind(tong, clId).run();
+  // Lô 1: xóa dòng cũ + thêm dòng mới (lấy id); lô 2: ghi size
+  const tong = lines.reduce((a, l) => a + l.tong, 0);
+  const res = await env.DB.batch([
+    env.DB.prepare('DELETE FROM chi_lenh_dong_size WHERE dong_id IN (SELECT id FROM chi_lenh_dong WHERE chi_lenh_id = ?)').bind(clId),
+    env.DB.prepare('DELETE FROM chi_lenh_dong WHERE chi_lenh_id = ?').bind(clId),
+    env.DB.prepare('UPDATE chi_lenh SET tong_sl = ? WHERE id = ?').bind(tong, clId),
+    ...lines.map((l, i) => env.DB.prepare('INSERT INTO chi_lenh_dong (chi_lenh_id, po_id, po, thu_tu, so_luong) VALUES (?, ?, ?, ?, ?) RETURNING id')
+      .bind(clId, l.po_id, l.po, i + 1, l.tong)),
+  ]);
+  const ids = res.slice(3).map(r => r.results[0].id);
+  const sz = [];
+  lines.forEach((l, i) => Object.entries(l.sizes).forEach(([size, sl]) => sz.push(env.DB.prepare('INSERT INTO chi_lenh_dong_size (dong_id, size, so_luong) VALUES (?, ?, ?)').bind(ids[i], size, sl))));
+  await runBatch(env, sz);
   return tong;
 }
 

@@ -49,7 +49,8 @@ async function fillDashFilters() {
       if (r.success) dashDepts = r.data;
     } catch (_) {}
   }
-  if (bpSel && bpSel.options.length <= 1) {
+  if (bpSel && bpSel.options.length <= 1 && !bpSel.dataset.ready) {
+    bpSel.dataset.ready = '1'; // chạy 1 lần (2 lần tải cùng lúc không nhân đôi lựa chọn / sự kiện)
     dashDepts.forEach(d => bpSel.add(new Option(`${d.ten} (${d.ma})`, d.ma)));
     ['dash-tu-ngay', 'dash-den-ngay', 'dash-bophan'].forEach(id =>
       document.getElementById(id)?.addEventListener('change', () => window.loadDashboard()));

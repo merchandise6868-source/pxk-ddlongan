@@ -47,6 +47,12 @@ export const num = v => {
   return isNaN(n) ? 0 : n;
 };
 export const parseJson = (s, fb) => { try { return JSON.parse(s || ''); } catch (_) { return fb; } };
+/** Chạy nhiều lệnh theo lô (mỗi lô 1 lần gọi D1, tránh vượt giới hạn số lệnh mỗi lần gọi) */
+export async function runBatch(env, stmts, size = 200) {
+  const out = [];
+  for (let k = 0; k < stmts.length; k += size) out.push(...await env.DB.batch(stmts.slice(k, k + size)));
+  return out;
+}
 export const ok = (data = {}) => Response.json({ success: true, ...data });
 export const bad = (error, status = 400) => Response.json({ success: false, error }, { status });
 

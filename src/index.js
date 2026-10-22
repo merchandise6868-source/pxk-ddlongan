@@ -34,6 +34,9 @@ export default {
         return response;
       } catch (err) {
         console.error('API Error:', err);
+        if (err instanceof SyntaxError) {
+          return Response.json({ success: false, error: 'Dữ liệu gửi lên không hợp lệ' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
+        }
         return Response.json(
           { success: false, error: err.message || 'Lỗi xử lý máy chủ' },
           { status: 500, headers: { 'Cache-Control': 'no-store' } }
@@ -51,6 +54,35 @@ export default {
     return new Response('Assets binding not found', { status: 404 });
   },
 };
+
+/**
+ * Ghi các dòng + size của phiếu theo lô (env.DB.batch):
+ * - ít lệnh -> không vượt giới hạn số lệnh D1 mỗi lần gọi (gói Free) khi phiếu nhiều dòng × nhiều size
+ * - replace: xóa dòng cũ + ghi dòng mới trong cùng 1 giao dịch (lỗi giữa chừng thì phiếu giữ nguyên dòng cũ)
+ */
+async function writePhieuLines(env, phieuId, lines, replace) {
+  const lineStmts = (lines || []).map((line, i) => {
+    const sl_chung_tu = parseFloat(line.sl_chung_tu) || 0;
+    const sl_thuc_xuat = parseFloat(line.sl_thuc_xuat) || 0;
+    const don_gia = parseFloat(line.don_gia) || 0;
+    const thanh_tien = parseFloat(line.thanh_tien) || (sl_thuc_xuat > 0 ? sl_thuc_xuat * don_gia : sl_chung_tu * don_gia);
+    return env.DB.prepare(`
+      INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+    `).bind(phieuId, line.stt || (i + 1), line.ten_hang || '', line.ma_hang || '', line.mau || '', line.dvt || 'Đôi',
+      sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, line.ghi_chu || '', line.loai || '', parseFloat(line.he_so) || 0);
+  });
+  const stmts = replace ? [env.DB.prepare('DELETE FROM phieu_dong WHERE phieu_id = ?').bind(phieuId), ...lineStmts] : lineStmts;
+  if (!stmts.length) return;
+  const res = await env.DB.batch(stmts);
+  const ids = res.slice(replace ? 1 : 0).map(r => r.results[0].id);
+  const sizeStmts = [];
+  (lines || []).forEach((line, i) => (Array.isArray(line.sizes) ? line.sizes : []).forEach(sz => {
+    const qty = parseFloat(sz.so_luong) || 0;
+    if (qty > 0) sizeStmts.push(env.DB.prepare('INSERT INTO phieu_dong_size (phieu_dong_id, size, so_luong) VALUES (?, ?, ?)').bind(ids[i], String(sz.size), qty));
+  }));
+  for (let k = 0; k < sizeStmts.length; k += 200) await env.DB.batch(sizeStmts.slice(k, k + 200));
+}
 
 /** Ghi tên người giao (cột thêm sau, in dưới chữ ký "Người giao") */
 async function saveNguoiGiao(env, phieuId, nguoiGiao) {
@@ -170,10 +202,10 @@ async function handleApi(url, request, env) {
 
       const insertRes = await env.DB.prepare(`
         INSERT INTO qc_san_luong (ngay, ma_bo_phan, ma_hang, mau, qc_nguoi_ghi, ghi_chu, tong_sl)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).bind(ngay, ma_bo_phan, ma_hang, mau, qc_nguoi_ghi, ghi_chu, tong_sl).run();
+        VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
+      `).bind(ngay, ma_bo_phan, ma_hang, mau, qc_nguoi_ghi, ghi_chu, tong_sl).first();
 
-      const qcId = insertRes.meta.last_row_id;
+      const qcId = insertRes.id;
       savedIds.push(qcId);
       totalAll += tong_sl;
 
@@ -245,10 +277,10 @@ async function handleApi(url, request, env) {
 
     const insertRes = await env.DB.prepare(`
       INSERT INTO to_truong_san_luong (ngay, ma_bo_phan, to_truong_ten, ma_hang, khung_gio_tang_ca, tong_san_luong, ghi_chu)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).bind(ngay, ma_bo_phan, to_truong_ten, ma_hang, khung_gio_tang_ca, tong_san_luong, ghi_chu).run();
+      VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
+    `).bind(ngay, ma_bo_phan, to_truong_ten, ma_hang, khung_gio_tang_ca, tong_san_luong, ghi_chu).first();
 
-    const ttId = insertRes.meta.last_row_id;
+    const ttId = insertRes.id;
 
     for (let i = 0; i < gio_list.length; i++) {
       const g = gio_list[i];
@@ -460,7 +492,7 @@ async function handleApi(url, request, env) {
     try {
       insertPhieuRes = await env.DB.prepare(`
         INSERT INTO phieu (so_phieu, ma_bo_phan, mau_phieu, ngay, don_vi_nhan, ly_do_xuat, don_hang, bo_phan_xuat, trang_thai, nguoi_lap, dia_chi_cty, ghi_chu, canh_bao_lech_size, khach_hang_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
       `).bind(
         so_phieu,
         ma_bo_phan,
@@ -476,14 +508,14 @@ async function handleApi(url, request, env) {
         ghi_chu,
         canh_bao_lech_size,
         khach_hang_id
-      ).run();
+      ).first();
     } catch (insertErr) {
       if (String(insertErr?.message || insertErr).includes('no such column')) {
         try { await env.DB.prepare("ALTER TABLE phieu ADD COLUMN don_hang TEXT DEFAULT ''").run(); } catch (_) {}
         try { await env.DB.prepare("ALTER TABLE phieu ADD COLUMN bo_phan_xuat TEXT DEFAULT ''").run(); } catch (_) {}
         insertPhieuRes = await env.DB.prepare(`
           INSERT INTO phieu (so_phieu, ma_bo_phan, mau_phieu, ngay, don_vi_nhan, ly_do_xuat, don_hang, bo_phan_xuat, trang_thai, nguoi_lap, dia_chi_cty, ghi_chu, canh_bao_lech_size)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
         `).bind(
           so_phieu,
           ma_bo_phan,
@@ -498,58 +530,16 @@ async function handleApi(url, request, env) {
           dia_chi_cty,
           ghi_chu,
           canh_bao_lech_size
-        ).run();
+        ).first();
       } else {
         throw insertErr;
       }
     }
 
-    const phieuId = insertPhieuRes.meta.last_row_id;
+    const phieuId = insertPhieuRes.id; // RETURNING id (meta.last_row_id trên D1 không chắc chắn)
 
-    // 2. Thêm các dòng vào phieu_dong và phieu_dong_size
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const stt = line.stt || (i + 1);
-      const sl_chung_tu = parseFloat(line.sl_chung_tu) || 0;
-      const sl_thuc_xuat = parseFloat(line.sl_thuc_xuat) || 0;
-      const don_gia = parseFloat(line.don_gia) || 0;
-      const thanh_tien = parseFloat(line.thanh_tien) || (sl_thuc_xuat > 0 ? sl_thuc_xuat * don_gia : sl_chung_tu * don_gia);
-
-      const insertLineRes = await env.DB.prepare(`
-        INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
-      `).bind(
-        phieuId,
-        stt,
-        line.ten_hang || '',
-        line.ma_hang || '',
-        line.mau || '',
-        line.dvt || 'Đôi',
-        sl_chung_tu,
-        sl_thuc_xuat,
-        don_gia,
-        thanh_tien,
-        line.ghi_chu || '',
-        line.loai || '',
-        parseFloat(line.he_so) || 0
-      ).first();
-
-      // Lấy id bằng RETURNING (meta.last_row_id trên D1 có lúc trả sai sau khi xóa dòng cũ -> lỗi FOREIGN KEY)
-      const phieuDongId = insertLineRes.id;
-
-      // Lưu size
-      if (Array.isArray(line.sizes) && line.sizes.length > 0) {
-        for (const s of line.sizes) {
-          const qty = parseFloat(s.so_luong) || 0;
-          if (qty > 0) {
-            await env.DB.prepare(`
-              INSERT INTO phieu_dong_size (phieu_dong_id, size, so_luong)
-              VALUES (?, ?, ?)
-            `).bind(phieuDongId, String(s.size), qty).run();
-          }
-        }
-      }
-    }
+    // 2. Thêm các dòng vào phieu_dong và phieu_dong_size (ghi theo lô)
+    await writePhieuLines(env, phieuId, lines, false);
 
     // Cập nhật bộ đếm so_phieu_counter để không bao giờ lặp lại số khi phiếu bị xóa
     const matchNumber = so_phieu.match(/^PXK-([^-]+)-(\d+)$/);
@@ -591,13 +581,22 @@ async function handleApi(url, request, env) {
       ly_do_xuat = '',
       don_hang = '',
       bo_phan_xuat = '',
-      trang_thai = 'saved',
       nguoi_lap = '',
       dia_chi_cty = 'A8/21c, Bông Văn Dĩa, Xã Tân Nhựt, TP HCM',
       ghi_chu = '',
       lines = [],
     } = body;
     const khach_hang_id = parseInt(body.khach_hang_id, 10) || await guessKhachHangId(env, don_vi_nhan);
+
+    // Kiểm tra như khi tạo phiếu; giữ nguyên trạng thái cũ (sửa phiếu đã hủy không làm phiếu sống lại)
+    const old = await env.DB.prepare('SELECT id, trang_thai FROM phieu WHERE id = ?').bind(id).first();
+    if (!old) return Response.json({ success: false, error: 'Không tìm thấy phiếu' }, { status: 404 });
+    if (!so_phieu || !ma_bo_phan || !ngay) {
+      return Response.json({ success: false, error: 'Vui lòng điền đủ Số phiếu, Bộ phận và Ngày' }, { status: 400 });
+    }
+    const trung = await env.DB.prepare('SELECT id FROM phieu WHERE so_phieu = ? AND id <> ?').bind(so_phieu, id).first();
+    if (trung) return Response.json({ success: false, error: `Số phiếu ${so_phieu} đã tồn tại trong hệ thống` }, { status: 400 });
+    const trang_thai = body.trang_thai || old.trang_thai || 'saved';
 
     let canh_bao_lech_size = 0;
     for (const line of lines) {
@@ -660,51 +659,8 @@ async function handleApi(url, request, env) {
       }
     }
 
-    // Xóa dòng cũ và nạp lại
-    await env.DB.prepare('DELETE FROM phieu_dong WHERE phieu_id = ?').bind(id).run();
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const stt = line.stt || (i + 1);
-      const sl_chung_tu = parseFloat(line.sl_chung_tu) || 0;
-      const sl_thuc_xuat = parseFloat(line.sl_thuc_xuat) || 0;
-      const don_gia = parseFloat(line.don_gia) || 0;
-      const thanh_tien = parseFloat(line.thanh_tien) || (sl_thuc_xuat > 0 ? sl_thuc_xuat * don_gia : sl_chung_tu * don_gia);
-
-      const insertLineRes = await env.DB.prepare(`
-        INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
-      `).bind(
-        id,
-        stt,
-        line.ten_hang || '',
-        line.ma_hang || '',
-        line.mau || '',
-        line.dvt || 'Đôi',
-        sl_chung_tu,
-        sl_thuc_xuat,
-        don_gia,
-        thanh_tien,
-        line.ghi_chu || '',
-        line.loai || '',
-        parseFloat(line.he_so) || 0
-      ).first();
-
-      // Lấy id bằng RETURNING (meta.last_row_id trên D1 có lúc trả sai sau khi xóa dòng cũ -> lỗi FOREIGN KEY)
-      const phieuDongId = insertLineRes.id;
-
-      if (Array.isArray(line.sizes)) {
-        for (const s of line.sizes) {
-          const qty = parseFloat(s.so_luong) || 0;
-          if (qty > 0) {
-            await env.DB.prepare(`
-              INSERT INTO phieu_dong_size (phieu_dong_id, size, so_luong)
-              VALUES (?, ?, ?)
-            `).bind(phieuDongId, String(s.size), qty).run();
-          }
-        }
-      }
-    }
+    // Xóa dòng cũ và nạp lại (cùng 1 lô: lỗi giữa chừng thì không mất dòng cũ)
+    await writePhieuLines(env, id, lines, true);
 
     await saveNguoiGiao(env, id, body.nguoi_giao);
 

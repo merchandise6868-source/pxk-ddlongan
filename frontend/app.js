@@ -152,6 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   // Đang sửa phiếu đã lưu -> hỏi trước khi đổi khách (đổi khách = bỏ sửa)
   if (window.KH) window.KH.guard(id => {
+    if (AppState.saving) return 'Phiếu đang được lưu – nên đợi lưu xong rồi mới đổi khách.';
     if (!AppState.currentEditingId) return '';
     if ((typeof id === 'number' ? id : null) === (AppState.khachHangId || null)) return '';
     return `Đang sửa phiếu ${document.getElementById('slip-so')?.value || ''} – chuyển khách sẽ bỏ sửa (phiếu đã lưu không mất).`;
@@ -189,7 +190,7 @@ function initTabs() {
    2. KHỞI TẠO ĐIỀU KHIỂN FORM
    ============================================================ */
 function initFormControls() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = window.U ? window.U.today() : new Date().toISOString().slice(0, 10);
   document.getElementById('slip-date').value = today;
   document.getElementById('filter-tu-ngay').value = getFirstDayOfMonth();
   document.getElementById('filter-den-ngay').value = getLastDayOfMonth();
@@ -1082,7 +1083,20 @@ function calculateTotals() {
  * opts.forPrint = true: dùng khi bấm "In phiếu" -> lưu xong KHÔNG xóa form (để in), không chuyển tab.
  * Trả về: 'saved' (đã lưu) · 'empty' (in phiếu trắng, không có dòng nào) · false (lỗi / chưa đủ thông tin)
  */
+/** Đánh dấu đang lưu + nhớ khách của phiếu đang lưu (đổi khách giữa chừng không làm mất nháp khách khác) */
 async function saveSlip(opts = {}) {
+  if (AppState.saving) return false;
+  AppState.saving = true;
+  AppState.savingKh = AppState.khachHangId || null;
+  try { return await saveSlipCore(opts); } finally { AppState.saving = false; }
+}
+/** Lưu xong: làm mới phiếu nếu vẫn đang ở khách đó, còn đã đổi khách thì chỉ xóa nháp của khách vừa lưu */
+function afterSaved() {
+  if ((AppState.khachHangId || null) === AppState.savingKh) resetForm();
+  else removeSlipDraft(AppState.savingKh);
+}
+
+async function saveSlipCore(opts = {}) {
   if (opts && opts.type) opts = {}; // được gọi trực tiếp từ sự kiện click
   // Lấy khách hàng làm chuẩn: phiếu mới bắt buộc có khách (chọn ở thanh bên)
   if (!AppState.khachHangId && !AppState.currentEditingId) {
@@ -1199,7 +1213,7 @@ async function saveSlip(opts = {}) {
       }
 
       // Xóa form và nháp
-      resetForm();
+      afterSaved();
 
       // Nạp lại danh sách phiếu ngay lập tức
       await loadSlipList();
@@ -1212,6 +1226,10 @@ async function saveSlip(opts = {}) {
       return 'saved';
     } else {
       showToast(data.error || 'Lỗi khi lưu phiếu', 'error');
+      if (/đã tồn tại/.test(data.error || '') && !AppState.currentEditingId) {
+        await fetchNextSlipNumber();
+        showToast(`Đã lấy số phiếu mới: ${document.getElementById('slip-so').value}. Bấm lưu lại.`, 'info');
+      }
       return false;
     }
   } catch (err) {
@@ -1239,7 +1257,7 @@ async function printAndSaveSlip() {
     if (result === false) return;
     printCurrentSlip();
     if (result === 'saved') {
-      resetForm();
+      afterSaved();
       loadSlipList();
     }
   } finally {
@@ -1491,15 +1509,15 @@ function printCurrentSlip() {
         <div class="p-title">PHIẾU XUẤT KHO</div>
         <div class="p-sub-info">
           <div class="p-date">${dateText}</div>
-          <div class="p-slip-no">Số: ${soPhieu}</div>
+          <div class="p-slip-no">Số: ${escapeHtml(soPhieu)}</div>
         </div>
       </div>
 
       <div class="p-meta">
-        <div><strong>Đơn vị nhận:</strong> ${donViNhan || '................................................................'}</div>
-        <div><strong>Bộ phận xuất kho:</strong> ${boPhanXuat || '................................................................'}</div>
-        <div><strong>Đơn hàng:</strong> ${donHang || '................................................................'}</div>
-        <div><strong>Lý do xuất:</strong> ${lyDoXuat || '................................................................'}</div>
+        <div><strong>Đơn vị nhận:</strong> ${escapeHtml(donViNhan) || '................................................................'}</div>
+        <div><strong>Bộ phận xuất kho:</strong> ${escapeHtml(boPhanXuat) || '................................................................'}</div>
+        <div><strong>Đơn hàng:</strong> ${escapeHtml(donHang) || '................................................................'}</div>
+        <div><strong>Lý do xuất:</strong> ${escapeHtml(lyDoXuat) || '................................................................'}</div>
       </div>
 
       <table class="p-table">
@@ -1672,7 +1690,7 @@ function renderSlipListTable(slips) {
         <td class="r nowrap">
           ${s.khach_hang_id ? '' : `<button type="button" class="ui-btn-sm ui-btn-sm-primary" onclick="assignSlipCustomer(${s.id})">Gán khách</button>`}
           <button type="button" class="ui-btn-sm ui-btn-sm-primary" onclick="reprintSlip(${s.id})">In lại</button>
-          <button type="button" class="ui-btn-sm" onclick="editSlip(${s.id})">Sửa</button>
+          ${cancelled ? '' : `<button type="button" class="ui-btn-sm" onclick="editSlip(${s.id})">Sửa</button>`}
           ${!cancelled ? `<button type="button" class="ui-btn-sm ui-btn-sm-danger" onclick="cancelSlip(${s.id})">Hủy</button>` : ''}
         </td>
       </tr>
@@ -1692,7 +1710,9 @@ window.reprintSlip = async function(id) {
 
     const slip = data.data;
 
-    // Lưu tạm state để tái sử dụng hàm in
+    // Lưu tạm state để tái sử dụng hàm in (kể cả các ô đầu phiếu đang nhập)
+    const HEAD_IDS = ['slip-so', 'slip-date', 'slip-donvi', 'slip-lydo', 'slip-donhang', 'slip-bophanxuat', 'slip-nguoilap', 'slip-nguoigiao', 'slip-diachi-cty'];
+    const prevHead = HEAD_IDS.map(i => [i, document.getElementById(i)?.value]);
     const prevMau = AppState.currentMau;
     const prevRows = AppState.rows;
     const prevSizes = [...AppState.selectedSizes];
@@ -1757,6 +1777,7 @@ window.reprintSlip = async function(id) {
     printCurrentSlip();
 
     // Khôi phục state
+    prevHead.forEach(([i, v]) => { const el = document.getElementById(i); if (el && v !== undefined) el.value = v; });
     AppState.currentMau = prevMau;
     AppState.rows = prevRows;
     AppState.selectedSizes = prevSizes;
@@ -1783,6 +1804,7 @@ window.editSlip = async function(id) {
       if (!ok) return;
     }
     AppState.currentEditingId = slip.id;
+    if (window.Grid) { Grid.resetHistory(); Grid.clearSelection(); }
 
     if (slip.mau_phieu === 3) {
       const slipSizes = [];
@@ -1852,6 +1874,7 @@ window.editSlip = async function(id) {
     });
     assignBlockKeys(AppState.rows);
 
+    if (slip.mau_phieu !== 3) AppState.rows.forEach((_, i) => parseSizesFromText(i));
     renderTableStructure();
 
     // Chuyển sang tab Lập phiếu
