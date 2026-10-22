@@ -154,8 +154,15 @@
      ============================================================ */
   const X = { sub: 'lap', f: null, editingId: null, pos: [], list: [], dirty: false,
     filter: { tu: firstOfMonth(), den: today(), bp: '', tt: 'mo', q: '' } };
-  const emptyX = () => ({ ngay: today(), so_phieu: '', art: '', ma_bo_phan_nhan: '', ghi_chu: '', vals: {} });
-  const vk = (poId, ct, s) => `${poId}|${ct}|${s}`; // khóa ô số lượng
+  const emptyX = () => ({ ngay: today(), so_phieu: '', art: '', ma_bo_phan_nhan: '', ghi_chu: '', vals: {}, doi: {},
+    kieu: U.store.get('xnb_kieu', 'chi_tiet') === 'doi' ? 'doi' : 'chi_tiet' });
+  const vk = (poId, ct, s) => `${poId}|${ct}|${s}`; // khóa ô số lượng (theo chi tiết)
+  const dk = (poId, s) => `${poId}|${s}`;          // khóa ô số đôi (theo đôi)
+  /** Số đôi còn giao được của 1 PO / size = nhỏ nhất (còn lại chi tiết ÷ miếng/đôi) */
+  const conDoi = (p, s) => {
+    const cs = p.chi_tiet.filter(c => c.phai[s]);
+    return cs.length ? Math.max(0, Math.min(...cs.map(c => Math.floor((c.con[s] || 0) / (c.he_so || 2))))) : 0;
+  };
 
   function xRender() {
     $('xnb-root').innerHTML = `
@@ -183,6 +190,17 @@
       if (X.editingId) p.set('tru_id', X.editingId);
       X.pos = (await api('/api/tochat/xuat/goiy?' + p)).data;
       if (!X.pos.length) toast(`ART ${X.f.art} chưa có PO nào`, 'info');
+      // Sửa phiếu "theo đôi": đổi số miếng đã lưu về số đôi (nhỏ nhất miếng ÷ miếng/đôi)
+      if (X.f.raw) {
+        if (X.f.kieu === 'doi') {
+          X.pos.forEach(p => p.sizes.forEach(s => {
+            const vs = p.chi_tiet.map(c => (X.f.vals[vk(p.id, c.ten, s)] || 0) / (c.he_so || 2));
+            const d = vs.length ? Math.floor(Math.min(...vs)) : 0;
+            if (d > 0) X.f.doi[dk(p.id, s)] = d;
+          }));
+        }
+        delete X.f.raw;
+      }
     } catch (err) { toast(err.message, 'error'); }
     xRenderRows();
   }
@@ -204,11 +222,15 @@
           <label class="ui-field"><span class="ui-label">ART <b class="ui-req">*</b></span><input type="text" class="ui-input ui-input-strong" id="xnb-art" list="xnb-dl-art" value="${esc(f.art)}" autocomplete="off" placeholder="gõ để tìm"></label>
           <label class="ui-field ui-span-2"><span class="ui-label">Ghi chú</span><input type="text" class="ui-input" data-h="ghi_chu" value="${esc(f.ghi_chu)}"></label>
         </div>
+        <div class="v3-days v3-mb"><span class="ui-label">Xuất theo</span>
+          <button type="button" class="ui-chip ${f.kieu === 'doi' ? 'active' : ''}" data-act="x-kieu" data-kieu="doi">Đôi</button>
+          <button type="button" class="ui-chip ${f.kieu === 'chi_tiet' ? 'active' : ''}" data-act="x-kieu" data-kieu="chi_tiet">Chi tiết (miếng)</button>
+          <span class="ui-hint">${f.kieu === 'doi' ? 'Nhập số đôi mỗi PO, phần mềm tự nhân ra số miếng từng chi tiết.' : 'Nhập số miếng từng chi tiết.'}</span></div>
         <datalist id="xnb-dl-art">${artsOf(khId()).map(a => `<option value="${esc(a)}"></option>`).join('')}</datalist>
         <div id="xnb-rows"></div>
       </section>
       <div class="ui-actionbar v3-actionbar">
-        <div class="v3-grand">Tổng xuất: <b id="xnb-grand">0</b> miếng</div><div class="ui-flex-fill"></div>
+        <div class="v3-grand">Tổng xuất: <b id="xnb-grand">0</b> ${f.kieu === 'doi' ? 'đôi' : 'miếng'}</div><div class="ui-flex-fill"></div>
         <button type="button" class="ui-btn ui-btn-ghost" data-act="x-new">Phiếu mới</button>
         <button type="button" class="ui-btn ui-btn-ghost" data-act="x-save" data-print="1">Lưu và in</button>
         <button type="button" class="ui-btn ui-btn-primary ui-btn-lg" data-act="x-save">💾 Lưu phiếu</button>
@@ -221,6 +243,22 @@
     if (!box) return;
     if (!X.f.art) { box.innerHTML = '<p class="v3-empty">Chọn ART để hiện các PO và chi tiết.</p>'; xTotals(); return; }
     if (!X.pos.length) { box.innerHTML = `<p class="v3-empty">ART <b>${esc(X.f.art)}</b> chưa có PO.</p>`; xTotals(); return; }
+    if (X.f.kieu === 'doi') {
+      const sizes = [...new Set(X.pos.flatMap(p => p.sizes))];
+      box.innerHTML = `<div class="v3-table-wrap v3-mb"><table class="v3-table v3-td-table">
+        <thead><tr><th>PO</th>${sizes.map(s => `<th class="c v3-sz"><i>${esc(s)}</i></th>`).join('')}<th class="r">Tổng đôi</th><th></th></tr></thead>
+        <tbody>${X.pos.map(p => !p.chi_tiet.length
+          ? `<tr><th>PO ${esc(p.po)}</th><td colspan="${sizes.length + 2}" class="v3-neg">ART chưa có bộ chi tiết (khai báo ở tab ✂️ Đơn hàng tổ chặt)</td></tr>`
+          : `<tr><th>PO ${esc(p.po)} <small class="ui-muted">${p.chi_tiet.length} chi tiết</small></th>
+            ${sizes.map(s => { const v = X.f.doi[dk(p.id, s)]; const con = conDoi(p, s);
+              return `<td class="c"><input type="text" inputmode="numeric" class="v3-cell xnb-d" data-k="${esc(dk(p.id, s))}" value="${esc(v ? fmt(v) : '')}"
+                placeholder="${con > 0 ? fmt(con) : ''}" ${p.dat[s] || v ? '' : 'disabled'}></td>`; }).join('')}
+            <td class="r"><b data-rt="${esc(p.id + '|doi')}"></b></td>
+            <td><button type="button" class="ui-btn-sm" data-act="x-fill" data-id="${p.id}">Điền hết còn lại</button></td></tr>`).join('')}</tbody></table></div>
+        <p class="ui-hint">Chữ mờ = số đôi còn giao được (nhỏ nhất của các chi tiết). Khi lưu, mỗi chi tiết = số đôi × miếng/đôi.</p>`;
+      xTotals();
+      return;
+    }
     box.innerHTML = X.pos.map(p => {
       if (!p.chi_tiet.length) return `<div class="v3-pad"><b>PO ${esc(p.po)}</b> – <span class="v3-neg">ART chưa có bộ chi tiết (khai báo ở tab ✂️ Đơn hàng tổ chặt)</span></div>`;
       return `<div class="v3-table-wrap v3-mb"><table class="v3-table v3-td-table">
@@ -237,6 +275,16 @@
 
   function xTotals() {
     let g = 0;
+    if (X.f.kieu === 'doi') {
+      X.pos.forEach(p => {
+        const t = p.sizes.reduce((a, s) => a + qty(X.f.doi[dk(p.id, s)]), 0);
+        g += t;
+        const el = document.querySelector(`#xnb-rows [data-rt="${CSS.escape(p.id + '|doi')}"]`);
+        if (el) el.textContent = t ? fmt0(t) : '';
+      });
+      const gr = $('xnb-grand'); if (gr) gr.textContent = fmt0(g);
+      return;
+    }
     X.pos.forEach(p => p.chi_tiet.forEach(c => {
       const t = p.sizes.reduce((a, s) => a + (qty(X.f.vals[vk(p.id, c.ten, s)])), 0);
       g += t;
@@ -251,20 +299,29 @@
     if (!f.ma_bo_phan_nhan) { toast('Chưa chọn tổ may nhận', 'error'); return; }
     const lines = [];
     const vuot = [];
-    X.pos.forEach(p => p.chi_tiet.forEach(c => p.sizes.forEach(s => {
-      const v = qty(f.vals[vk(p.id, c.ten, s)]);
-      if (!v) return;
-      lines.push({ po_id: p.id, chi_tiet: c.ten, size: s, so_luong: v });
-      if (v > Math.max(0, c.con[s] || 0)) vuot.push(`PO ${p.po} · ${c.ten} · size ${s}: xuất ${fmt0(v)}, còn ${fmt0(Math.max(0, c.con[s] || 0))}`);
-    })));
+    if (f.kieu === 'doi') {
+      X.pos.forEach(p => p.sizes.forEach(s => {
+        const d = qty(f.doi[dk(p.id, s)]);
+        if (!d || !p.chi_tiet.length) return;
+        p.chi_tiet.forEach(c => lines.push({ po_id: p.id, chi_tiet: c.ten, size: s, so_luong: Math.round(d * (c.he_so || 2)) }));
+        if (d > conDoi(p, s)) vuot.push(`PO ${p.po} · size ${s}: xuất ${fmt0(d)} đôi, còn ${fmt0(conDoi(p, s))} đôi`);
+      }));
+    } else {
+      X.pos.forEach(p => p.chi_tiet.forEach(c => p.sizes.forEach(s => {
+        const v = qty(f.vals[vk(p.id, c.ten, s)]);
+        if (!v) return;
+        lines.push({ po_id: p.id, chi_tiet: c.ten, size: s, so_luong: v });
+        if (v > Math.max(0, c.con[s] || 0)) vuot.push(`PO ${p.po} · ${c.ten} · size ${s}: xuất ${fmt0(v)}, còn ${fmt0(Math.max(0, c.con[s] || 0))}`);
+      })));
+    }
     if (!lines.length) { toast('Chưa nhập số lượng nào', 'error'); return; }
     if (vuot.length && !confirm(`Xuất vượt số còn lại:\n${vuot.slice(0, 8).join('\n')}${vuot.length > 8 ? `\n… và ${vuot.length - 8} ô khác` : ''}\n\nVẫn lưu?`)) return;
-    const body = { ngay: f.ngay, so_phieu: f.so_phieu, khach_hang_id: khId(), art: f.art, ma_bo_phan_nhan: f.ma_bo_phan_nhan, ghi_chu: f.ghi_chu, lines };
+    const body = { ngay: f.ngay, so_phieu: f.so_phieu, khach_hang_id: khId(), art: f.art, ma_bo_phan_nhan: f.ma_bo_phan_nhan, ghi_chu: f.ghi_chu, kieu: f.kieu, lines };
     try {
       const r = X.editingId ? await api(`/api/tochat/xuat/${X.editingId}`, 'PUT', body) : await api('/api/tochat/xuat', 'POST', body);
       toast(r.message, 'success');
       if (andPrint) await xPrint(r.id);
-      X.editingId = null; X.dirty = false; X.f = emptyX(); X.f.ma_bo_phan_nhan = f.ma_bo_phan_nhan; X.pos = [];
+      X.editingId = null; X.dirty = false; X.f = emptyX(); X.f.ma_bo_phan_nhan = f.ma_bo_phan_nhan; X.f.kieu = f.kieu; X.pos = [];
       xRenderForm(); xSoPhieu();
     } catch (err) { toast('Không lưu được: ' + err.message, 'error'); }
   }
@@ -275,7 +332,8 @@
       if (data.trang_thai === 'huy') { toast('Phiếu đã hủy, khôi phục trước khi sửa', 'info'); return; }
       if (window.KH && !window.KH.set(data.khach_hang_id)) return;
       X.editingId = data.id; X.dirty = false;
-      X.f = { ngay: data.ngay, so_phieu: data.so_phieu, art: data.art, ma_bo_phan_nhan: data.ma_bo_phan_nhan, ghi_chu: data.ghi_chu || '', vals: {} };
+      X.f = { ngay: data.ngay, so_phieu: data.so_phieu, art: data.art, ma_bo_phan_nhan: data.ma_bo_phan_nhan, ghi_chu: data.ghi_chu || '', vals: {}, doi: {},
+        kieu: data.kieu === 'doi' ? 'doi' : 'chi_tiet', raw: true };
       data.lines.forEach(l => { const k = vk(l.po_id, l.chi_tiet, normSize(l.size)); X.f.vals[k] = (X.f.vals[k] || 0) + l.so_luong; });
       X.sub = 'lap'; X.pos = [];
       xRender();
@@ -317,7 +375,7 @@
         <tbody>${data.map(r => `<tr class="${r.trang_thai === 'huy' ? 'v3-row-off' : ''}">
           <td class="nowrap">${viDate(r.ngay)}</td><td class="nowrap"><b>${esc(r.so_phieu)}</b>${r.trang_thai === 'huy' ? ' <span class="ui-badge ui-badge-off">Đã hủy</span>' : ''}</td>
           <td>${esc(bpTen(r.ma_bo_phan_nhan))}</td>${allKh ? `<td>${esc((C().byId(r.khach_hang_id) || {}).ten_ngan || '')}</td>` : ''}<td><b>${esc(r.art)}</b></td>
-          <td><small>${(r.dong || []).slice(0, 4).map(d => `${esc(d.po)} · ${esc(d.chi_tiet)} (${fmt0(d.sl)})`).join('<br>')}${(r.dong || []).length > 4 ? `<br>+ ${r.dong.length - 4} dòng` : ''}</small></td>
+          <td>${r.kieu === 'doi' ? '<span class="v3-chip">theo đôi</span><br>' : ''}<small>${(r.dong || []).slice(0, 4).map(d => `${esc(d.po)} · ${esc(d.chi_tiet)} (${fmt0(d.sl)})`).join('<br>')}${(r.dong || []).length > 4 ? `<br>+ ${r.dong.length - 4} dòng` : ''}</small></td>
           <td class="r"><b>${fmt0(r.tong_sl)}</b></td><td>${esc(r.nguoi)}</td>
           <td class="nowrap">${r.trang_thai === 'huy' ? `<button type="button" class="ui-btn-sm" data-act="x-mo" data-id="${r.id}">Khôi phục</button>`
             : `<button type="button" class="ui-btn-sm" data-act="x-edit" data-id="${r.id}">Xem / Sửa</button>
@@ -342,6 +400,20 @@
       if (!r) { r = { k, po: l.po, ct: l.chi_tiet, sz: {} }; rows.push(r); }
       r.sz[normSize(l.size)] = (r.sz[normSize(l.size)] || 0) + l.so_luong;
     });
+    // Phiếu theo đôi: in mỗi PO 1 dòng số đôi (nhỏ nhất miếng ÷ miếng/đôi của bộ chi tiết)
+    const bo = (C().bo || []).find(b => b.khach_hang_id === x.khach_hang_id && normKey(b.art) === normKey(x.art));
+    let theoDoi = x.kieu === 'doi' && bo && (bo.chi_tiet || []).length;
+    if (theoDoi) {
+      const heSo = Object.fromEntries(bo.chi_tiet.map(c => [normKey(c.ten), c.he_so || 2]));
+      const byPo = [];
+      rows.forEach(r => {
+        let g = byPo.find(z => z.po === r.po);
+        if (!g) { g = { k: r.po, po: r.po, ct: 'Đôi (đủ bộ)', parts: [] }; byPo.push(g); }
+        g.parts.push({ he: heSo[normKey(r.ct)] || 2, sz: r.sz });
+      });
+      byPo.forEach(g => { g.sz = {}; cols.forEach(s => { const v = Math.floor(Math.min(...g.parts.map(pt => (pt.sz[s] || 0) / pt.he))); if (v > 0) g.sz[s] = v; }); });
+      rows.length = 0; rows.push(...byPo);
+    }
     const n = v => (v ? new Intl.NumberFormat('vi-VN').format(v) : '');
     const tot = r => Object.values(r.sz).reduce((a, v) => a + v, 0);
     const d = x.ngay || '';
@@ -366,7 +438,7 @@
         <tr><td class="nb" colspan="3"></td>${cols.map(s => `<th class="sz">${esc(s)}</th>`).join('')}<td class="nb"></td></tr>
         <tr><th>STT</th><th>PO</th><th>Chi tiết</th>${cols.map(() => '<th></th>').join('')}<th>Tổng</th></tr>
         ${rows.map((r, i) => `<tr><td>${i + 1}</td><td class="l">${esc(r.po)}</td><td class="l">${esc(r.ct)}</td>${cols.map(s => `<td>${n(r.sz[s])}</td>`).join('')}<td><b>${n(tot(r))}</b></td></tr>`).join('')}
-        <tr class="tot"><td colspan="3">CỘNG</td>${cols.map(s => `<td>${n(rows.reduce((a, r) => a + (r.sz[s] || 0), 0))}</td>`).join('')}<td>${n(x.tong_sl)}</td></tr>
+        <tr class="tot"><td colspan="3">CỘNG${theoDoi ? ' (ĐÔI)' : ' (MIẾNG)'}</td>${cols.map(s => `<td>${n(rows.reduce((a, r) => a + (r.sz[s] || 0), 0))}</td>`).join('')}<td>${n(rows.reduce((a, r) => a + tot(r), 0))}</td></tr>
       </table>
       <div class="sign"><div><b>Người lập phiếu</b><i>(Ký, họ tên)</i><div class="nm">${esc(x.nguoi)}</div></div>
         <div><b>Người giao (tổ chặt)</b><i>(Ký, họ tên)</i></div><div><b>Người nhận (${esc(x.ten_bo_phan_nhan)})</b><i>(Ký, họ tên)</i></div></div>
@@ -388,8 +460,17 @@
       }
       if (act === 'x-fill') {
         const p = X.pos.find(z => z.id === id);
-        p.chi_tiet.forEach(c => p.sizes.forEach(s => { if ((c.con[s] || 0) > 0) X.f.vals[vk(p.id, c.ten, s)] = c.con[s]; }));
+        if (X.f.kieu === 'doi') p.sizes.forEach(s => { const d = conDoi(p, s); if (d > 0) X.f.doi[dk(p.id, s)] = d; });
+        else p.chi_tiet.forEach(c => p.sizes.forEach(s => { if ((c.con[s] || 0) > 0) X.f.vals[vk(p.id, c.ten, s)] = c.con[s]; }));
         X.dirty = true; xRenderRows();
+      }
+      if (act === 'x-kieu') {
+        const k = b.dataset.kieu;
+        if (k === X.f.kieu) return;
+        const co = Object.values(X.f.vals).some(qty) || Object.values(X.f.doi).some(qty);
+        if (co && !confirm('Đổi kiểu xuất sẽ xóa các số đang nhập. Tiếp tục?')) return;
+        X.f.kieu = k; X.f.vals = {}; X.f.doi = {}; U.store.set('xnb_kieu', k);
+        xRenderForm();
       }
       if (act === 'x-filter') xReadFilter();
       if (act === 'x-edit') xEdit(id);
@@ -412,6 +493,7 @@
     if (t.dataset.h) { X.f[t.dataset.h] = t.value; X.dirty = true; return; }
     if (t.id === 'xnb-art') { X.f.art = t.value; return; }
     if (t.classList.contains('xnb-q')) { X.f.vals[t.dataset.k] = t.value; X.dirty = true; xTotals(); }
+    if (t.classList.contains('xnb-d')) { X.f.doi[t.dataset.k] = t.value; X.dirty = true; xTotals(); }
   }
   function xChange(e) {
     const t = e.target;
@@ -424,7 +506,7 @@
       if (art === X.f.art && X.pos.length) return;
       X.f.art = art; t.value = art; X.f.vals = {}; xLoadPos();
     }
-    if (t.classList.contains('xnb-q')) { const n = qty(t.value); t.value = n ? fmt(n) : ''; }
+    if (t.classList.contains('xnb-q') || t.classList.contains('xnb-d')) { const n = qty(t.value); t.value = n ? fmt(n) : ''; }
   }
   function xKey(e) {
     if (e.isComposing || e.keyCode === 229) return;

@@ -24,6 +24,7 @@ const AppState = {
   khachHangId: null,       // Khách hàng đang chọn
   dayIdx: 0,               // Dãy size đang chọn của khách hàng
   defaultDvt: 'Đôi',       // ĐVT mặc định cho dòng mới
+  kieuXuat: 'chi_tiet',    // Khách có bộ chi tiết (JiaYu): 'doi' = xuất theo đôi · 'chi_tiet' = theo chi tiết (miếng) + dòng đồng bộ đôi
   lastAutoDonHang: '',     // Giá trị "Đơn hàng" do hệ thống tự ghép (để biết người dùng đã sửa tay chưa)
 };
 
@@ -46,6 +47,7 @@ function saveSlipDraft() {
       khachHangId: AppState.khachHangId,
       dayIdx: AppState.dayIdx,
       lastAutoDonHang: AppState.lastAutoDonHang,
+      kieuXuat: AppState.kieuXuat,
     };
     localStorage.setItem(draftKey(AppState.khachHangId), JSON.stringify(draft));
   } catch (err) {
@@ -84,6 +86,7 @@ function restoreSlipDraft(khId) {
       AppState.khachHangId = khId || null;
       AppState.dayIdx = draft.dayIdx || 0;
       AppState.lastAutoDonHang = draft.lastAutoDonHang || '';
+      AppState.kieuXuat = draft.kieuXuat === 'doi' ? 'doi' : 'chi_tiet';
       assignBlockKeys(AppState.rows);
 
       if (draft.donvi && document.getElementById('slip-donvi')) document.getElementById('slip-donvi').value = draft.donvi;
@@ -1809,6 +1812,8 @@ window.editSlip = async function(id) {
       }
     }
 
+    // Phiếu có dòng chi tiết / đồng bộ -> kiểu "theo chi tiết", ngược lại "theo đôi"
+    AppState.kieuXuat = slip.lines.some(l => l.loai === 'chi_tiet' || l.loai === 'dong_bo') ? 'chi_tiet' : 'doi';
     selectCustomer(slip.khach_hang_id || null, { fromLoad: true });
     switchMau(slip.mau_phieu);
     setDeptValue(slip.ma_bo_phan);
@@ -2023,7 +2028,8 @@ function setDeptValue(ma) {
 function selectCustomer(id, opts = {}) {
   AppState.khachHangId = id || null;
   const kh = currentCustomer();
-  AppState.defaultDvt = kh?.dvt || 'Đôi';
+  if (!opts.fromLoad) AppState.kieuXuat = 'chi_tiet';
+  AppState.defaultDvt = kieuDvt(kh);
 
   renderCustomerPills();
   applyDeptFilter();
@@ -2060,6 +2066,31 @@ function isRowEmpty(r) {
 /* ============================================================
    12. BỘ CHI TIẾT & DÒNG ĐỒNG BỘ ĐÔI (JIAYU)
    ============================================================ */
+/** ĐVT mặc định cho dòng mới: khách có bộ chi tiết xuất theo đôi -> Đôi, còn lại theo khách */
+function kieuDvt(kh) {
+  return kh?.co_bo_chi_tiet && AppState.kieuXuat === 'doi' ? 'Đôi' : (kh?.dvt || 'Đôi');
+}
+
+/** Khách có bộ chi tiết: chọn xuất theo đôi hay theo chi tiết (miếng) + dòng đồng bộ đôi */
+function setKieuXuat(kieu) {
+  if (kieu === AppState.kieuXuat) return;
+  const blocks = [...new Set(AppState.rows.filter(r => r.bo_key && (r.loai === 'chi_tiet' || r.loai === 'dong_bo')).map(r => r.bo_key))];
+  if (kieu === 'doi' && blocks.length) {
+    if (!confirm(`Phiếu đang có ${blocks.length} bộ chi tiết. Chuyển sang xuất theo đôi sẽ bỏ các dòng chi tiết đó. Tiếp tục?`)) return;
+    if (window.Grid) Grid.snapshot();
+    AppState.rows = AppState.rows.filter(r => !blocks.includes(r.bo_key));
+    if (!AppState.rows.length) AppState.rows.push(createEmptyRowData(1));
+  }
+  AppState.kieuXuat = kieu;
+  AppState.defaultDvt = kieuDvt(currentCustomer());
+  AppState.rows.forEach(r => { if (!r.loai && isRowEmpty(r)) r.dvt = AppState.defaultDvt; });
+  if (AppState.currentMau !== 3) switchMau(3); else renderTableBody();
+  calculateTotals();
+  renderBoPanel();
+  saveSlipDraft();
+  showToast(kieu === 'doi' ? 'Xuất theo đôi: mỗi dòng nhập số đôi' : 'Xuất theo chi tiết: bấm một bộ để thêm các dòng chi tiết (miếng) và dòng đồng bộ đôi', 'info');
+}
+
 function renderBoPanel() {
   const panel = document.getElementById('kh-bo-panel');
   const list = document.getElementById('kh-bo-list');
@@ -2067,6 +2098,25 @@ function renderBoPanel() {
   const kh = currentCustomer();
   if (!kh || !kh.co_bo_chi_tiet) { panel.classList.remove('show'); return; }
   panel.classList.add('show');
+  // Nút chọn kiểu xuất (tạo 1 lần, đặt đầu khung)
+  let seg = document.getElementById('kh-kieu-xuat');
+  if (!seg) {
+    seg = document.createElement('div');
+    seg.id = 'kh-kieu-xuat';
+    seg.className = 'pxk-kieu';
+    panel.insertBefore(seg, panel.firstChild);
+    seg.addEventListener('click', e => { const b = e.target.closest('[data-kieu]'); if (b) setKieuXuat(b.dataset.kieu); });
+  }
+  const doi = AppState.kieuXuat === 'doi';
+  seg.innerHTML = `<span class="pxk-kieu-lbl">Xuất theo</span>
+    <button type="button" class="pxk-day-pill ${doi ? 'active' : ''}" data-kieu="doi">Đôi</button>
+    <button type="button" class="pxk-day-pill ${doi ? '' : 'active'}" data-kieu="chi_tiet">Chi tiết (miếng) + đồng bộ đôi</button>`;
+  const text = panel.querySelector('.ui-bo-text');
+  if (text) text.innerHTML = doi
+    ? '<strong>Xuất theo đôi</strong><span>Mỗi dòng nhập PO · ART và số đôi từng size (ĐVT Đôi), không tách chi tiết.</span>'
+    : '<strong>Thêm bộ chi tiết</strong><span>Bấm một bộ để thêm các dòng chi tiết (miếng) và dòng đồng bộ đôi. Nhập số ở dòng đầu, các dòng còn lại tự chạy theo.</span>';
+  list.hidden = doi;
+  if (doi) return;
   const sets = window.Catalog.boOf(kh.id);
   list.innerHTML = sets.length
     ? sets.map(b => `<button type="button" class="pxk-bo-btn" data-bo="${b.id}" title="${escapeHtml((b.chi_tiet || []).map(c => c.ten).join(', '))}">+ ${escapeHtml(b.ten_bo)} <small>${(b.chi_tiet || []).length} chi tiết</small></button>`).join('')

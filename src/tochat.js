@@ -46,9 +46,12 @@ export function schemaFor(sqlite) {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_xnbd_phieu ON xuat_noi_bo_dong(phieu_id)`,
     `CREATE INDEX IF NOT EXISTS idx_xnbd_po ON xuat_noi_bo_dong(po_id)`,
+    // Kiểu nhập: 'doi' (nhập số đôi, tự nhân ra từng chi tiết) | 'chi_tiet' (nhập số miếng từng chi tiết)
+    sqlite ? `ALTER TABLE xuat_noi_bo ADD COLUMN kieu TEXT DEFAULT 'chi_tiet'`
+      : `ALTER TABLE xuat_noi_bo ADD COLUMN IF NOT EXISTS kieu TEXT DEFAULT 'chi_tiet'`,
   ];
 }
-const PROBE = 'SELECT c.id, x.id, d.id FROM chat_dinh_muc c, xuat_noi_bo x, xuat_noi_bo_dong d WHERE 1 = 0';
+const PROBE = 'SELECT c.id, x.id, x.kieu, d.id FROM chat_dinh_muc c, xuat_noi_bo x, xuat_noi_bo_dong d WHERE 1 = 0';
 const ensureToChatSchema = env => ensureTables(env, 'tochat_v1', PROBE, schemaFor(isSqlite(env)));
 
 const add = (m, k, v) => { if (v) m[k] = (m[k] || 0) + v; };
@@ -118,7 +121,7 @@ async function nextSoPhieu(env, ngay) {
 /** Làm sạch phiếu xuất nội bộ; trả { err } hoặc { h, lines } */
 async function readXuat(env, b) {
   const h = { ngay: str(b.ngay), khach_hang_id: int(b.khach_hang_id), art: str(b.art), ma_bo_phan_nhan: str(b.ma_bo_phan_nhan).toUpperCase(),
-    ghi_chu: str(b.ghi_chu), so_phieu: str(b.so_phieu) };
+    ghi_chu: str(b.ghi_chu), so_phieu: str(b.so_phieu), kieu: b.kieu === 'doi' ? 'doi' : 'chi_tiet' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(h.ngay)) return { err: 'Chưa chọn ngày' };
   if (!h.khach_hang_id) return { err: 'Chưa chọn khách hàng' };
   if (!h.art) return { err: 'Chưa chọn ART' };
@@ -246,8 +249,8 @@ export async function handleToChatApi(path, method, url, request, env, user) {
     if (r.err) return bad(r.err);
     let so = r.h.so_phieu || await nextSoPhieu(env, r.h.ngay);
     if (await env.DB.prepare('SELECT id FROM xuat_noi_bo WHERE so_phieu = ?').bind(so).first()) so = await nextSoPhieu(env, r.h.ngay);
-    const x = await env.DB.prepare(`INSERT INTO xuat_noi_bo (so_phieu, ngay, khach_hang_id, art, ma_bo_phan_nhan, nguoi, ghi_chu)
-      VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`).bind(so, r.h.ngay, r.h.khach_hang_id, r.h.art, r.h.ma_bo_phan_nhan, user?.ho_ten || '', r.h.ghi_chu).first();
+    const x = await env.DB.prepare(`INSERT INTO xuat_noi_bo (so_phieu, ngay, khach_hang_id, art, ma_bo_phan_nhan, nguoi, ghi_chu, kieu)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`).bind(so, r.h.ngay, r.h.khach_hang_id, r.h.art, r.h.ma_bo_phan_nhan, user?.ho_ten || '', r.h.ghi_chu, r.h.kieu).first();
     await saveXuatLines(env, x.id, r.lines);
     return ok({ id: x.id, so_phieu: so, message: `Đã lưu phiếu xuất nội bộ ${so}` });
   }
@@ -258,8 +261,8 @@ export async function handleToChatApi(path, method, url, request, env, user) {
     if (old.trang_thai === 'huy') return bad('Phiếu đã hủy, khôi phục trước khi sửa');
     const r = await readXuat(env, await request.json());
     if (r.err) return bad(r.err);
-    await env.DB.prepare('UPDATE xuat_noi_bo SET ngay = ?, khach_hang_id = ?, art = ?, ma_bo_phan_nhan = ?, ghi_chu = ? WHERE id = ?')
-      .bind(r.h.ngay, r.h.khach_hang_id, r.h.art, r.h.ma_bo_phan_nhan, r.h.ghi_chu, id).run();
+    await env.DB.prepare('UPDATE xuat_noi_bo SET ngay = ?, khach_hang_id = ?, art = ?, ma_bo_phan_nhan = ?, ghi_chu = ?, kieu = ? WHERE id = ?')
+      .bind(r.h.ngay, r.h.khach_hang_id, r.h.art, r.h.ma_bo_phan_nhan, r.h.ghi_chu, r.h.kieu, id).run();
     await saveXuatLines(env, id, r.lines);
     return ok({ id, so_phieu: old.so_phieu, message: `Đã lưu phiếu ${old.so_phieu}` });
   }

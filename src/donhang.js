@@ -235,8 +235,9 @@ export async function tienDo(env, o = {}) {
     if (dongBo.length) {
       dongBo.forEach(l => Object.entries(l.sz).forEach(([s, v]) => addTo(sizes, s, v)));
       cach = 'dong_bo';
-    } else if (kh?.co_bo_chi_tiet && g.lines.length > 1) {
+    } else if (kh?.co_bo_chi_tiet && g.lines.length > 1 && g.lines.some(l => /mi[eế]ng/i.test(l.dvt || ''))) {
       // Phiếu cũ ghi từng chi tiết của bộ: số đôi = nhỏ nhất của các chi tiết (Miếng ÷ 2)
+      // (phiếu "xuất theo đôi" ghi ĐVT Đôi -> cộng bình thường ở nhánh dưới)
       const all = new Set(g.lines.flatMap(l => Object.keys(l.sz)));
       all.forEach(s => {
         const v = Math.floor(Math.min(...g.lines.map(l => (l.sz[s] || 0) / (/mi[eế]ng/i.test(l.dvt || '') ? 2 : 1))));
