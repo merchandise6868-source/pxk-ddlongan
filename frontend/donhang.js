@@ -109,7 +109,7 @@
       lines: Array.from({ length: BLANK_ROWS }, emptyLine) };
     S.day = -1; S.sel.clear(); S.dirty = false; S.view = 'don';
     render();
-    document.querySelector('#dh-view .dd-cell')?.focus();
+    S.sheet?.focus(0, 0);
   }
   async function openDon(d) {
     if (window.KH && !window.KH.set(d.khach_hang_id)) return; // đang xem Tất cả -> thanh bên theo khách của đơn
@@ -170,9 +170,12 @@
           ${days.length > 1 ? `<span class="v3-days"><span class="ui-hint">Cột size:</span>${days.map((d, i) => `<button type="button" class="ui-chip ${i === S.day ? 'active' : ''}" data-act="day" data-day="${i}">${esc(d.ten)}</button>`).join('')}
             <button type="button" class="ui-chip ${S.day < 0 ? 'active' : ''}" data-act="day" data-day="-1">Tất cả size</button></span>` : ''}
         </div>
-        <p class="ui-hint">Copy trong Excel các cột <b>đúng thứ tự cột của bảng</b> (ART · PO · Màu · Đơn giá · các size), bấm vào ô bắt đầu rồi <b>Ctrl+V</b>. Ô ART để trống = cùng ART dòng trên. Enter / mũi tên lên xuống để đi dòng.</p>
-        <div class="v3-table-wrap dd-wrap" id="dd-grid"></div>
+        <p class="sheet-help">Dùng như Excel: bấm ô rồi gõ · mũi tên / <kbd>Tab</kbd> / <kbd>Enter</kbd> đi ô · kéo chuột chọn vùng ·
+          <kbd>Ctrl+C</kbd> <kbd>Ctrl+V</kbd> copy / dán (dán khối từ Excel theo <b>đúng thứ tự cột</b>: ART · PO · Màu · Đơn giá · các size) ·
+          <kbd>Delete</kbd> xóa · <kbd>Ctrl+D</kbd> điền xuống · <kbd>Ctrl+Z</kbd> hoàn tác · <kbd>F2</kbd> sửa trong ô · chuột phải chèn / xóa dòng. Ô ART trống = cùng ART dòng trên.</p>
+        <div class="sheet-wrap" id="dd-grid"></div>
         <div class="v3-actions"><button type="button" class="ui-btn ui-btn-ghost" data-act="add-rows">＋ Thêm 5 dòng</button>
+          <button type="button" class="ui-btn ui-btn-ghost" data-act="del-rows">Xóa dòng đang chọn</button>
           <span class="ui-hint" id="dd-sel-note"></span><div class="ui-flex-fill"></div>
           ${D.isNew ? '' : '<button type="button" class="ui-btn ui-btn-ghost" data-act="tha" id="dd-tha" disabled>🧵 Thả chuyền PO đã chọn</button>'}</div>
         <div id="dd-sum" class="dd-sum"></div>
@@ -186,28 +189,29 @@
     renderGrid();
   }
 
+  /** Bảng nhập kiểu Excel (sheet.js): cột ART · PO · Màu · Đơn giá · size; bên phải Tổng (+ Đã thả · Đã xuất · Còn lại · Thả khi đơn đã lưu) */
   function renderGrid() {
     const D = S.don;
-    const cols = columns();
-    S.cols = cols; // cột cố định theo lần vẽ (gõ xóa số không làm lệch chỉ số cột)
-    const arts = effArts();
     const saved = !D.isNew;
-    $('dd-grid').innerHTML = `<table class="v3-table dd-grid">
-      <thead><tr><th class="c">#</th>${saved ? '<th class="c">Thả</th>' : ''}
-        ${cols.map(c => `<th class="${c.k === 'sz' ? 'c v3-sz' : ''} dd-h-${c.k}">${esc(c.t)}</th>`).join('')}
-        <th class="r">Tổng</th>${saved ? '<th class="r">Đã thả</th><th class="r">Đã xuất</th><th class="r">Còn lại</th>' : ''}<th></th></tr></thead>
-      <tbody>${D.lines.map((l, r) => {
-        const locked = l.info && l.info.tong_tha > 0;
-        return `<tr data-r="${r}">
-          <td class="c ui-muted">${r + 1}</td>
-          ${saved ? `<td class="c">${l.id ? `<input type="checkbox" class="dd-sel" ${S.sel.has(l.id) ? 'checked' : ''} aria-label="Chọn PO ${esc(l.po)}">` : ''}</td>` : ''}
-          ${cols.map((c, ci) => `<td class="dd-td-${c.k}"><input class="dd-cell${c.num ? ' dd-num' : ''}" data-r="${r}" data-c="${ci}" ${c.num ? 'inputmode="numeric"' : ''}
-            value="${esc(cellVal(l, c))}" ${c.k === 'art' && !String(l.art).trim() && arts[r] ? `placeholder="${esc(arts[r])}"` : ''} autocomplete="off"></td>`).join('')}
-          <td class="r"><b data-tot="${r}">${fmt(rowTotal(l))}</b></td>
-          ${saved ? (l.info ? `<td class="r">${fmt(l.info.tong_tha)}</td><td class="r">${fmt(l.info.tong_xuat + l.info.tong_dc)}</td>
-            <td class="r ${l.info.con_phai_giao ? '' : 'v3-ok'}">${l.info.tong_dat ? (l.info.con_phai_giao ? fmt0(l.info.con_phai_giao) : '✓') : ''}</td>` : '<td></td><td></td><td></td>') : ''}
-          <td class="c"><button type="button" class="ui-btn-sm dd-del" data-act="del-row" data-r="${r}" ${locked ? 'disabled title="PO đã thả chuyền, không bỏ được"' : 'title="Bỏ dòng này"'}>🗑</button></td></tr>`;
-      }).join('')}</tbody></table>`;
+    const cols = columns().map(c => ({ key: c.k === 'sz' ? 'sz:' + c.s : c.k, title: c.t, num: !!c.num,
+      width: c.k === 'art' ? 130 : c.k === 'po' ? 120 : c.k === 'mau' ? 96 : c.k === 'don_gia' ? 84 : 56 }));
+    S.sheet = window.Sheet.create($('dd-grid'), {
+      cols, rows: D.lines, newRow: emptyLine,
+      get: (l, key) => (key.startsWith('sz:') ? cellVal(l, { k: 'sz', s: key.slice(3) }) : cellVal(l, { k: key })),
+      set: (l, key, v) => {
+        if (key.startsWith('sz:')) { const s = key.slice(3); if (qtyNum(v)) l.sizes[s] = v; else delete l.sizes[s]; }
+        else l[key] = v;
+      },
+      placeholder: (l, key, r) => { if (key !== 'art' || String(l.art).trim()) return ''; return effArts()[r] || ''; },
+      canDelete: l => (l.info && l.info.tong_tha > 0 ? `PO ${l.po} đã thả chuyền, không bỏ khỏi đơn được` : true),
+      extraHead: () => `<th class="sheet-num">Tổng</th>${saved ? '<th class="sheet-num">Đã thả</th><th class="sheet-num">Đã xuất</th><th class="sheet-num">Còn lại</th><th class="sheet-num">Thả</th>' : ''}`,
+      extraCells: l => `<td class="sheet-x"><b>${fmt(rowTotal(l))}</b></td>${saved ? (l.info
+        ? `<td class="sheet-x">${fmt(l.info.tong_tha)}</td><td class="sheet-x">${fmt(l.info.tong_xuat + l.info.tong_dc)}</td>
+           <td class="sheet-x ${l.info.con_phai_giao ? '' : 'v3-ok'}">${l.info.tong_dat ? (l.info.con_phai_giao ? fmt0(l.info.con_phai_giao) : '✓') : ''}</td>`
+        : '<td class="sheet-x"></td><td class="sheet-x"></td><td class="sheet-x"></td>')
+        + `<td class="sheet-x c">${l.id ? `<input type="checkbox" class="dd-sel" ${S.sel.has(l.id) ? 'checked' : ''} aria-label="Chọn PO ${esc(l.po)} để thả chuyền">` : ''}</td>` : ''}`,
+      onChange: () => { S.dirty = true; renderSum(); },
+    });
     renderSum();
     renderSelNote();
   }
@@ -240,45 +244,11 @@
     if (note) note.innerHTML = rows.length ? (arts.size === 1 ? `Đã chọn ${rows.length} PO · ART <b>${esc(rows[0].art)}</b>` : '<span class="v3-neg">Chỉ thả chuyền được các PO cùng 1 ART</span>') : '';
   }
 
-  /** Dán khối từ Excel bắt đầu tại ô (r, c) */
-  function pasteBlock(r0, c0, text) {
-    const cols = S.cols || columns();
-    let rows = String(text).replace(/\r/g, '').split('\n');
-    if (rows.length && rows[rows.length - 1] === '') rows.pop();
-    rows = rows.map(l => l.split('\t'));
-    // Bỏ dòng tiêu đề (có chữ PO / ART / Mã hàng)
-    rows = rows.filter(cells => !cells.some(x => /^(po|art|m[aã] h[aà]ng|size)$/i.test(String(x).trim())));
-    if (!rows.length) return;
-    const D = S.don;
-    rows.forEach((cells, i) => {
-      const r = r0 + i;
-      while (D.lines.length <= r) D.lines.push(emptyLine());
-      const l = D.lines[r];
-      cells.forEach((v, j) => {
-        const c = cols[c0 + j];
-        if (!c) return;
-        v = String(v ?? '').trim();
-        if (c.k === 'sz') { const n = qtyNum(v); if (n) l.sizes[c.s] = n; else delete l.sizes[c.s]; }
-        else if (c.k === 'don_gia') l.don_gia = priceNum(v) || '';
-        else l[c.k] = v;
-      });
-    });
-    if (D.lines.length < r0 + rows.length + 2) D.lines.push(emptyLine(), emptyLine());
-    S.dirty = true;
-    renderGrid();
-    toast(`Đã dán ${rows.length} dòng`, 'success');
-    focusCell(r0 + rows.length - 1, c0);
-  }
-
-  function focusCell(r, c) {
-    const el = document.querySelector(`#dd-grid .dd-cell[data-r="${r}"][data-c="${c}"]`);
-    if (el) { el.focus(); if (el.select) el.select(); }
-  }
 
   function saveDon() { return once('dh-save', saveDonCore); }
   async function saveDonCore() {
     const D = S.don;
-    document.querySelectorAll('#dd-grid tr.dd-err').forEach(tr => { tr.classList.remove('dd-err'); tr.removeAttribute('title'); });
+    S.sheet?.markErrors({});
     const body = {
       khach_hang_id: D.khach_hang_id, so_don: D.so_don, ngay_giao: D.ngay_giao, ghi_chu: D.ghi_chu,
       lines: D.lines.map(l => ({ id: l.id, art: l.art, po: l.po, mau: l.mau, don_gia: priceNum(l.don_gia),
@@ -292,11 +262,9 @@
       if (window.Catalog) { await window.Catalog.load(); window.dispatchEvent(new Event('catalog-changed')); }
     } catch (err) {
       // Tô đỏ các dòng lỗi "Dòng n: ..."
-      err.message.split('\n').forEach(m => {
-        const n = (m.match(/^Dòng (\d+)/) || [])[1];
-        const tr = n && document.querySelector(`#dd-grid tr[data-r="${n - 1}"]`);
-        if (tr) { tr.classList.add('dd-err'); tr.title = m; }
-      });
+      const loi = {};
+      err.message.split('\n').forEach(m => { const n = (m.match(/^Dòng (\d+)/) || [])[1]; if (n) loi[n - 1] = m; });
+      S.sheet?.markErrors(loi);
       toast('Chưa lưu được:\n' + err.message, 'error');
     }
   }
@@ -311,16 +279,7 @@
   function onInput(e) {
     const t = e.target;
     if (!S.don) return;
-    if (t.dataset.h) { S.don[t.dataset.h] = t.value; S.dirty = true; return; }
-    if (!t.classList.contains('dd-cell')) return;
-    const r = +t.dataset.r, c = (S.cols || columns())[+t.dataset.c];
-    const l = S.don.lines[r];
-    if (!l || !c) return;
-    if (c.k === 'sz') l.sizes[c.s] = t.value; else l[c.k] = t.value;
-    S.dirty = true;
-    t.closest('tr')?.classList.remove('dd-err');
-    const tot = document.querySelector(`#dd-grid [data-tot="${r}"]`); if (tot) tot.textContent = fmt(rowTotal(l));
-    renderSum();
+    if (t.dataset.h) { S.don[t.dataset.h] = t.value; S.dirty = true; }
   }
   function onChange(e) {
     const t = e.target;
@@ -330,44 +289,11 @@
       if (t.checked) S.sel.add(l.id); else S.sel.delete(l.id);
       renderSelNote(); return;
     }
-    if (t.classList.contains('dd-num')) {
-      const isGia = (S.cols || columns())[+t.dataset.c]?.k === 'don_gia';
-      const n = isGia ? priceNum(t.value) : qtyNum(t.value); t.value = n ? fmt(n) : '';
-    }
-    if (t.classList.contains('dd-cell') && (S.cols || columns())[+t.dataset.c]?.k === 'art') {
-      // ART đổi -> cập nhật chữ mờ "cùng ART dòng trên" của các dòng dưới
-      const arts = effArts();
-      document.querySelectorAll('#dd-grid .dd-cell[data-c="0"]').forEach(el => {
-        const r = +el.dataset.r;
-        el.placeholder = !String(S.don.lines[r].art).trim() && arts[r] ? arts[r] : '';
-      });
-      renderSum();
-    }
   }
   function onKeydown(e) {
     if (e.isComposing || e.keyCode === 229) return;
     const t = e.target;
-    if (t.id === 'dh-f-q' && e.key === 'Enter') { S.q = t.value.trim(); loadList(); return; }
-    if (!t.classList.contains('dd-cell')) return;
-    const r = +t.dataset.r, c = +t.dataset.c;
-    if (e.key === 'Enter' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      t.dispatchEvent(new Event('change', { bubbles: true }));
-      if (r + 1 >= S.don.lines.length) { S.don.lines.push(emptyLine()); renderGrid(); }
-      focusCell(r + 1, c);
-    } else if (e.key === 'ArrowUp' && r > 0) {
-      e.preventDefault();
-      t.dispatchEvent(new Event('change', { bubbles: true }));
-      focusCell(r - 1, c);
-    }
-  }
-  function onPaste(e) {
-    const t = e.target;
-    if (!t.classList || !t.classList.contains('dd-cell')) return;
-    const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
-    if (!/[\t\n]/.test(text.replace(/\r?\n$/, ''))) return; // 1 ô: dán bình thường
-    e.preventDefault();
-    pasteBlock(+t.dataset.r, +t.dataset.c, text);
+    if (t.id === 'dh-f-q' && e.key === 'Enter') { S.q = t.value.trim(); loadList(); }
   }
   async function onClick(e) {
     const b = e.target.closest('[data-act]');
@@ -383,16 +309,8 @@
     }
     if (act === 'close') closeDon();
     if (act === 'save') saveDon();
-    if (act === 'add-rows') { for (let i = 0; i < 5; i++) S.don.lines.push(emptyLine()); renderGrid(); }
-    if (act === 'del-row') {
-      const r = +b.dataset.r;
-      const l = S.don.lines[r];
-      if (l.id && !confirm(`Bỏ PO ${l.po} khỏi đơn? (Bấm Lưu đơn mới xóa hẳn)`)) return;
-      S.don.lines.splice(r, 1);
-      if (l.id) S.sel.delete(l.id);
-      if (!S.don.lines.length) S.don.lines.push(emptyLine());
-      S.dirty = true; renderGrid();
-    }
+    if (act === 'add-rows') S.sheet?.addRows(5);
+    if (act === 'del-rows') S.sheet?.deleteRows();
     if (act === 'day') { S.day = parseInt(b.dataset.day, 10); renderDon(); }
     if (act === 'tha') {
       if (S.dirty) { toast('Lưu đơn trước khi thả chuyền', 'error'); return; }
@@ -415,7 +333,6 @@
       root.addEventListener('input', onInput);
       root.addEventListener('change', onChange);
       root.addEventListener('keydown', onKeydown);
-      root.addEventListener('paste', onPaste);
       render();
     } else if (S.view === 'list') loadList();
   }

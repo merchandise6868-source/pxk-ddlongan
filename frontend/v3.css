@@ -174,6 +174,37 @@ html.auth-pending .main-container { visibility: hidden; }
 .v3-tab .dd-del { height: 32px; padding: 0 8px; }
 .v3-tab .dd-sum { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 
+/* Bảng tính kiểu Excel (sheet.js) */
+.v3-tab .sheet-wrap { scroll-padding: 34px 0 0 46px; overflow: auto; max-height: 560px; margin-top: 8px; border: 1px solid #c6cfcc; border-radius: 6px; background: #fff; }
+.sheet { border-collapse: separate; border-spacing: 0; font-size: 14px; font-family: inherit; user-select: none; }
+.sheet th, .sheet td { border-right: 1px solid #dde3e1; border-bottom: 1px solid #dde3e1; padding: 0; height: 32px; background: #fff; }
+.sheet thead th { position: sticky; top: 0; z-index: 3; background: #f1f4f3; color: #34423f; font-weight: 700; font-size: 13px; padding: 0 8px; text-align: left; white-space: nowrap; border-bottom: 1px solid #c6cfcc; }
+.sheet thead th.sheet-num { text-align: center; }
+.sheet thead th.on { background: #d7ebe4; color: #0e5a4a; }
+.sheet .sheet-corner { left: 0; z-index: 4; min-width: 44px; cursor: pointer; }
+.sheet .sheet-rh { position: sticky; left: 0; z-index: 2; background: #f1f4f3; color: #6b7875; font-weight: 600; font-size: 12.5px; text-align: center; min-width: 44px; cursor: pointer; border-right: 1px solid #c6cfcc; }
+.sheet .sheet-rh.on { background: #d7ebe4; color: #0e5a4a; }
+.sheet .sheet-td { position: relative; }
+.sheet .sheet-in { display: block; width: 100%; height: 31px; padding: 0 8px; border: 0; outline: none; background: transparent; font: inherit; font-size: 14.5px; color: #1c2a28; cursor: cell; user-select: text; }
+.sheet .sheet-num .sheet-in { text-align: center; font-weight: 600; }
+.sheet .sheet-in::placeholder { color: #a3aeab; font-style: italic; }
+.sheet td.sheet-sel { background: #e3f1ec; }
+.sheet td.sheet-act { box-shadow: inset 0 0 0 2px #0e7a5f; z-index: 1; }
+.sheet td.sheet-act .sheet-in { cursor: text; }
+.sheet tr.sheet-err td, .sheet tr.sheet-err th.sheet-rh { background: #fdecea !important; }
+.sheet td.sheet-x { padding: 0 8px; text-align: right; white-space: nowrap; color: #34423f; background: #fafbfb; }
+.sheet td.sheet-x.c { text-align: center; }
+.sheet td.sheet-x input[type=checkbox] { width: 18px; height: 18px; accent-color: #0e5a4a; vertical-align: middle; }
+.sheet-menu { position: fixed; z-index: 1000; min-width: 220px; padding: 6px; background: #fff; border: 1px solid #c6cfcc; border-radius: 8px; box-shadow: 0 10px 30px rgba(16, 40, 34, .2); display: flex; flex-direction: column; }
+.sheet-menu[hidden] { display: none; }
+.sheet-menu button { display: flex; justify-content: space-between; gap: 16px; padding: 8px 10px; border: 0; background: none; text-align: left; font: inherit; font-size: 14px; color: #1c2a28; cursor: pointer; border-radius: 5px; }
+.sheet-menu button:hover { background: #e3f1ec; }
+.sheet-menu button.danger { color: #b42318; }
+.sheet-menu kbd { font-family: inherit; font-size: 12px; color: #8a9794; }
+.sheet-menu hr { border: 0; border-top: 1px solid #e3e8e6; margin: 4px 0; }
+.v3-tab .sheet-help { font-size: 13px; color: var(--ui-muted); }
+.v3-tab .sheet-help kbd { font-family: inherit; font-size: 12px; padding: 1px 5px; border: 1px solid var(--ui-line-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--ui-paper); }
+
 /* Chỉ lệnh */
 .v3-tab .v3-cl-table td { border-bottom: 0; }
 .v3-tab .v3-cl-info td { padding-top: 10px; padding-bottom: 2px; border-top: 1px solid var(--ui-line); color: var(--ui-muted); }

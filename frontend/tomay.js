@@ -56,15 +56,15 @@
     const pane = $('tmk-pane');
     if (!khId()) { pane.innerHTML = '<section class="ui-panel"><p class="v3-need-kh">Chọn <b>1 khách hàng</b> ở thanh bên trái để nhập số giao kho.</p></section>'; return; }
     if (!S.rows.length) S.rows = newRows();
-    const orders = C().po.filter(p => p.khach_hang_id === khId() && String(p.po || '').trim() && String(p.art || '').trim());
     pane.innerHTML = `
       ${S.editId ? `<div class="ui-return-note v3-editing"><span>Đang sửa một lần nhập đã lưu</span><button type="button" class="ui-btn ui-btn-ghost" data-act="new">Hủy sửa, nhập mới</button></div>` : ''}
       <section class="ui-panel v3-form">
-        <p class="ui-hint">Copy trong Excel các cột <b>ART · PO · các size</b> theo đúng thứ tự cột của bảng, bấm vào ô bắt đầu rồi <b>Ctrl+V</b>. Ô ART trống = cùng ART dòng trên.</p>
-        <div class="v3-table-wrap dd-wrap" id="tmk-grid"></div>
-        <datalist id="tmk-dl-art">${[...new Set(orders.map(o => o.art.trim()))].map(a => `<option value="${esc(a)}"></option>`).join('')}</datalist>
-        <datalist id="tmk-dl-po">${orders.map(o => `<option value="${esc(o.po)}">${esc(o.art)}</option>`).join('')}</datalist>
-        <div class="v3-actions"><button type="button" class="ui-btn ui-btn-ghost" data-act="add-rows">＋ Thêm 5 dòng</button><div class="ui-flex-fill"></div>
+        <p class="sheet-help">Dùng như Excel: bấm ô rồi gõ · mũi tên / <kbd>Tab</kbd> / <kbd>Enter</kbd> đi ô · kéo chuột chọn vùng ·
+          <kbd>Ctrl+C</kbd> <kbd>Ctrl+V</kbd> (dán khối từ Excel theo đúng thứ tự cột: ART · PO · các size) · <kbd>Delete</kbd> xóa ·
+          <kbd>Ctrl+D</kbd> điền xuống · <kbd>Ctrl+Z</kbd> hoàn tác · chuột phải chèn / xóa dòng. Ô ART trống = cùng ART dòng trên; gõ PO có trong đơn hàng thì ART tự điền.</p>
+        <div class="sheet-wrap" id="tmk-grid"></div>
+        <div class="v3-actions"><button type="button" class="ui-btn ui-btn-ghost" data-act="add-rows">＋ Thêm 5 dòng</button>
+          <button type="button" class="ui-btn ui-btn-ghost" data-act="del-rows">Xóa dòng đang chọn</button><div class="ui-flex-fill"></div>
           <span class="v3-grand">Tổng: <b id="tmk-grand">0</b> đôi</span>
           <button type="button" class="ui-btn ui-btn-primary ui-btn-lg" data-act="save">💾 Lưu số giao kho</button></div>
       </section>
@@ -73,45 +73,33 @@
     loadList();
   }
 
+  /** Bảng nhập kiểu Excel (sheet.js): ART · PO · size; bên phải cột Tổng */
   function renderGrid() {
-    const C2 = COLS();
-    S.cols = C2; // cột cố định theo lần vẽ
-    const arts = effArts();
-    $('tmk-grid').innerHTML = `<table class="v3-table dd-grid">
-      <thead><tr><th class="c">#</th>${C2.map(c => `<th class="${c.k === 'sz' ? 'c v3-sz' : ''}">${c.k === 'sz' ? `<i>${esc(c.t)}</i>` : esc(c.t)}</th>`).join('')}<th class="r">Tổng</th><th></th></tr></thead>
-      <tbody>${S.rows.map((r, i) => `<tr data-r="${i}"><td class="c ui-muted">${i + 1}</td>
-        ${C2.map((c, ci) => `<td class="dd-td-${c.k}"><input class="dd-cell${c.k === 'sz' ? ' dd-num' : ''}" data-r="${i}" data-c="${ci}" autocomplete="off"
-          ${c.k === 'sz' ? 'inputmode="numeric"' : `list="tmk-dl-${c.k}"`}
-          value="${esc(c.k === 'sz' ? (qty(r.sizes[c.s]) ? fmt(qty(r.sizes[c.s])) : '') : r[c.k])}"
-          ${c.k === 'art' && !String(r.art).trim() && arts[i] ? `placeholder="${esc(arts[i])}"` : ''}></td>`).join('')}
-        <td class="r"><b data-tot="${i}">${fmt(rowTot(r))}</b></td>
-        <td class="c"><button type="button" class="ui-btn-sm dd-del" data-act="del-row" data-r="${i}" title="Bỏ dòng này">🗑</button></td></tr>`).join('')}</tbody></table>`;
+    const cols = COLS().map(c => ({ key: c.k === 'sz' ? 'sz:' + c.s : c.k, title: c.t, num: c.k === 'sz', width: c.k === 'art' ? 130 : c.k === 'po' ? 120 : 56 }));
+    S.sheet = window.Sheet.create($('tmk-grid'), {
+      cols, rows: S.rows, newRow: emptyRow,
+      get: (r, key) => { if (key.startsWith('sz:')) { const n = qty(r.sizes[key.slice(3)]); return n ? fmt(n) : ''; } return r[key] || ''; },
+      set: (r, key, v) => { if (key.startsWith('sz:')) { const s = key.slice(3); if (qty(v)) r.sizes[s] = v; else delete r.sizes[s]; } else r[key] = v; },
+      placeholder: (r, key, i) => (key === 'art' && !String(r.art).trim() ? effArts()[i] || '' : ''),
+      extraHead: () => '<th class="sheet-num">Tổng</th>',
+      extraCells: r => `<td class="sheet-x"><b>${fmt(rowTot(r))}</b></td>`,
+      onChange: i => {
+        S.dirty = true;
+        // Gõ PO có trong đơn hàng -> tự điền ART nếu ô ART trống
+        const r = i !== null && i !== undefined ? S.rows[i] : null;
+        if (r && String(r.po).trim() && !String(r.art).trim()) {
+          const hit = C().po.find(p => p.khach_hang_id === khId() && normKey(p.po) === normKey(r.po));
+          if (hit && normKey(effArts()[i]) !== normKey(hit.art)) {
+            r.art = hit.art;
+            const a = document.querySelector(`#tmk-grid .sheet-in[data-r="${i}"][data-c="0"]`); if (a) a.value = hit.art;
+          }
+        }
+        grand();
+      },
+    });
     grand();
   }
   function grand() { const g = $('tmk-grand'); if (g) g.textContent = fmt0(S.rows.reduce((a, r) => a + rowTot(r), 0)); }
-  function focusCell(r, c) { const el = document.querySelector(`#tmk-grid .dd-cell[data-r="${r}"][data-c="${c}"]`); if (el) { el.focus(); el.select?.(); } }
-
-  function pasteBlock(r0, c0, text) {
-    const C2 = S.cols || COLS();
-    let rows = String(text).replace(/\r/g, '').split('\n');
-    if (rows.length && rows[rows.length - 1] === '') rows.pop();
-    rows = rows.map(l => l.split('\t')).filter(cells => !cells.some(x => /^(po|art|m[aã] h[aà]ng|size)$/i.test(String(x).trim())));
-    if (!rows.length) return;
-    rows.forEach((cells, i) => {
-      while (S.rows.length <= r0 + i) S.rows.push(emptyRow());
-      const r = S.rows[r0 + i];
-      cells.forEach((v, j) => {
-        const c = C2[c0 + j];
-        if (!c) return;
-        v = String(v ?? '').trim();
-        if (c.k === 'sz') { const n = qty(v); if (n) r.sizes[c.s] = n; else delete r.sizes[c.s]; } else r[c.k] = v;
-      });
-    });
-    S.rows.push(emptyRow(), emptyRow());
-    S.dirty = true;
-    renderGrid();
-    toast(`Đã dán ${rows.length} dòng`, 'success');
-  }
 
   async function loadList() {
     const to = S.coDinh || S.to;
@@ -142,7 +130,7 @@
   async function saveCore() {
     const to = S.coDinh || S.to;
     if (!to) { toast('Chọn tổ may trước', 'error'); return; }
-    document.querySelectorAll('#tmk-grid tr.dd-err').forEach(tr => tr.classList.remove('dd-err'));
+    S.sheet?.markErrors({});
     const body = { ngay: S.ngay, ma_bo_phan: to, khach_hang_id: khId(),
       lines: S.rows.map(r => ({ art: r.art, po: r.po, sizes: Object.entries(r.sizes).filter(([, v]) => qty(v)).map(([size, v]) => ({ size, so_luong: qty(v) })) })) };
     try {
@@ -151,7 +139,9 @@
       S.editId = null; S.dirty = false; S.rows = newRows();
       renderNhap();
     } catch (err) {
-      err.message.split('\n').forEach(m => { const n = (m.match(/^Dòng (\d+)/) || [])[1]; const tr = n && document.querySelector(`#tmk-grid tr[data-r="${n - 1}"]`); if (tr) tr.classList.add('dd-err'); });
+      const loi = {};
+      err.message.split('\n').forEach(m => { const n = (m.match(/^Dòng (\d+)/) || [])[1]; if (n) loi[n - 1] = m; });
+      S.sheet?.markErrors(loi);
       toast('Chưa lưu được:\n' + err.message, 'error');
     }
   }
@@ -213,51 +203,10 @@
   }
 
   /* ---------------- SỰ KIỆN ---------------- */
-  function onInput(e) {
-    const t = e.target;
-    if (!t.classList.contains('dd-cell')) return;
-    const r = S.rows[+t.dataset.r], c = (S.cols || COLS())[+t.dataset.c];
-    if (!r || !c) return;
-    if (c.k === 'sz') r.sizes[c.s] = t.value; else r[c.k] = t.value;
-    S.dirty = true;
-    t.closest('tr')?.classList.remove('dd-err');
-    const tot = document.querySelector(`#tmk-grid [data-tot="${t.dataset.r}"]`); if (tot) tot.textContent = fmt(rowTot(r));
-    grand();
-  }
   function onChange(e) {
     const t = e.target;
     if (t.id === 'tmk-ngay') { S.ngay = t.value || today(); if (S.sub === 'nhap') { const h = document.querySelector('#tmk-pane .ui-panel-title'); if (h) h.textContent = `Đã nhập ngày ${viDate(S.ngay)}`; loadList(); } else loadDc(); return; }
     if (t.id === 'tmk-to') { S.to = t.value; if (S.sub === 'nhap') loadList(); else loadDc(); return; }
-    if (t.classList.contains('dd-num')) { const n = qty(t.value); t.value = n ? fmt(n) : ''; }
-    if (t.classList.contains('dd-cell') && (S.cols || COLS())[+t.dataset.c]?.k === 'po') {
-      // Gõ PO có trong đơn hàng -> tự điền ART nếu ô ART trống
-      const r = S.rows[+t.dataset.r];
-      const hit = C().po.find(p => p.khach_hang_id === khId() && normKey(p.po) === normKey(t.value));
-      if (hit && !String(r.art).trim() && normKey(effArts()[+t.dataset.r]) !== normKey(hit.art)) {
-        r.art = hit.art;
-        const a = document.querySelector(`#tmk-grid .dd-cell[data-r="${t.dataset.r}"][data-c="0"]`); if (a) a.value = hit.art;
-      }
-    }
-  }
-  function onKeydown(e) {
-    if (e.isComposing || e.keyCode === 229) return;
-    const t = e.target;
-    if (!t.classList.contains('dd-cell')) return;
-    const r = +t.dataset.r, c = +t.dataset.c;
-    if (e.key === 'Enter' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      t.dispatchEvent(new Event('change', { bubbles: true }));
-      if (r + 1 >= S.rows.length) { S.rows.push(emptyRow()); renderGrid(); }
-      focusCell(r + 1, c);
-    } else if (e.key === 'ArrowUp' && r > 0) { e.preventDefault(); t.dispatchEvent(new Event('change', { bubbles: true })); focusCell(r - 1, c); }
-  }
-  function onPaste(e) {
-    const t = e.target;
-    if (!t.classList?.contains('dd-cell')) return;
-    const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
-    if (!/[\t\n]/.test(text.replace(/\r?\n$/, ''))) return;
-    e.preventDefault();
-    pasteBlock(+t.dataset.r, +t.dataset.c, text);
   }
   async function onClick(e) {
     const sub = e.target.closest('.v3-subs .ui-tab');
@@ -268,8 +217,8 @@
     try {
       if (act === 'save') save();
       if (act === 'new') { S.editId = null; S.dirty = false; S.rows = newRows(); renderNhap(); }
-      if (act === 'add-rows') { for (let i = 0; i < 5; i++) S.rows.push(emptyRow()); renderGrid(); }
-      if (act === 'del-row') { S.rows.splice(+b.dataset.r, 1); if (!S.rows.length) S.rows.push(emptyRow()); S.dirty = true; renderGrid(); }
+      if (act === 'add-rows') S.sheet?.addRows(5);
+      if (act === 'del-rows') S.sheet?.deleteRows();
       if (act === 'edit') editEntry(S.list[+b.dataset.i]);
       if (act === 'del') {
         const x = S.list[+b.dataset.i];
@@ -291,10 +240,7 @@
       root.dataset.ready = '1';
       try { const r = await api('/api/tomay/to'); S.tos = r.data; S.coDinh = r.co_dinh || ''; } catch (err) { toast(err.message, 'error'); }
       root.addEventListener('click', onClick);
-      root.addEventListener('input', onInput);
       root.addEventListener('change', onChange);
-      root.addEventListener('keydown', onKeydown);
-      root.addEventListener('paste', onPaste);
     }
     render();
   }
