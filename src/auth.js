@@ -8,7 +8,8 @@
 import { isSqlite, ddlTypes, ensureTables, str, int, parseJson, ok, bad } from './ddl.js';
 
 /** Các tab admin có thể tick cho nhóm quyền (tab Tài khoản chỉ dành cho admin) */
-export const TABS = ['tab-donhang', 'tab-chilenh', 'tab-create', 'tab-list', 'tab-theodoi', 'tab-nhapkho', 'tab-dashboard', 'tab-catalog'];
+export const TABS = ['tab-donhang', 'tab-chilenh', 'tab-create', 'tab-list', 'tab-theodoi', 'tab-nhapkho', 'tab-dashboard', 'tab-catalog',
+  'tab-donhangchat', 'tab-xuatchat', 'tab-maykho'];
 
 const ID_TABLES = ['nhom_quyen', 'tai_khoan'];
 export const TABLES = [...ID_TABLES, 'phien'];
@@ -43,10 +44,13 @@ export function schemaFor(sqlite) {
       tao_luc ${T.INT} DEFAULT 0
     )`,
     `CREATE INDEX IF NOT EXISTS idx_phien_tk ON phien(tai_khoan_id)`,
+    // Tài khoản gắn với tổ (TC, CMA, CMB, CMC...): '' = không gắn tổ
+    sqlite ? `ALTER TABLE tai_khoan ADD COLUMN ma_bo_phan TEXT DEFAULT ''`
+      : `ALTER TABLE tai_khoan ADD COLUMN IF NOT EXISTS ma_bo_phan TEXT DEFAULT ''`,
   ];
 }
 const ensureAuthSchema = env =>
-  ensureTables(env, 'auth_v1', 'SELECT token_hash FROM phien WHERE 1 = 0', schemaFor(isSqlite(env)));
+  ensureTables(env, 'auth_v1', 'SELECT p.token_hash, t.ma_bo_phan FROM phien p, tai_khoan t WHERE 1 = 0', schemaFor(isSqlite(env)));
 
 /* ---------------- Mật khẩu & mã phiên ---------------- */
 const enc = new TextEncoder();
@@ -111,7 +115,7 @@ async function loadUser(env, request) {
   if (!token) return null;
   const th = await sha256(token);
   const r = await env.DB.prepare(`
-    SELECT p.het_han, t.id, t.ten_dang_nhap, t.ho_ten, t.khoa, t.nhom_id, n.ten AS nhom_ten, n.tabs, n.la_admin
+    SELECT p.het_han, t.id, t.ten_dang_nhap, t.ho_ten, t.khoa, t.nhom_id, t.ma_bo_phan, n.ten AS nhom_ten, n.tabs, n.la_admin
     FROM phien p JOIN tai_khoan t ON t.id = p.tai_khoan_id LEFT JOIN nhom_quyen n ON n.id = t.nhom_id
     WHERE p.token_hash = ?`).bind(th).first();
   if (!r) return null;
@@ -125,9 +129,10 @@ async function loadUser(env, request) {
   }
   const la_admin = !!r.la_admin;
   const tabs = la_admin ? [...TABS, 'tab-taikhoan'] : parseJson(r.tabs, []).filter(t => TABS.includes(t));
-  return { id: r.id, ten_dang_nhap: r.ten_dang_nhap, ho_ten: r.ho_ten || r.ten_dang_nhap, nhom_id: r.nhom_id, nhom_ten: r.nhom_ten || '', la_admin, tabs, token_hash: th };
+  return { id: r.id, ten_dang_nhap: r.ten_dang_nhap, ho_ten: r.ho_ten || r.ten_dang_nhap, nhom_id: r.nhom_id, nhom_ten: r.nhom_ten || '', la_admin, tabs,
+    ma_bo_phan: r.ma_bo_phan || '', token_hash: th };
 }
-const publicUser = u => u && ({ id: u.id, ten_dang_nhap: u.ten_dang_nhap, ho_ten: u.ho_ten, nhom_ten: u.nhom_ten, la_admin: u.la_admin, tabs: u.tabs });
+const publicUser = u => u && ({ id: u.id, ten_dang_nhap: u.ten_dang_nhap, ho_ten: u.ho_ten, nhom_ten: u.nhom_ten, la_admin: u.la_admin, tabs: u.tabs, ma_bo_phan: u.ma_bo_phan });
 
 /* ---------------- Quyền theo API ---------------- */
 const ANY = '*';
@@ -135,7 +140,8 @@ const ANY = '*';
 const RULES = [
   ['GET', /^\/api\/(khachhang|po|bochitiet|bophan)(\/|$)/, ANY],
   ['*', /^\/api\/po(\/|$)/, ['tab-catalog', 'tab-donhang']],
-  ['*', /^\/api\/(khachhang|bochitiet)(\/|$)/, ['tab-catalog']],
+  ['*', /^\/api\/bochitiet(\/|$)/, ['tab-catalog', 'tab-donhangchat']], // tổ chặt tự khai bộ chi tiết
+  ['*', /^\/api\/khachhang(\/|$)/, ['tab-catalog']],
   ['GET', /^\/api\/donhang(\/|$)/, ['tab-donhang', 'tab-chilenh', 'tab-theodoi']],
   ['*', /^\/api\/donhang(\/|$)/, ['tab-donhang']],
   ['*', /^\/api\/dondat(\/|$)/, ['tab-donhang']], // đơn: nhiều ART · nhiều PO
@@ -149,6 +155,10 @@ const RULES = [
   ['PUT', /^\/api\/phieu\/\d+\/khachhang$/, ['tab-list']], // gán khách cho phiếu cũ
   ['*', /^\/api\/(dashboard|congno)(\/|$)/, ['tab-dashboard']],
   ['*', /^\/api\/nhapkho\//, ['tab-nhapkho']],
+  ['GET', /^\/api\/tochat\/(donhang|dinhmuc)(\/|$)/, ['tab-donhangchat', 'tab-xuatchat']],
+  ['*', /^\/api\/tochat\/(donhang|dinhmuc)(\/|$)/, ['tab-donhangchat']],
+  ['*', /^\/api\/tochat\/xuat(\/|$)/, ['tab-xuatchat']],
+  ['*', /^\/api\/tomay(\/|$)/, ['tab-maykho']],
 ];
 export function allowed(user, method, path) {
   if (user.la_admin) return true;
@@ -316,7 +326,7 @@ export async function handleTaiKhoanApi(path, method, url, request, env, user) {
   // ---------------- TÀI KHOẢN ----------------
   if (path === '/api/taikhoan' && method === 'GET') {
     const { results } = await env.DB.prepare(`
-      SELECT t.id, t.ten_dang_nhap, t.ho_ten, t.nhom_id, t.khoa, t.khoa_den, t.dang_nhap_cuoi, n.ten AS nhom_ten, n.la_admin
+      SELECT t.id, t.ten_dang_nhap, t.ho_ten, t.nhom_id, t.ma_bo_phan, t.khoa, t.khoa_den, t.dang_nhap_cuoi, n.ten AS nhom_ten, n.la_admin
       FROM tai_khoan t LEFT JOIN nhom_quyen n ON n.id = t.nhom_id ORDER BY t.ten_dang_nhap`).all();
     const now = Date.now();
     return ok({ data: results.map(t => ({ ...t, tam_khoa: t.khoa_den > now, la_admin: t.la_admin ? 1 : 0 })), me: user.id });
@@ -330,8 +340,8 @@ export async function handleTaiKhoanApi(path, method, url, request, env, user) {
     if (!int(b.nhom_id)) return bad('Chưa chọn nhóm quyền');
     const dup = await env.DB.prepare('SELECT id FROM tai_khoan WHERE ten_dang_nhap = ?').bind(ten).first();
     if (dup) return bad(`Tên đăng nhập "${ten}" đã có`);
-    const r = await env.DB.prepare('INSERT INTO tai_khoan (ten_dang_nhap, ho_ten, mat_khau, nhom_id) VALUES (?, ?, ?, ?) RETURNING id')
-      .bind(ten, str(b.ho_ten) || ten, await hashPassword(env, b.mat_khau), int(b.nhom_id)).first();
+    const r = await env.DB.prepare('INSERT INTO tai_khoan (ten_dang_nhap, ho_ten, mat_khau, nhom_id, ma_bo_phan) VALUES (?, ?, ?, ?, ?) RETURNING id')
+      .bind(ten, str(b.ho_ten) || ten, await hashPassword(env, b.mat_khau), int(b.nhom_id), str(b.ma_bo_phan).toUpperCase()).first();
     return ok({ id: r.id, message: `Đã tạo tài khoản ${ten}` });
   }
   const tkM = path.match(/^\/api\/taikhoan\/(\d+)$/);
@@ -349,8 +359,8 @@ export async function handleTaiKhoanApi(path, method, url, request, env, user) {
       if (errPw) return bad(errPw);
       await env.DB.prepare('UPDATE tai_khoan SET mat_khau = ? WHERE id = ?').bind(await hashPassword(env, b.mat_khau), id).run();
     }
-    await env.DB.prepare(`UPDATE tai_khoan SET ho_ten = ?, nhom_id = ?, khoa = ?${b.mo_khoa ? ', sai_lien_tiep = 0, khoa_den = 0' : ''} WHERE id = ?`)
-      .bind(str(b.ho_ten), nhomId, khoa, id).run();
+    await env.DB.prepare(`UPDATE tai_khoan SET ho_ten = ?, nhom_id = ?, khoa = ?${b.ma_bo_phan !== undefined ? ', ma_bo_phan = ?' : ''}${b.mo_khoa ? ', sai_lien_tiep = 0, khoa_den = 0' : ''} WHERE id = ?`)
+      .bind(...[str(b.ho_ten), nhomId, khoa, ...(b.ma_bo_phan !== undefined ? [str(b.ma_bo_phan).toUpperCase()] : []), id]).run();
     // Khóa hoặc đặt lại mật khẩu -> đăng xuất tài khoản đó ở mọi máy
     if (khoa || b.mat_khau) await env.DB.prepare('DELETE FROM phien WHERE tai_khoan_id = ?').bind(id).run();
     return ok({ message: 'Đã lưu tài khoản' });

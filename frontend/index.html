@@ -43,6 +43,9 @@
       <button class="tab-btn" data-target="tab-list" hidden>📋 Danh Sách Phiếu</button>
       <button class="tab-btn" data-target="tab-theodoi" hidden>📈 Xuất Theo Đơn Hàng</button>
       <button class="tab-btn" data-target="tab-nhapkho" hidden>📥 Nhập Kho</button>
+      <button class="tab-btn" data-target="tab-donhangchat" hidden>✂️ Đơn Hàng Tổ Chặt</button>
+      <button class="tab-btn" data-target="tab-xuatchat" hidden>🚚 Xuất Nội Bộ</button>
+      <button class="tab-btn" data-target="tab-maykho" hidden>🧺 Tổ May Xuất Kho</button>
       <button class="tab-btn" data-target="tab-dashboard" hidden>📊 Dashboard</button>
       <button class="tab-btn" data-target="tab-catalog" hidden>⚙️ Danh Mục</button>
       <button class="tab-btn" data-target="tab-taikhoan" hidden>👤 Tài Khoản</button>
@@ -377,6 +380,19 @@
       <div class="ui-page" id="td-root"></div>
     </section>
 
+    <!-- TỔ CHẶT: ĐƠN HÀNG THEO CHI TIẾT + XUẤT NỘI BỘ (tochat.js) -->
+    <section id="tab-donhangchat" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="dhc-root"></div>
+    </section>
+    <section id="tab-xuatchat" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="xnb-root"></div>
+    </section>
+
+    <!-- TỔ MAY XUẤT KHO + ĐỐI CHIẾU CUỐI NGÀY (tomay.js) -->
+    <section id="tab-maykho" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="tmk-root"></div>
+    </section>
+
     <!-- TAB TÀI KHOẢN (giao diện do taikhoan.js vẽ) -->
     <section id="tab-taikhoan" class="tab-content ui-scope v3-tab">
       <div class="ui-page" id="tk-root"></div>
@@ -583,7 +599,9 @@
   <script src="donhang.js?v=20261021d"></script>
   <script src="chilenh.js?v=20261021c"></script>
   <script src="theodoi.js?v=20261021c"></script>
-  <script src="taikhoan.js?v=20261021a"></script>
+  <script src="taikhoan.js?v=20261022a"></script>
+  <script src="tochat.js?v=20261022a"></script>
+  <script src="tomay.js?v=20261022a"></script>
   <script src="pwa.js?v=20261021a"></script>
 </body>
 </html>

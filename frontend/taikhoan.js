@@ -6,6 +6,8 @@
   const S = { tk: [], nhom: [], tabs: [], me: null, editTk: null, editNhom: null, loaded: false };
   const tabLabel = t => document.querySelector(`.tab-btn[data-target="${t}"]`)?.textContent.trim() || t;
   const dt = ms => (ms ? new Date(ms).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+  const boPhan = () => (window.Catalog && window.Catalog.bophan) || [];
+  const toName = ma => (ma ? (boPhan().find(b => b.ma === ma)?.ten || ma) : '');
 
   async function load() {
     const [a, b] = await Promise.all([api('/api/taikhoan'), api('/api/nhomquyen')]);
@@ -24,11 +26,12 @@
       <div class="ui-panel">
         <h3 class="ui-panel-title">Tài khoản đăng nhập</h3>
         <div class="v3-table-wrap"><table class="v3-table">
-          <thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Nhóm quyền</th><th>Trạng thái</th><th>Đăng nhập lần cuối</th><th></th></tr></thead>
+          <thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Nhóm quyền</th><th>Tổ</th><th>Trạng thái</th><th>Đăng nhập lần cuối</th><th></th></tr></thead>
           <tbody>${S.tk.map(x => `<tr class="${x.id === S.editTk ? 'v3-row-on' : ''} ${x.khoa ? 'v3-row-off' : ''}">
             <td><b>${esc(x.ten_dang_nhap)}</b>${x.id === S.me ? ' <span class="ui-badge">bạn</span>' : ''}</td>
             <td>${esc(x.ho_ten)}</td>
             <td>${esc(x.nhom_ten || '—')}${x.la_admin ? ' <span class="ui-badge ui-badge-ok">Quản trị</span>' : ''}</td>
+            <td>${x.ma_bo_phan ? `<span class="v3-chip">${esc(toName(x.ma_bo_phan))}</span>` : '<span class="ui-muted">—</span>'}</td>
             <td>${x.khoa ? '<span class="ui-badge ui-badge-off">Đã khóa</span>' : x.tam_khoa ? '<span class="ui-badge ui-badge-warn">Tạm khóa (sai mật khẩu)</span>' : '<span class="ui-badge ui-badge-ok">Đang dùng</span>'}</td>
             <td>${dt(x.dang_nhap_cuoi)}</td>
             <td><button type="button" class="ui-btn-sm" data-act="tk-edit" data-id="${x.id}">Sửa</button></td></tr>`).join('')}</tbody>
@@ -45,6 +48,9 @@
           <label class="ui-field"><span class="ui-label">Nhóm quyền <b class="ui-req">*</b></span>
             <select class="ui-input" id="tk-g"><option value="">Chọn nhóm</option>${S.nhom.map(g =>
               `<option value="${g.id}" ${t?.nhom_id === g.id ? 'selected' : ''}>${esc(g.ten)}</option>`).join('')}</select></label>
+          <label class="ui-field"><span class="ui-label">Tổ <span class="ui-label-note">tổ may chỉ nhập cho tổ mình</span></span>
+            <select class="ui-input" id="tk-bp"><option value="">Không gắn tổ</option>${boPhan().map(b =>
+              `<option value="${esc(b.ma)}" ${t?.ma_bo_phan === b.ma ? 'selected' : ''}>${esc(b.ten)} (${esc(b.ma)})</option>`).join('')}</select></label>
           <label class="ui-field"><span class="ui-label">${t ? 'Đặt lại mật khẩu <span class="ui-label-note">để trống = giữ nguyên</span>' : 'Mật khẩu <b class="ui-req">*</b>'}</span>
             <input type="text" class="ui-input" id="tk-p" autocomplete="new-password" spellcheck="false" placeholder="ít nhất 6 ký tự"></label>
           ${t ? `<div class="ui-field ui-span-4"><label class="v3-check"><input type="checkbox" id="tk-khoa" ${t.khoa ? 'checked' : ''}> Khóa tài khoản này (không đăng nhập được)</label></div>` : ''}
@@ -102,7 +108,8 @@
       if (act === 'g-edit') { S.editNhom = id; render(); $('g-form').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       if (act === 'g-new') { S.editNhom = null; render(); $('g-ten').focus(); }
       if (act === 'tk-save') {
-        const body = { ten_dang_nhap: $('tk-u').value.trim(), ho_ten: $('tk-n').value.trim(), nhom_id: parseInt($('tk-g').value, 10) || null, mat_khau: $('tk-p').value };
+        const body = { ten_dang_nhap: $('tk-u').value.trim(), ho_ten: $('tk-n').value.trim(), nhom_id: parseInt($('tk-g').value, 10) || null,
+          ma_bo_phan: $('tk-bp').value, mat_khau: $('tk-p').value };
         if (S.editTk) {
           body.khoa = $('tk-khoa').checked;
           if (!body.mat_khau) delete body.mat_khau;

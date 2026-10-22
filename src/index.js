@@ -8,6 +8,8 @@ import { handleNhapKhoApi } from './nhapkho.js';
 import { authGate, handleAuthApi, handleTaiKhoanApi } from './auth.js';
 import { handleDonHangApi } from './donhang.js';
 import { handleChiLenhApi } from './chilenh.js';
+import { handleToChatApi } from './tochat.js';
+import { handleToMayApi } from './tomay.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -91,6 +93,12 @@ async function handleApi(url, request, env) {
 
   const chiLenhRes = await handleChiLenhApi(path, method, url, request, env, user);
   if (chiLenhRes) return chiLenhRes;
+
+  // Tổ chặt (đơn hàng theo chi tiết, xuất nội bộ) và tổ may (giao kho, đối chiếu cuối ngày)
+  const toChatRes = await handleToChatApi(path, method, url, request, env, user);
+  if (toChatRes) return toChatRes;
+  const toMayRes = await handleToMayApi(path, method, url, request, env, user);
+  if (toMayRes) return toMayRes;
 
   // -------------------------------------------------------------
   // GET /api/bophan: Danh sách bộ phận/chuyền

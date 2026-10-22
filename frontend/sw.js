@@ -4,11 +4,11 @@
  *   -> mỗi lần deploy, người dùng mở app là thấy bản mới ngay
  * - Dữ liệu /api/: luôn lấy từ máy chủ (không lưu tạm để tránh sai số liệu)
  */
-const CACHE = 'pxk-shell-v7';
+const CACHE = 'pxk-shell-v8';
 const SHELL = [
   '/', '/index.html', '/styles.css', '/print.css', '/ui-v2.css', '/v3.css',
   '/common.js', '/auth.js', '/app.js', '/grid.js', '/catalog.js', '/dashboard.js', '/pwa.js', '/nhapkho.js', '/nhapkho.css',
-  '/donhang.js', '/chilenh.js', '/theodoi.js', '/taikhoan.js', '/khsidebar.js',
+  '/donhang.js', '/chilenh.js', '/theodoi.js', '/taikhoan.js', '/khsidebar.js', '/tochat.js', '/tomay.js',
   '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png',
 ];
 
