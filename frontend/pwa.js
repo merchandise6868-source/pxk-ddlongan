@@ -10,6 +10,42 @@
     });
   }
 
+  // BÁO CÓ BẢN MỚI: so số phiên bản (?v=) của các file đang chạy với index.html trên máy chủ.
+  // Kiểm tra mỗi 5 phút và mỗi lần quay lại tab -> máy để mở cả ngày vẫn biết có bản mới.
+  const verOf = list => list.map(s => (String(s).match(/([\w-]+\.(?:js|css))\?v=([\w.-]+)/) || []).slice(1).join('@')).filter(Boolean).sort().join('|');
+  const verDangChay = () => verOf([...document.querySelectorAll('script[src], link[rel="stylesheet"][href]')].map(el => el.getAttribute('src') || el.getAttribute('href')));
+  let hoanDen = 0;
+  async function kiemTraBanMoi() {
+    if (!navigator.onLine || document.hidden || Date.now() < hoanDen || document.getElementById('update-bar')) return;
+    try {
+      const res = await fetch('/index.html', { cache: 'no-store' });
+      if (!res.ok) return;
+      const moi = verOf((await res.text()).match(/(?:src|href)="[^"]+\?v=[^"]+"/g) || []);
+      if (moi && moi !== verDangChay()) hienBaoBanMoi();
+    } catch (_) { /* mất mạng: bỏ qua, lần sau kiểm tra lại */ }
+  }
+  function hienBaoBanMoi() {
+    const bar = document.createElement('div');
+    bar.id = 'update-bar';
+    bar.className = 'no-print';
+    bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:10000;display:flex;gap:10px;align-items:center;flex-wrap:wrap;'
+      + 'max-width:calc(100% - 24px);background:#1b3a6b;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:15px';
+    bar.innerHTML = '<b>Đã có bản mới của Phiếu Xuất Kho.</b><span style="opacity:.85">Lưu phiếu đang làm rồi bấm tải lại.</span>'
+      + '<button type="button" data-up="reload" style="height:34px;padding:0 14px;border:0;border-radius:8px;background:#fff;color:#1b3a6b;font-weight:700;cursor:pointer">Tải lại ngay</button>'
+      + '<button type="button" data-up="later" style="height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.5);border-radius:8px;background:transparent;color:#fff;cursor:pointer">Để sau</button>';
+    bar.addEventListener('click', e => {
+      const b = e.target.closest('[data-up]'); if (!b) return;
+      if (b.dataset.up === 'reload') location.reload();
+      else { hoanDen = Date.now() + 30 * 60 * 1000; bar.remove(); } // 30 phút sau nhắc lại
+    });
+    document.body.appendChild(bar);
+  }
+  window.addEventListener('load', () => setTimeout(kiemTraBanMoi, 10000));
+  setInterval(kiemTraBanMoi, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) kiemTraBanMoi(); });
+  window.kiemTraBanMoi = kiemTraBanMoi;
+
   const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   let deferredPrompt = null;
