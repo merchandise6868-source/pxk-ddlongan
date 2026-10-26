@@ -1172,6 +1172,7 @@ async function saveSlipCore(opts = {}) {
       chi_tiet: r.chi_tiet || '',
       loai: AppState.currentMau === 3 ? (r.loai || '') : '',
       he_so: r.he_so || 0,
+      po_id: AppState.currentMau === 3 ? (r.po_id || null) : null, // dòng đơn đã chọn ở danh sách PO
       sizes,
       hasMismatch: r.hasMismatch,
     });
@@ -1790,6 +1791,7 @@ window.reprintSlip = async function(id) {
         chi_tiet: l.chi_tiet || l.ghi_chu || '',
         loai: l.loai || '',
         he_so: l.he_so || 0,
+        po_id: l.po_id || null,
         sizes: sizesMap,
       };
     });
@@ -1906,6 +1908,7 @@ window.editSlip = async function(id) {
         chi_tiet: l.chi_tiet || l.ghi_chu || '',
         loai: l.loai || '',
         he_so: l.he_so || 0,
+        po_id: l.po_id || null,
         sizes: sizesMap,
       };
     });

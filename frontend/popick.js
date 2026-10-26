@@ -87,7 +87,10 @@
     PoPick.refresh();
   });
 
-  /** Dòng đơn của 1 dòng phiếu */
+  /**
+   * Dòng đơn của 1 dòng phiếu: PO + ART; nhiều màu thì theo màu ở Diễn giải, không ra màu thì theo dòng đã chọn ở danh sách
+   * (r.po_id: Diễn giải ghi thêm "Hàng mẫu", "Bù thành hình"... vẫn trừ vào dòng đó) – giống tienDo ở src/donhang.js
+   */
   function matchLine(lines, r) {
     const po = normKey(r.ma_hang), art = normKey(r.mau);
     if (!po) return null;
@@ -100,6 +103,8 @@
         const inText = list.filter(l => normKey(l.mau) && m.includes(normKey(l.mau)));
         if (inText.length === 1) return inText[0];
       }
+      const chon = r.po_id && list.find(l => l.id === r.po_id);
+      if (chon) return chon;
       return new Set(list.map(l => normKey(l.mau))).size === 1 ? list[0] : null;
     }
     if (list.length === 1) return list[0];
@@ -321,9 +326,9 @@
     const r = AppState.rows[i];
     if (!r) { close(); return; }
     if (window.Grid) Grid.snapshot();
-    const oldPo = r.ma_hang, oldArt = r.mau;
+    const oldPo = r.ma_hang, oldArt = r.mau, oldId = r.po_id;
     fn(r);
-    if (r.bo_key) { propagateBlockField(i, 'ma_hang', oldPo); propagateBlockField(i, 'mau', oldArt); }
+    if (r.bo_key) { propagateBlockField(i, 'ma_hang', oldPo); propagateBlockField(i, 'mau', oldArt); propagateBlockField(i, 'po_id', oldId); }
     close();
     renderTableBody();
     calculateTotals();
@@ -350,17 +355,19 @@
       r.ma_hang = l.po;
       r.mau = l.art;
       r._autoArt = l.art;
+      r.po_id = l.id; // nhớ dòng đơn đã chọn
       if (!r.loai) r.chi_tiet = l.mau || ''; // dòng chi tiết / đồng bộ giữ tên chi tiết ở Diễn giải
     }, true);
   }
   function typed(q) {
     if (!q) return;
-    apply(r => { r.ma_hang = q; }, false);
+    apply(r => { r.ma_hang = q; r.po_id = null; }, false);
   }
   function clearRow() {
     apply(r => {
       r.ma_hang = '';
       r.mau = '';
+      r.po_id = null;
       if (!r.loai) r.chi_tiet = '';
     }, false);
   }

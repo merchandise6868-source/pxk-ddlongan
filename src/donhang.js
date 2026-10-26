@@ -93,10 +93,12 @@ export function schemaFor(sqlite) {
     // Đợt đơn hàng của khách (1, 2, 3...): phiếu xuất chỉ trừ vào đơn cùng đợt. Trống = đợt 1
     sqlite ? `ALTER TABLE don_dat ADD COLUMN dot ${T.INT}` : `ALTER TABLE don_dat ADD COLUMN IF NOT EXISTS dot ${T.INT}`,
     sqlite ? `ALTER TABLE phieu ADD COLUMN dot_don ${T.INT}` : `ALTER TABLE phieu ADD COLUMN IF NOT EXISTS dot_don ${T.INT}`,
+    // Dòng đơn đã chọn ở danh sách PO (Lập phiếu): Diễn giải ghi thêm chữ (Hàng mẫu, Bù thành hình...) vẫn trừ vào dòng này
+    sqlite ? `ALTER TABLE phieu_dong ADD COLUMN po_id ${T.INT}` : `ALTER TABLE phieu_dong ADD COLUMN IF NOT EXISTS po_id ${T.INT}`,
   ];
 }
-const PROBE = `SELECT p.ngay_giao, p.don_id, dd.dot, ph.dot_don FROM po_don_hang p, don_hang_size s, don_hang_alias a, dieu_chinh_xuat d,
-  chi_lenh c, chi_lenh_dong cd, chi_lenh_dong_size cs, don_dat dd, phieu ph WHERE 1 = 0`;
+const PROBE = `SELECT p.ngay_giao, p.don_id, dd.dot, ph.dot_don, pd.po_id FROM po_don_hang p, don_hang_size s, don_hang_alias a, dieu_chinh_xuat d,
+  chi_lenh c, chi_lenh_dong cd, chi_lenh_dong_size cs, don_dat dd, phieu ph, phieu_dong pd WHERE 1 = 0`;
 export const ensureDonHangSchema = env => ensureTables(env, 'donhang_v1', PROBE, schemaFor(isSqlite(env)));
 
 /* ---------------- Tiện ích ---------------- */
@@ -160,6 +162,7 @@ export async function tienDo(env, o = {}) {
      ORDER BY p.khach_hang_id, p.art, p.po, p.id`).bind(...khB).all();
   orders.forEach(r => { r.dot = dotOf(r.dot); });
   const dotById = new Map(orders.map(r => [r.id, r.dot]));
+  const keyById = new Map(orders.map(r => [r.id, orderKey(r.khach_hang_id, r.po, r.art)]));
   if (o.poIds) orders = orders.filter(r => o.poIds.includes(r.id));
   const byId = new Map(orders.map(r => [r.id, {
     ...r, dat: {}, tha: {}, xuat: {}, dc: {}, entries: [], adjustments: [], aliases: [],
@@ -185,7 +188,7 @@ export async function tienDo(env, o = {}) {
     if (o.withEntries) od.adjustments.push(d);
   });
 
-  // --- Đã xuất: khớp dòng phiếu xuất với đơn hàng cùng đợt (PO + ART, cùng PO + ART nhiều màu thì theo màu ở Diễn giải) ---
+  // --- Đã xuất: khớp dòng phiếu xuất với đơn hàng cùng đợt (PO + ART, cùng PO + ART nhiều màu thì theo màu ở Diễn giải, không ra màu thì theo dòng đơn đã chọn) ---
   const keyMap = new Map(); // đợt|khách|PO|ART -> các dòng đơn
   const poMap = new Map();
   orders.forEach(r => {
@@ -212,10 +215,12 @@ export async function tienDo(env, o = {}) {
     const inText = list.filter(r => normKey(r.mau) && m.includes(normKey(r.mau)));
     return inText.length === 1 ? inText[0].id : null;
   };
-  const match = (kh, po, art, dg, dot) => {
+  const match = (kh, po, art, dg, dot, link) => {
     const k = orderKey(kh, po, art);
     const list = keyMap.get(`${dot}|${k}`) || [];
     if (list.length > 1) { const c = byColor(list, dg); if (c) return c; }
+    // Dòng đơn đã chọn ở danh sách PO: còn đúng PO + ART + đợt thì trừ vào đó (Diễn giải không ghi rõ màu khác)
+    if (link && keyById.get(link) === k && dotById.get(link) === dot) return link;
     if (aliasMap.has(k) && dotById.get(aliasMap.get(k)) === dot) return aliasMap.get(k); // gán tay: chỉ trong cùng đợt
     if (list.length === 1) return list[0].id;
     // Nhiều màu mà Diễn giải không ghi màu -> để "chưa khớp" cho người dùng gán; dòng trùng hẳn (cùng màu) lấy dòng đầu như cũ
@@ -231,7 +236,7 @@ export async function tienDo(env, o = {}) {
   const pW = (o.khId ? ' AND p.khach_hang_id = ?' : '') + (o.excludePhieu ? ' AND p.id <> ?' : '');
   const pB = [...khB, ...(o.excludePhieu ? [o.excludePhieu] : [])];
   const { results: lines } = await env.DB.prepare(`
-    SELECT d.id, d.phieu_id, d.stt, d.ma_hang, d.mau, d.dvt, d.loai, d.ghi_chu, d.sl_chung_tu, p.so_phieu, p.ngay, p.khach_hang_id, p.dot_don
+    SELECT d.id, d.phieu_id, d.stt, d.ma_hang, d.mau, d.dvt, d.loai, d.ghi_chu, d.sl_chung_tu, d.po_id, p.so_phieu, p.ngay, p.khach_hang_id, p.dot_don
     FROM phieu_dong d JOIN phieu p ON p.id = d.phieu_id
     WHERE COALESCE(p.trang_thai, '') <> 'cancelled' AND COALESCE(d.loai, '') NOT IN ('chi_tiet', 'khong_size')${pW}
     ORDER BY p.ngay, p.id, d.stt, d.id`).bind(...pB).all();
@@ -251,7 +256,7 @@ export async function tienDo(env, o = {}) {
     const sz = lineSz.get(l.id);
     if (!sz || !sumOf(sz)) continue;
     const dot = dotOf(l.dot_don);
-    const poId = l.khach_hang_id ? match(l.khach_hang_id, l.ma_hang, l.mau, l.ghi_chu, dot) : null;
+    const poId = l.khach_hang_id ? match(l.khach_hang_id, l.ma_hang, l.mau, l.ghi_chu, dot, int(l.po_id)) : null;
     if (!poId || !byId.has(poId)) {
       if (poId) continue; // khớp đơn hàng nằm ngoài bộ lọc
       const dongBoCu = l.loai !== 'dong_bo' && normKey(`${l.ma_hang}${l.mau}${l.ghi_chu}`).includes('DONGBO');

@@ -61,16 +61,18 @@ export default {
  * - replace: xóa dòng cũ + ghi dòng mới trong cùng 1 giao dịch (lỗi giữa chừng thì phiếu giữ nguyên dòng cũ)
  */
 async function writePhieuLines(env, phieuId, lines, replace) {
+  await ensureDonHangSchema(env); // cột phieu_dong.po_id
   const lineStmts = (lines || []).map((line, i) => {
     const sl_chung_tu = parseFloat(line.sl_chung_tu) || 0;
     const sl_thuc_xuat = parseFloat(line.sl_thuc_xuat) || 0;
     const don_gia = parseFloat(line.don_gia) || 0;
     const thanh_tien = parseFloat(line.thanh_tien) || (sl_thuc_xuat > 0 ? sl_thuc_xuat * don_gia : sl_chung_tu * don_gia);
     return env.DB.prepare(`
-      INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+      INSERT INTO phieu_dong (phieu_id, stt, ten_hang, ma_hang, mau, dvt, sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, ghi_chu, loai, he_so, po_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
     `).bind(phieuId, line.stt || (i + 1), line.ten_hang || '', line.ma_hang || '', line.mau || '', line.dvt || 'Đôi',
-      sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, line.ghi_chu || '', line.loai || '', parseFloat(line.he_so) || 0);
+      sl_chung_tu, sl_thuc_xuat, don_gia, thanh_tien, line.ghi_chu || '', line.loai || '', parseFloat(line.he_so) || 0,
+      parseInt(line.po_id, 10) > 0 ? parseInt(line.po_id, 10) : null);
   });
   const stmts = replace ? [env.DB.prepare('DELETE FROM phieu_dong WHERE phieu_id = ?').bind(phieuId), ...lineStmts] : lineStmts;
   if (!stmts.length) return;
