@@ -333,7 +333,7 @@
   .p-signatures {
     font-family: "Times New Roman", Times, serif !important;
     display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
+    grid-template-columns: repeat(5, 1fr) !important; /* Lập phiếu · Giao · Nhận · Phòng kế hoạch · Giám đốc */
     text-align: center !important;
     margin-top: 14px !important;
     font-size: 10.5pt !important;

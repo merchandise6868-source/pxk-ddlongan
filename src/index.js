@@ -92,6 +92,14 @@ async function saveNguoiGiao(env, phieuId, nguoiGiao) {
   } catch (_) { /* DB chưa có cột */ }
 }
 
+/** Ghi tên Phòng kế hoạch (in dưới chữ ký "Phòng kế hoạch"); trang bản cũ không gửi ô này -> giữ nguyên tên đã lưu */
+async function savePhongKeHoach(env, phieuId, ten) {
+  if (!phieuId || ten === undefined) return;
+  try {
+    await env.DB.prepare('UPDATE phieu SET phong_ke_hoach = ? WHERE id = ?').bind(String(ten || '').trim(), phieuId).run();
+  } catch (_) { /* DB chưa có cột */ }
+}
+
 /**
  * Xử lý các endpoint API
  */
@@ -557,6 +565,7 @@ async function handleApi(url, request, env) {
     }
 
     await saveNguoiGiao(env, phieuId, body.nguoi_giao);
+    await savePhongKeHoach(env, phieuId, body.phong_ke_hoach);
 
     return Response.json({
       success: true,
@@ -663,6 +672,7 @@ async function handleApi(url, request, env) {
     await writePhieuLines(env, id, lines, true);
 
     await saveNguoiGiao(env, id, body.nguoi_giao);
+    await savePhongKeHoach(env, id, body.phong_ke_hoach);
 
     return Response.json({ success: true, message: 'Cập nhật phiếu thành công' });
   }

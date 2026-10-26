@@ -41,6 +41,7 @@ function saveSlipDraft() {
       bophanxuat: document.getElementById('slip-bophanxuat')?.value || '',
       nguoilap: document.getElementById('slip-nguoilap')?.value || '',
       nguoigiao: document.getElementById('slip-nguoigiao')?.value || '',
+      phongkh: document.getElementById('slip-phongkh')?.value || '',
       diachiCty: document.getElementById('slip-diachi-cty')?.value || '',
       selectedSizes: AppState.selectedSizes,
       rows: AppState.rows,
@@ -95,6 +96,7 @@ function restoreSlipDraft(khId) {
       if (draft.bophanxuat && document.getElementById('slip-bophanxuat')) document.getElementById('slip-bophanxuat').value = draft.bophanxuat;
       if (draft.nguoilap && document.getElementById('slip-nguoilap')) document.getElementById('slip-nguoilap').value = draft.nguoilap;
       if (draft.nguoigiao && document.getElementById('slip-nguoigiao')) document.getElementById('slip-nguoigiao').value = draft.nguoigiao;
+      if (draft.phongkh && document.getElementById('slip-phongkh')) document.getElementById('slip-phongkh').value = draft.phongkh;
       if (draft.diachiCty && document.getElementById('slip-diachi-cty')) document.getElementById('slip-diachi-cty').value = draft.diachiCty;
       if (draft.date && document.getElementById('slip-date')) document.getElementById('slip-date').value = draft.date;
 
@@ -210,7 +212,7 @@ function initFormControls() {
   });
 
   // Tự động lưu nháp khi nhập thông tin đầu phiếu
-  ['slip-donvi', 'slip-lydo', 'slip-donhang', 'slip-bophanxuat', 'slip-nguoilap', 'slip-nguoigiao', 'slip-diachi-cty'].forEach(id => {
+  ['slip-donvi', 'slip-lydo', 'slip-donhang', 'slip-bophanxuat', 'slip-nguoilap', 'slip-nguoigiao', 'slip-phongkh', 'slip-diachi-cty'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener('input', saveSlipDraft);
@@ -1191,6 +1193,7 @@ async function saveSlipCore(opts = {}) {
     bo_phan_xuat: boPhanXuat,
     nguoi_lap: nguoiLap,
     nguoi_giao: document.getElementById('slip-nguoigiao')?.value.trim() || '',
+    phong_ke_hoach: document.getElementById('slip-phongkh')?.value.trim() || '',
     dia_chi_cty: diaChiCty,
     khach_hang_id: AppState.khachHangId,
     lines: validLines,
@@ -1290,6 +1293,7 @@ function printCurrentSlip() {
   const boPhanXuat = document.getElementById('slip-bophanxuat')?.value || (document.getElementById('slip-bophan')?.selectedOptions[0]?.text || '');
   const nguoiLap = document.getElementById('slip-nguoilap').value || '';
   const nguoiGiao = document.getElementById('slip-nguoigiao')?.value || '';
+  const phongKeHoach = document.getElementById('slip-phongkh')?.value || '';
   const diachiCty = document.getElementById('slip-diachi-cty')?.value?.trim() || DEFAULT_COMPANY_ADDRESS;
 
   const [y, m, d] = ngayStr.split('-');
@@ -1556,6 +1560,10 @@ function printCurrentSlip() {
           <div class="p-sig-name"></div>
         </div>
         <div class="p-sig-col">
+          <div class="p-sig-title">Phòng kế hoạch</div><div class="p-sig-note">(Ký, họ tên)</div>
+          <div class="p-sig-name">${escapeHtml(phongKeHoach)}</div>
+        </div>
+        <div class="p-sig-col">
           <div class="p-sig-title">Giám đốc</div><div class="p-sig-note">(Ký, họ tên)</div>
           <div class="p-sig-name"></div>
         </div>
@@ -1730,7 +1738,7 @@ window.reprintSlip = async function(id) {
       ? await PoPick.fetch(slip.khach_hang_id, slip.id).catch(() => null) : null;
 
     // Lưu tạm state để tái sử dụng hàm in (kể cả các ô đầu phiếu đang nhập)
-    const HEAD_IDS = ['slip-so', 'slip-date', 'slip-donvi', 'slip-lydo', 'slip-donhang', 'slip-bophanxuat', 'slip-nguoilap', 'slip-nguoigiao', 'slip-diachi-cty'];
+    const HEAD_IDS = ['slip-so', 'slip-date', 'slip-donvi', 'slip-lydo', 'slip-donhang', 'slip-bophanxuat', 'slip-nguoilap', 'slip-nguoigiao', 'slip-phongkh', 'slip-diachi-cty'];
     const prevHead = HEAD_IDS.map(i => [i, document.getElementById(i)?.value]);
     const prevMau = AppState.currentMau;
     const prevRows = AppState.rows;
@@ -1790,6 +1798,7 @@ window.reprintSlip = async function(id) {
     if (document.getElementById('slip-bophanxuat')) document.getElementById('slip-bophanxuat').value = slip.bo_phan_xuat || '';
     document.getElementById('slip-nguoilap').value = slip.nguoi_lap || '';
     if (document.getElementById('slip-nguoigiao')) document.getElementById('slip-nguoigiao').value = slip.nguoi_giao || '';
+    if (document.getElementById('slip-phongkh')) document.getElementById('slip-phongkh').value = slip.phong_ke_hoach || '';
     const diachiInput = document.getElementById('slip-diachi-cty');
     if (diachiInput) diachiInput.value = slip.dia_chi_cty || DEFAULT_COMPANY_ADDRESS;
 
@@ -1867,6 +1876,7 @@ window.editSlip = async function(id) {
     if (document.getElementById('slip-bophanxuat')) document.getElementById('slip-bophanxuat').value = slip.bo_phan_xuat || '';
     document.getElementById('slip-nguoilap').value = slip.nguoi_lap || '';
     if (document.getElementById('slip-nguoigiao')) document.getElementById('slip-nguoigiao').value = slip.nguoi_giao || '';
+    if (document.getElementById('slip-phongkh')) document.getElementById('slip-phongkh').value = slip.phong_ke_hoach || '';
     const diachiInput = document.getElementById('slip-diachi-cty');
     if (diachiInput) diachiInput.value = slip.dia_chi_cty || DEFAULT_COMPANY_ADDRESS;
 

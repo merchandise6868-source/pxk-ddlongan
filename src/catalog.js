@@ -48,6 +48,7 @@ const ALTER_STATEMENTS = [
   `ALTER TABLE phieu ADD COLUMN don_hang TEXT DEFAULT ''`,
   `ALTER TABLE phieu ADD COLUMN bo_phan_xuat TEXT DEFAULT ''`,
   `ALTER TABLE phieu ADD COLUMN nguoi_giao TEXT DEFAULT ''`,
+  `ALTER TABLE phieu ADD COLUMN phong_ke_hoach TEXT DEFAULT ''`, // tên in dưới chữ ký "Phòng kế hoạch"
   `ALTER TABLE phieu_dong ADD COLUMN loai TEXT DEFAULT ''`,
   `ALTER TABLE phieu_dong ADD COLUMN he_so REAL DEFAULT 0`,
 ];
