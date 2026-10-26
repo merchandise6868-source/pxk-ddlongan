@@ -334,7 +334,7 @@
       root.addEventListener('change', onChange);
       root.addEventListener('keydown', onKeydown);
       render();
-    } else if (S.view === 'list') loadList();
+    } else if (S.view === 'list') renderListView(); // vẽ lại cả khung lọc: thanh bên có thể đã đổi khách khi đang ở tab khác (nút Tạo đơn mới)
   }
   function init() {
     document.querySelector('.tab-btn[data-target="tab-donhang"]')?.addEventListener('click', show);
