@@ -125,6 +125,11 @@ export async function ensureSchema(env) {
 /** Tìm khách hàng theo tên đơn vị nhận (khi phiếu không chọn khách) */
 export async function guessKhachHangId(env, donViNhan) {
   if (!donViNhan) return null;
+  // Trùng tên đầy đủ, không tính dấu cách / hoa thường / dấu ("Giày Jia Yu" = "Giày JiaYu")
+  const k = normKey(donViNhan);
+  const { results } = await env.DB.prepare('SELECT id, ten_day_du FROM khach_hang ORDER BY thu_tu, id').all();
+  const same = k && results.find(r => normKey(r.ten_day_du) === k);
+  if (same) return same.id;
   const row = await env.DB.prepare(`
     SELECT id FROM khach_hang
     WHERE ? = ten_day_du OR ? LIKE '%' || ten_ngan || '%'
@@ -135,7 +140,7 @@ export async function guessKhachHangId(env, donViNhan) {
 
 const parseJson = (s, fallback) => { try { return JSON.parse(s || ''); } catch (_) { return fallback; } };
 // num: số đã là number giữ nguyên (tránh 12.5 -> "125" khi lưu lại đơn giá thập phân), chuỗi đọc theo kiểu Việt Nam
-import { num } from './ddl.js';
+import { num, normKey } from './ddl.js';
 
 function khachFromRow(r) {
   return { ...r, day_size: parseJson(r.day_size, []), bo_phan: parseJson(r.bo_phan, []) };

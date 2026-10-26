@@ -98,6 +98,23 @@ export const ensureDonHangSchema = env => ensureTables(env, 'donhang_v1', PROBE,
 
 /* ---------------- Tiện ích ---------------- */
 const orderKey = (kh, po, art) => `${kh}|${normKey(po)}|${normKey(art)}`;
+const colorKey = (kh, po, art, mau) => `${orderKey(kh, po, art)}|${normKey(mau)}`;
+/**
+ * Khóa kiểm tra trùng dòng đơn hàng.
+ * - Admin (bản mới): trùng cả PO + ART + Màu mới chặn.
+ * - Người khác (bản cũ): trùng PO + ART là chặn; riêng PO + ART đã lưu nhiều màu (admin nhập) thì tách theo màu để vẫn lưu lại được đơn đó.
+ */
+function dupKeyFn(theoMau, have) {
+  if (theoMau) return colorKey;
+  const maus = new Map();
+  have.forEach(r => {
+    const k = orderKey(r.khach_hang_id, r.po, r.art);
+    if (!maus.has(k)) maus.set(k, new Set());
+    maus.get(k).add(normKey(r.mau));
+  });
+  return (kh, po, art, mau) => ((maus.get(orderKey(kh, po, art))?.size || 0) > 1 ? colorKey(kh, po, art, mau) : orderKey(kh, po, art));
+}
+const dupText = (d, byColor) => `PO ${d.po} · ART ${d.art}${byColor ? ` · Màu ${d.mau || '(trống)'}` : ''}`;
 /** {size: so_luong} từ mảng [{size, so_luong}] (gộp size trùng sau chuẩn hóa) */
 function sizeMap(list) {
   const m = {};
@@ -125,7 +142,7 @@ function sizeOrder(kh, extra) {
 
 /* ============================================================
    TÍNH TIẾN ĐỘ ĐƠN HÀNG
-   o: { khId, poIds, excludeCl, withEntries, withUnmatched }
+   o: { khId, poIds, excludeCl, excludePhieu, withEntries, withUnmatched }
    ============================================================ */
 export async function tienDo(env, o = {}) {
   await ensureDonHangSchema(env);
@@ -161,12 +178,13 @@ export async function tienDo(env, o = {}) {
     if (o.withEntries) od.adjustments.push(d);
   });
 
-  // --- Đã xuất: khớp dòng phiếu xuất với đơn hàng ---
-  const keyMap = new Map();
+  // --- Đã xuất: khớp dòng phiếu xuất với đơn hàng (PO + ART, cùng PO + ART nhiều màu thì theo màu ở Diễn giải) ---
+  const keyMap = new Map(); // khách|PO|ART -> các dòng đơn
   const poMap = new Map();
   orders.forEach(r => {
     const k = orderKey(r.khach_hang_id, r.po, r.art);
-    if (!keyMap.has(k)) keyMap.set(k, r.id);
+    if (!keyMap.has(k)) keyMap.set(k, []);
+    keyMap.get(k).push(r);
     const kp = `${r.khach_hang_id}|${normKey(r.po)}`;
     if (!poMap.has(kp)) poMap.set(kp, new Set());
     poMap.get(kp).add(r.id);
@@ -178,10 +196,23 @@ export async function tienDo(env, o = {}) {
     const od = byId.get(a.po_id);
     if (od && o.withEntries) od.aliases.push(a);
   });
-  const match = (kh, po, art) => {
+  /** Cùng PO + ART có nhiều màu: chọn theo màu ghi ở Diễn giải (đúng màu, hoặc Diễn giải chứa đúng 1 màu) */
+  const byColor = (list, dg) => {
+    const m = normKey(dg);
+    if (!m) return null;
+    const exact = list.filter(r => normKey(r.mau) === m);
+    if (exact.length === 1) return exact[0].id;
+    const inText = list.filter(r => normKey(r.mau) && m.includes(normKey(r.mau)));
+    return inText.length === 1 ? inText[0].id : null;
+  };
+  const match = (kh, po, art, dg) => {
     const k = orderKey(kh, po, art);
+    const list = keyMap.get(k) || [];
+    if (list.length > 1) { const c = byColor(list, dg); if (c) return c; }
     if (aliasMap.has(k)) return aliasMap.get(k);
-    if (keyMap.has(k)) return keyMap.get(k);
+    if (list.length === 1) return list[0].id;
+    // Nhiều màu mà Diễn giải không ghi màu -> để "chưa khớp" cho người dùng gán; dòng trùng hẳn (cùng màu) lấy dòng đầu như cũ
+    if (list.length > 1) return new Set(list.map(r => normKey(r.mau))).size === 1 ? list[0].id : null;
     if (!normKey(art)) {
       const ids = poMap.get(`${kh}|${normKey(po)}`);
       if (ids && ids.size === 1) return [...ids][0];
@@ -189,16 +220,18 @@ export async function tienDo(env, o = {}) {
     return null;
   };
 
-  const pW = o.khId ? ' AND p.khach_hang_id = ?' : '';
+  // excludePhieu: bỏ phiếu đang sửa (tính "còn lại" khi lập / sửa phiếu)
+  const pW = (o.khId ? ' AND p.khach_hang_id = ?' : '') + (o.excludePhieu ? ' AND p.id <> ?' : '');
+  const pB = [...khB, ...(o.excludePhieu ? [o.excludePhieu] : [])];
   const { results: lines } = await env.DB.prepare(`
     SELECT d.id, d.phieu_id, d.stt, d.ma_hang, d.mau, d.dvt, d.loai, d.ghi_chu, d.sl_chung_tu, p.so_phieu, p.ngay, p.khach_hang_id
     FROM phieu_dong d JOIN phieu p ON p.id = d.phieu_id
     WHERE COALESCE(p.trang_thai, '') <> 'cancelled' AND COALESCE(d.loai, '') NOT IN ('chi_tiet', 'khong_size')${pW}
-    ORDER BY p.ngay, p.id, d.stt, d.id`).bind(...khB).all();
+    ORDER BY p.ngay, p.id, d.stt, d.id`).bind(...pB).all();
   const { results: psz } = await env.DB.prepare(`
     SELECT s.phieu_dong_id, s.size, s.so_luong FROM phieu_dong_size s
     JOIN phieu_dong d ON d.id = s.phieu_dong_id JOIN phieu p ON p.id = d.phieu_id
-    WHERE COALESCE(p.trang_thai, '') <> 'cancelled'${pW}`).bind(...khB).all();
+    WHERE COALESCE(p.trang_thai, '') <> 'cancelled'${pW}`).bind(...pB).all();
   const lineSz = new Map();
   psz.forEach(s => {
     if (!lineSz.has(s.phieu_dong_id)) lineSz.set(s.phieu_dong_id, {});
@@ -210,7 +243,7 @@ export async function tienDo(env, o = {}) {
   for (const l of lines) {
     const sz = lineSz.get(l.id);
     if (!sz || !sumOf(sz)) continue;
-    const poId = l.khach_hang_id ? match(l.khach_hang_id, l.ma_hang, l.mau) : null;
+    const poId = l.khach_hang_id ? match(l.khach_hang_id, l.ma_hang, l.mau, l.ghi_chu) : null;
     if (!poId || !byId.has(poId)) {
       if (poId) continue; // khớp đơn hàng nằm ngoài bộ lọc
       const dongBoCu = l.loai !== 'dong_bo' && normKey(`${l.ma_hang}${l.mau}${l.ghi_chu}`).includes('DONGBO');
@@ -279,10 +312,11 @@ export async function tienDo(env, o = {}) {
 }
 
 /* ---------------- Ghi đơn hàng ---------------- */
-async function findDuplicate(env, kh, po, art, exceptId) {
-  const { results } = await env.DB.prepare('SELECT id, po, art FROM po_don_hang WHERE khach_hang_id = ?').bind(kh).all();
-  const k = orderKey(kh, po, art);
-  return results.find(r => r.id !== exceptId && orderKey(kh, r.po, r.art) === k) || null;
+async function findDuplicate(env, d, exceptId, theoMau) {
+  const { results } = await env.DB.prepare('SELECT id, khach_hang_id, po, art, mau FROM po_don_hang WHERE khach_hang_id = ?').bind(d.khach_hang_id).all();
+  const key = dupKeyFn(theoMau, results);
+  const k = key(d.khach_hang_id, d.po, d.art, d.mau);
+  return results.find(r => r.id !== exceptId && key(d.khach_hang_id, r.po, r.art, r.mau) === k) || null;
 }
 async function writeSizes(env, poId, sizes) {
   await env.DB.prepare('DELETE FROM don_hang_size WHERE po_id = ?').bind(poId).run();
@@ -341,7 +375,7 @@ function tongDon(head, rows) {
  * Kiểm tra đầu đơn + các dòng PO trước khi ghi (lỗi thì không ghi gì).
  * Dòng trống bị bỏ; ART trống lấy ART dòng trên (Excel hay gộp ô ART).
  */
-async function checkDon(env, b, donId) {
+async function checkDon(env, b, donId, user) {
   const khId = int(b.khach_hang_id);
   const soDon = str(b.so_don);
   const errs = [];
@@ -351,8 +385,9 @@ async function checkDon(env, b, donId) {
   const { results: dons } = await env.DB.prepare('SELECT id, so_don FROM don_dat WHERE khach_hang_id = ?').bind(khId).all();
   if (dons.some(d => d.id !== donId && normKey(d.so_don) === normKey(soDon))) errs.push(`Số đơn ${soDon} đã có rồi`);
 
-  const { results: have } = await env.DB.prepare('SELECT id, po, art, don_id FROM po_don_hang WHERE khach_hang_id = ?').bind(khId).all();
+  const { results: have } = await env.DB.prepare('SELECT id, khach_hang_id, po, art, mau, don_id FROM po_don_hang WHERE khach_hang_id = ?').bind(khId).all();
   const haveById = new Map(have.map(r => [r.id, r]));
+  const key = dupKeyFn(!!user?.la_admin, have);
   const lines = [];
   const seen = new Map();
   let lastArt = '';
@@ -371,16 +406,17 @@ async function checkDon(env, b, donId) {
       // Dòng có id phải thuộc đơn này (hoặc PO lẻ chưa thuộc đơn nào của cùng khách)
       if (!old || (old.don_id && old.don_id !== donId)) { errs.push(`Dòng ${d.row}: PO không thuộc đơn này`); return; }
     }
-    const k = orderKey(khId, d.po, d.art);
-    if (seen.has(k)) { errs.push(`Dòng ${d.row}: PO ${d.po} · ART ${d.art} trùng dòng ${seen.get(k)}`); return; }
+    const k = key(khId, d.po, d.art, d.mau);
+    if (seen.has(k)) { errs.push(`Dòng ${d.row}: ${dupText(d, k !== orderKey(khId, d.po, d.art))} trùng dòng ${seen.get(k)}`); return; }
     seen.set(k, d.row);
     lines.push(d);
   });
   if (!lines.length && !errs.length) errs.push('Đơn chưa có dòng PO nào');
   const ids = new Set(lines.map(l => l.id).filter(Boolean));
   lines.forEach(d => {
-    const dup = have.find(r => !ids.has(r.id) && !(donId && r.don_id === donId) && orderKey(khId, r.po, r.art) === orderKey(khId, d.po, d.art));
-    if (dup) errs.push(`Dòng ${d.row}: PO ${d.po} · ART ${d.art} đã có ở đơn khác`);
+    const k = key(khId, d.po, d.art, d.mau);
+    const dup = have.find(r => !ids.has(r.id) && !(donId && r.don_id === donId) && key(khId, r.po, r.art, r.mau) === k);
+    if (dup) errs.push(`Dòng ${d.row}: ${dupText(d, k !== orderKey(khId, d.po, d.art))} đã có ở đơn khác`);
   });
   return { errs, khId, soDon, lines, ids };
 }
@@ -445,7 +481,7 @@ async function handleDonDatApi(path, method, url, request, env, user) {
   }
   if (path === '/api/dondat' && method === 'POST') {
     const body = await request.json();
-    const c = await checkDon(env, body, 0);
+    const c = await checkDon(env, body, 0, user);
     if (c.errs.length) return bad(c.errs.slice(0, 12).join('\n'));
     const r = await env.DB.prepare('INSERT INTO don_dat (khach_hang_id, so_don, ngay_giao, ghi_chu, nguoi) VALUES (?, ?, ?, ?, ?) RETURNING id')
       .bind(c.khId, c.soDon, str(body.ngay_giao), str(body.ghi_chu), user?.ho_ten || '').first();
@@ -457,7 +493,7 @@ async function handleDonDatApi(path, method, url, request, env, user) {
     const head = await env.DB.prepare('SELECT * FROM don_dat WHERE id = ?').bind(id).first();
     if (!head) return bad('Không tìm thấy đơn', 404);
     const body = await request.json();
-    const c = await checkDon(env, { ...body, khach_hang_id: head.khach_hang_id }, id);
+    const c = await checkDon(env, { ...body, khach_hang_id: head.khach_hang_id }, id, user);
     // Dòng bị bỏ khỏi bảng -> xóa PO, trừ PO đã thả chuyền
     const { results: cur } = await env.DB.prepare('SELECT id, po, art FROM po_don_hang WHERE don_id = ?').bind(id).all();
     const bo = cur.filter(r => !c.ids?.has(r.id));
@@ -511,18 +547,29 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
   const isTd = path === '/api/theodoi' || path.startsWith('/api/theodoi/');
   const isDc = path === '/api/dieuchinh' || path.startsWith('/api/dieuchinh/');
   const isDd = path === '/api/dondat' || path.startsWith('/api/dondat/');
-  if (!isDh && !isTd && !isDc && !isDd) return null;
+  const isCl = path === '/api/conlai';
+  if (!isDh && !isTd && !isDc && !isDd && !isCl) return null;
   await ensureDonHangSchema(env);
   const nguoi = user?.ho_ten || '';
   if (isDd) return (await handleDonDatApi(path, method, url, request, env, user)) || bad('Endpoint không tồn tại', 404);
 
+  // ---------------- CÒN LẠI THEO DÒNG ĐƠN (lập phiếu: ô PO chọn từ danh sách + cột Còn lại) ----------------
+  // Còn lại từng size = đặt − đã xuất − điều chỉnh, không tính phiếu đang sửa (tru_phieu)
+  if (isCl && method === 'GET') {
+    const khId = int(url.searchParams.get('khach_hang_id'));
+    if (!khId) return bad('Chưa chọn khách hàng');
+    const { orders } = await tienDo(env, { khId, excludePhieu: int(url.searchParams.get('tru_phieu')) });
+    return ok({ data: orders.map(o => ({ id: o.id, po: o.po, art: o.art, mau: o.mau || '', don_hang: o.don_hang || '',
+      sizes: Object.fromEntries(o.sizes.map(s => [s.size, s.con])), tong_dat: o.tong_dat })) });
+  }
+
   // ---------------- ĐƠN HÀNG ----------------
   if (path === '/api/donhang' && method === 'GET') {
     const { orders } = await tienDo(env, { khId: int(url.searchParams.get('khach_hang_id')) });
-    // Đánh dấu dòng trùng (khách + PO + ART) có từ trước
+    // Đánh dấu dòng trùng (khách + PO + ART + Màu) có từ trước
     const cnt = new Map();
-    orders.forEach(r => { const k = orderKey(r.khach_hang_id, r.po, r.art); cnt.set(k, (cnt.get(k) || 0) + 1); });
-    const data = filterOrders(orders, url).map(r => ({ ...r, trung: cnt.get(orderKey(r.khach_hang_id, r.po, r.art)) > 1 }));
+    orders.forEach(r => { const k = colorKey(r.khach_hang_id, r.po, r.art, r.mau); cnt.set(k, (cnt.get(k) || 0) + 1); });
+    const data = filterOrders(orders, url).map(r => ({ ...r, trung: cnt.get(colorKey(r.khach_hang_id, r.po, r.art, r.mau)) > 1 }));
     return ok({ data });
   }
   if (path === '/api/donhang' && method === 'POST') {
@@ -535,7 +582,7 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
         const d = cleanOrder({ ...it, khach_hang_id: it.khach_hang_id || b.khach_hang_id });
         const err = checkOrder(d);
         if (err) { loi.push(`Dòng ${i + 1}: ${err}`); continue; }
-        const dup = await findDuplicate(env, d.khach_hang_id, d.po, d.art, 0);
+        const dup = await findDuplicate(env, d, 0, !!user?.la_admin);
         if (dup) {
           if (b.mode === 'update') { await updateOrder(env, dup.id, d); capNhat++; } else boQua++;
           continue;
@@ -548,7 +595,7 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
     const d = cleanOrder(b);
     const err = checkOrder(d);
     if (err) return bad(err);
-    if (await findDuplicate(env, d.khach_hang_id, d.po, d.art, 0)) return bad(`Đã có đơn hàng PO ${d.po} · ART ${d.art} của khách này`);
+    if (await findDuplicate(env, d, 0, !!user?.la_admin)) return bad(`Đã có đơn hàng ${dupText(d, !!user?.la_admin)} của khách này`);
     const id = await insertOrder(env, d);
     return ok({ id, message: `Đã thêm đơn hàng PO ${d.po}` });
   }
@@ -559,7 +606,7 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
     const d = cleanOrder(b);
     const err = checkOrder(d);
     if (err) return bad(err);
-    if (await findDuplicate(env, d.khach_hang_id, d.po, d.art, id)) return bad(`Đã có đơn hàng PO ${d.po} · ART ${d.art} của khách này`);
+    if (await findDuplicate(env, d, id, !!user?.la_admin)) return bad(`Đã có đơn hàng ${dupText(d, !!user?.la_admin)} của khách này`);
     // PO đã thả chuyền: không cho đổi khách / ART (chỉ lệnh đang trỏ vào PO này)
     const cu = await env.DB.prepare('SELECT khach_hang_id, art FROM po_don_hang WHERE id = ?').bind(id).first();
     if (cu && (cu.khach_hang_id !== d.khach_hang_id || normKey(cu.art) !== normKey(d.art)) && await activeChiLenhCount(env, id)) {

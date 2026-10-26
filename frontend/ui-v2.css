@@ -552,3 +552,60 @@ body:has(#tab-create.active) #toast-container { bottom: 110px; }
 .grid-menu button.danger { color: #b42318; }
 .grid-menu button.danger:hover { background: #fde8e6; }
 .grid-menu-sep { height: 1px; background: #e3e8e6; margin: 4px 6px; }
+
+/* ============================================================
+   LẬP PHIẾU – BẢN MỚI ĐANG THỬ (admin, popick.js): ô PO chọn từ danh sách + cột Còn lại
+   ============================================================ */
+#tab-create #excel-grid input.po-pick {
+  cursor: pointer; padding-right: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5l3.5 3.5 3.5-3.5' fill='none' stroke='%235a6865' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+#tab-create #excel-grid .size-val-cell::placeholder { color: #b6c0bd; font-style: italic; font-weight: 400; }
+#tab-create #excel-grid th.th-conlai-col { min-width: 96px; border-left: 2px solid var(--ui-brand); }
+#tab-create #excel-grid td.td-conlai {
+  text-align: right; padding: 0 12px; white-space: nowrap; font-weight: 800; font-size: 16px;
+  background: #f4f8f6; border-left: 2px solid var(--ui-brand); color: var(--ui-faint);
+}
+#tab-create #excel-grid td.td-conlai.cl-con { color: var(--ui-amber); }
+#tab-create #excel-grid td.td-conlai.cl-du { color: var(--ui-danger); }
+#tab-create #excel-grid td.td-conlai.cl-ok { color: #1d6b43; }
+#tab-create #excel-grid td.td-conlai small { font-size: 12px; font-weight: 600; }
+#tab-create #excel-grid tfoot td.foot-conlai { background: #f4f8f6; border-left: 2px solid var(--ui-brand); }
+
+.popick {
+  position: absolute; z-index: 1200; background: var(--ui-paper); color: var(--ui-ink);
+  border: 1px solid var(--ui-line-strong); border-radius: var(--ui-radius); overflow: hidden;
+  box-shadow: 0 14px 34px rgba(14, 40, 34, .24); font-size: 14px;
+}
+.popick-search { display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid var(--ui-line); background: #f8faf9; }
+.popick-q { position: relative; flex: 1; min-width: 0; }
+.popick-q svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--ui-muted); }
+.popick-input {
+  width: 100%; height: 36px; border: 1px solid var(--ui-line-strong); border-radius: var(--ui-radius-sm);
+  padding: 0 10px 0 30px; background: #fff; font: inherit; font-size: 15px; outline: none;
+}
+.popick-input:focus { border-color: var(--ui-focus); box-shadow: 0 0 0 2px rgba(31, 122, 101, .18); }
+.popick-n { font-size: 12px; color: var(--ui-muted); white-space: nowrap; }
+.popick-head, .popick-it {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, .8fr) 88px;
+  gap: 8px; padding: 7px 12px; align-items: center;
+}
+.popick-head { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ui-muted); border-bottom: 1px solid var(--ui-line); }
+.popick-head span:last-child, .pp-con { text-align: right; }
+.popick-list { max-height: 300px; overflow-y: auto; }
+.popick-it { cursor: pointer; border-bottom: 1px solid #eef2f0; }
+.popick-it > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.popick-it:hover { background: #f1f6f4; }
+.popick-it.hi { background: var(--ui-brand-soft); box-shadow: inset 3px 0 0 var(--ui-brand); }
+.popick-it.done { color: var(--ui-faint); }
+.pp-po { font-weight: 700; }
+.pp-cur { color: var(--ui-brand); }
+.pp-mau { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 1px 8px; border-radius: 999px; background: #eef2f0; font-weight: 700; font-size: 12.5px; vertical-align: middle; }
+.pp-con { font-weight: 700; font-size: 13px; color: var(--ui-amber); }
+.popick-it.done .pp-con { color: #1d6b43; }
+.popick-empty { padding: 18px 12px; text-align: center; color: var(--ui-muted); }
+.popick-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 7px 12px; border-top: 1px solid var(--ui-line); background: #f8faf9; font-size: 12px; color: var(--ui-muted); }
+.popick-foot kbd { border: 1px solid var(--ui-line-strong); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; font-family: inherit; font-size: 11px; background: #fff; }
+.popick-fill { flex: 1; }
+@media print { .popick { display: none !important; } }

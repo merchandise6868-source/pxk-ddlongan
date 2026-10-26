@@ -301,6 +301,16 @@
     font-size: 8.5pt !important;
   }
 
+  /* Cột Còn lại (bản mới đang thử – admin): ngay sau cột Tổng, 1 số tổng */
+  table.p-table th.p-cell-conlai,
+  table.p-table td.p-cell-conlai {
+    width: 1% !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    padding: 2px 6px !important;
+    font-weight: bold !important;
+  }
+
   /* Chống rớt dòng đối với các ô số liệu, mã hàng, PO */
   table.p-table .nowrap,
   table.p-table td.text-right,

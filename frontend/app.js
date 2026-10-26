@@ -612,6 +612,9 @@ function renderTableStructure() {
     thHtml += `
       <th class="th-total-col">Tổng</th>
     `;
+    // Bản mới đang thử (admin): cột Còn lại theo đơn hàng – popick.js (nhớ lại để thân bảng / dòng cộng vẽ cùng số cột)
+    AppState.clCol = !!(window.PoPick && PoPick.on());
+    if (AppState.clCol) thHtml += '<th class="th-conlai-col" title="Còn lại của dòng đơn hàng (PO · ART · Màu) sau phiếu này">Còn lại</th>';
   }
   thHtml += '</tr>';
   thead.innerHTML = thHtml;
@@ -635,6 +638,10 @@ function renderTableBody() {
   const tbody = document.querySelector('#excel-grid tbody');
   const mau = AppState.currentMau;
   tbody.innerHTML = '';
+  // Bản mới đang thử (admin): ô PO mở danh sách PO · ART · Màu + cột Còn lại (popick.js)
+  const poPick = mau === 3 && !!AppState.clCol;
+  const poAttrs = poPick ? 'class="excel-cell td-po-cell po-pick" title="Bấm hoặc gõ để chọn PO · ART · Màu"' : 'class="excel-cell td-po-cell" list="po-datalist"';
+  const clCell = rIdx => (poPick ? `<td class="td-conlai" data-cl="${rIdx}"></td>` : '');
 
   AppState.rows.forEach((row, rIdx) => {
     const tr = document.createElement('tr');
@@ -669,7 +676,7 @@ function renderTableBody() {
       `;
     } else if (mau === 3) {
       rowHtml += `
-        <td><input type="text" class="excel-cell td-po-cell" data-field="ma_hang" list="po-datalist" autocomplete="off" value="${escapeHtml(row.ma_hang)}"></td>
+        <td><input type="text" ${poAttrs} data-field="ma_hang" autocomplete="off" value="${escapeHtml(row.ma_hang)}"></td>
         <td><input type="text" class="excel-cell cell-center td-ma-cell" data-field="mau" list="art-datalist" autocomplete="off" value="${escapeHtml(row.mau)}"></td>
         <td><input type="text" class="excel-cell cell-center td-chitiet-cell" data-field="chi_tiet" value="${escapeHtml(row.chi_tiet || '')}"></td>
         <td><input type="text" class="excel-cell cell-center td-dvt-cell" data-field="dvt" value="${escapeHtml(row.dvt)}"></td>
@@ -680,6 +687,7 @@ function renderTableBody() {
         rowHtml += `<td colspan="${n}" class="td-ks"><input type="text" class="excel-cell cell-center ks-qty-cell" data-field="sl_chung_tu" data-span="${n}" placeholder="Số lượng (không theo size)" value="${formatNum(row.sl_chung_tu)}"></td>`;
         rowHtml += `
         <td><input type="text" class="excel-cell cell-center td-total-cell" data-field="ks_total" value="${formatNum(row.sl_chung_tu)}" readonly tabindex="-1" style="font-weight: 700;"></td>
+        ${clCell(rIdx)}
       `;
       } else {
         AppState.selectedSizes.forEach(s => {
@@ -688,6 +696,7 @@ function renderTableBody() {
         });
         rowHtml += `
         <td><input type="text" class="excel-cell cell-center td-total-cell" data-field="sl_chung_tu" value="${formatNum(row.sl_chung_tu)}" readonly tabindex="-1" style="font-weight: 700;"></td>
+        ${clCell(rIdx)}
       `;
       }
     }
@@ -1064,9 +1073,11 @@ function calculateTotals() {
     footHtml += `
       <td class="foot-grand-total">${formatNum(totalSlCt)}</td>
     `;
+    if (AppState.clCol) footHtml += '<td class="foot-conlai"></td>';
   }
   footHtml += '</tr>';
   tfoot.innerHTML = footHtml;
+  if (window.PoPick) PoPick.refresh(); // cột Còn lại + số gợi ý (bản mới – admin)
 
   // Tổng cộng hiển thị ở thanh thao tác phía dưới
   const sumEl = document.getElementById('slip-total-summary');
@@ -1092,6 +1103,7 @@ async function saveSlip(opts = {}) {
 }
 /** Lưu xong: làm mới phiếu nếu vẫn đang ở khách đó, còn đã đổi khách thì chỉ xóa nháp của khách vừa lưu */
 function afterSaved() {
+  if (window.PoPick) PoPick.invalidate(); // số còn lại đã đổi
   if ((AppState.khachHangId || null) === AppState.savingKh) resetForm();
   else removeSlipDraft(AppState.savingKh);
 }
@@ -1297,6 +1309,10 @@ function printCurrentSlip() {
     }
   }
 
+  // Bản mới đang thử (admin): cột "Còn lại" sau cột Tổng – chỉ in khi có dòng khớp đơn hàng (popick.js)
+  const clTexts = mau === 3 && window.PoPick ? PoPick.printTexts(AppState.rows, AppState.printConLai) : null;
+  const clTd = txt => (clTexts ? `<td class="p-cell-conlai">${escapeHtml(txt || '')}</td>` : '');
+
   let tableHeaderHtml = '';
   if (mau === 1) {
     tableHeaderHtml = `
@@ -1326,7 +1342,7 @@ function printCurrentSlip() {
       <tr class="p-size-head">
         <th class="p-nb" colspan="5"></th>
         ${activeSizes.map(s => `<th class="p-cell-size p-size-row">${escapeHtml(s)}</th>`).join('')}
-        <th class="p-nb"></th>
+        <th class="p-nb"></th>${clTexts ? '<th class="p-nb"></th>' : ''}
       </tr>
       <tr>
         <th class="p-cell-stt">STT</th>
@@ -1335,7 +1351,7 @@ function printCurrentSlip() {
         <th class="p-cell-chitiet">Diễn giải</th>
         <th class="p-cell-dvt">ĐVT</th>
         ${activeSizes.map(() => '<th class="p-cell-size"></th>').join('')}
-        <th class="p-cell-total">Tổng</th>
+        <th class="p-cell-total">Tổng</th>${clTexts ? '<th class="p-cell-conlai">Còn lại</th>' : ''}
       </tr>
     `;
   }
@@ -1352,7 +1368,7 @@ function printCurrentSlip() {
   let printedBlocks = 0;
   // Dòng công cụ / dụng cụ (không size) được gom xuống cuối phiếu
   const ksRows = mau === 3 ? AppState.rows.filter(r => r.loai === 'khong_size' && (r.chi_tiet || r.ma_hang || parseVnNumber(r.sl_chung_tu) > 0)) : [];
-  AppState.rows.forEach(r => {
+  AppState.rows.forEach((r, rIdx) => {
     if (mau === 3 && r.loai === 'khong_size') return;
     const slCt = parseVnNumber(r.sl_chung_tu);
     const slTx = parseVnNumber(r.sl_thuc_xuat);
@@ -1408,14 +1424,14 @@ function printCurrentSlip() {
             const val = parseVnNumber(r.sizes[s]);
             return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
           }).join('')}
-          <td class="p-cell-total" style="font-weight: bold;">${formatNum(slCt)}</td>
+          <td class="p-cell-total" style="font-weight: bold;">${formatNum(slCt)}</td>${clTd(clTexts && clTexts[rIdx])}
         </tr>
       `;
     }
   });
 
   if (ksRows.length) {
-    const nCols = 5 + activeSizes.length + 1;
+    const nCols = 5 + activeSizes.length + 1 + (clTexts ? 1 : 0);
     tableBodyHtml += `<tr class="p-sub-head"><td colspan="${nCols}">Công cụ, dụng cụ kèm theo</td></tr>`;
     ksRows.forEach(r => {
       sttCount++;
@@ -1427,7 +1443,7 @@ function printCurrentSlip() {
           <td class="p-cell-chitiet">${escapeHtml(r.chi_tiet || '')}</td>
           <td class="p-cell-dvt">${escapeHtml(r.dvt)}</td>
           <td class="p-cell-size p-ks-span" colspan="${activeSizes.length}"></td>
-          <td class="p-cell-total" style="font-weight: bold;">${formatNum(parseVnNumber(r.sl_chung_tu))}</td>
+          <td class="p-cell-total" style="font-weight: bold;">${formatNum(parseVnNumber(r.sl_chung_tu))}</td>${clTd('')}
         </tr>
       `;
     });
@@ -1470,7 +1486,7 @@ function printCurrentSlip() {
           const val = sizeTotals[s];
           return `<td class="p-cell-size">${val > 0 ? formatNum(val) : ''}</td>`;
         }).join('')}
-        <td class="p-cell-total" style="font-weight: bold;">${formatNum(totalSlCt)}</td>
+        <td class="p-cell-total" style="font-weight: bold;">${formatNum(totalSlCt)}</td>${clTd('')}
       </tr>
     `;
   }
@@ -1709,6 +1725,9 @@ window.reprintSlip = async function(id) {
     }
 
     const slip = data.data;
+    // Bản mới (admin): cột Còn lại của phiếu in lại = còn lại hiện tại theo đơn hàng của khách trên phiếu
+    const conLai = window.PoPick && PoPick.admin() && slip.mau_phieu === 3 && slip.khach_hang_id
+      ? await PoPick.fetch(slip.khach_hang_id, slip.id).catch(() => null) : null;
 
     // Lưu tạm state để tái sử dụng hàm in (kể cả các ô đầu phiếu đang nhập)
     const HEAD_IDS = ['slip-so', 'slip-date', 'slip-donvi', 'slip-lydo', 'slip-donhang', 'slip-bophanxuat', 'slip-nguoilap', 'slip-nguoigiao', 'slip-diachi-cty'];
@@ -1774,7 +1793,8 @@ window.reprintSlip = async function(id) {
     const diachiInput = document.getElementById('slip-diachi-cty');
     if (diachiInput) diachiInput.value = slip.dia_chi_cty || DEFAULT_COMPANY_ADDRESS;
 
-    printCurrentSlip();
+    AppState.printConLai = conLai;
+    try { printCurrentSlip(); } finally { delete AppState.printConLai; }
 
     // Khôi phục state
     prevHead.forEach(([i, v]) => { const el = document.getElementById(i); if (el && v !== undefined) el.value = v; });
