@@ -4,8 +4,8 @@
 #tab-nhapkho {
   --nk-1: #3f5f8a;  --nk-1-soft: #e8eef7;
   --nk-2: #7a4f93;  --nk-2-soft: #f2eaf7;
-  --nk-3: #a5600a;  --nk-3-soft: #fff3df;
-  --nk-4: #0e5a4a;  --nk-4-soft: #e2efea;
+  --nk-3: #a4492a;  --nk-3-soft: #fdeee8;
+  --nk-4: #0c5776;  --nk-4-soft: #dcf4f7;
   --nk-5: #a3402c;  --nk-5-soft: #fbebe6;
   --nk-c: var(--nk-4); --nk-c-soft: var(--nk-4-soft);
 }
@@ -96,7 +96,7 @@
   position: sticky; bottom: 0; z-index: 5;
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background: var(--ui-paper); border: 1px solid var(--ui-line); border-radius: var(--ui-radius);
-  padding: 12px 16px; box-shadow: 0 -4px 14px rgba(16, 40, 34, .08);
+  padding: 12px 16px; box-shadow: 0 -4px 14px rgba(0, 28, 68, .08);
 }
 #tab-nhapkho .nk-grand { font-size: 16px; }
 #tab-nhapkho .nk-grand b { font-size: 22px; color: var(--nk-c); margin-left: 4px; }
@@ -113,7 +113,7 @@
   text-align: left; padding: 10px; border-bottom: 1px solid var(--ui-line); white-space: nowrap;
 }
 #tab-nhapkho .nk-table td { padding: 10px; border-bottom: 1px solid var(--ui-line); vertical-align: top; }
-#tab-nhapkho .nk-table tbody tr:hover td { background: #f7faf8; }
+#tab-nhapkho .nk-table tbody tr:hover td { background: #f3f9fb; }
 #tab-nhapkho .nk-table tfoot td { background: var(--ui-wash); font-weight: 600; }
 #tab-nhapkho .nk-table .r { text-align: right; }
 #tab-nhapkho .nk-table .c { text-align: center; }

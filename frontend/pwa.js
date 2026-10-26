@@ -30,9 +30,9 @@
     bar.className = 'no-print';
     bar.setAttribute('role', 'status');
     bar.style.cssText = 'position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:10000;display:flex;gap:10px;align-items:center;flex-wrap:wrap;'
-      + 'max-width:calc(100% - 24px);background:#1b3a6b;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:15px';
+      + 'max-width:calc(100% - 24px);background:#001c44;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:15px';
     bar.innerHTML = '<b>Đã có bản mới của Phiếu Xuất Kho.</b><span style="opacity:.85">Lưu phiếu đang làm rồi bấm tải lại.</span>'
-      + '<button type="button" data-up="reload" style="height:34px;padding:0 14px;border:0;border-radius:8px;background:#fff;color:#1b3a6b;font-weight:700;cursor:pointer">Tải lại ngay</button>'
+      + '<button type="button" data-up="reload" style="height:34px;padding:0 14px;border:0;border-radius:8px;background:#fff;color:#001c44;font-weight:700;cursor:pointer">Tải lại ngay</button>'
       + '<button type="button" data-up="later" style="height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.5);border-radius:8px;background:transparent;color:#fff;cursor:pointer">Để sau</button>';
     bar.addEventListener('click', e => {
       const b = e.target.closest('[data-up]'); if (!b) return;

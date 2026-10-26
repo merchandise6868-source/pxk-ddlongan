@@ -6,7 +6,7 @@
  * Khách hàng lấy theo thanh bên (window.KH): số id | '' (tất cả) | 'none' (phiếu chưa gán khách)
  */
 
-const DEPT_COLORS = ['#0e5a4a', '#2f74b5', '#c47f17', '#7a5bb5', '#b4475b', '#3f8f6b'];
+const DEPT_COLORS = ['#0c5776', '#2d99ae', '#c47f17', '#7a5bb5', '#b4475b', '#3f8f6b'];
 let currentMatrixData = [];
 let currentMatrixSizes = [];
 let currentCongNo = [];
