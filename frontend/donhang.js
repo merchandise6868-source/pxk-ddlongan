@@ -14,6 +14,7 @@
 
   const S = {
     q: '', tt: 'con', list: [],
+    dotMoi: null, dotMoiKh: null, // đợt gợi ý cho đơn mới của khách đang chọn
     view: 'list',      // 'list' | 'don'
     don: null,         // { id, isNew, khach_hang_id, so_don, ngay_giao, ghi_chu, lines: [...] }
     day: -1,           // dãy size đang hiện (-1 = tất cả)
@@ -59,9 +60,10 @@
     if (S.q) p.set('q', S.q);
     const n = seq('dh-list');
     try {
-      const { data } = await api('/api/dondat?' + p);
+      const data = await api('/api/dondat?' + p);
       if (!latest('dh-list', n)) return; // đã đổi khách / bộ lọc trong lúc chờ
-      S.list = data;
+      S.list = data.data;
+      S.dotMoi = data.dot_moi; S.dotMoiKh = khId();
       renderList();
     } catch (err) { const box = $('dh-list'); if (box) box.innerHTML = `<div class="v3-empty">Lỗi tải đơn hàng: ${esc(err.message)}</div>`; }
   }
@@ -78,7 +80,7 @@
       <thead><tr><th>Số đơn</th>${allKh ? '<th>Khách hàng</th>' : ''}<th>Ngày giao</th><th class="r">Số ART</th><th class="r">Số PO</th>
         <th class="r">Đặt</th><th class="r">Đã thả</th><th class="r">Đã xuất</th><th class="r">Còn lại</th><th></th></tr></thead>
       <tbody>${S.list.map((d, i) => `<tr>
-        <td><b>${esc(d.so_don)}</b>${d.ghi_chu ? `<br><small class="ui-muted">${esc(d.ghi_chu)}</small>` : ''}</td>
+        <td><b>${esc(d.so_don)}</b>${d.id ? ` <span class="ui-badge ui-badge-off">Đợt ${d.dot}</span>` : ''}${d.ghi_chu ? `<br><small class="ui-muted">${esc(d.ghi_chu)}</small>` : ''}</td>
         ${allKh ? `<td>${esc(d.khach_ten)}</td>` : ''}
         <td class="nowrap">${esc(viDate(d.ngay_giao))}</td>
         <td class="r">${d.so_art}</td><td class="r">${d.so_po}</td>
@@ -103,9 +105,17 @@
     while (used.has(normKey(s))) s = `${base}-${n++}`;
     return s;
   }
-  function newDon() {
+  /** Đợt gợi ý cho đơn mới: sau mọi đợt đã có đơn / đã xuất phiếu của khách */
+  async function dotMoi(kh) {
+    if (S.dotMoiKh !== kh || !S.dotMoi) {
+      try { S.dotMoi = (await api(`/api/dondat?khach_hang_id=${kh}&trang_thai=all`)).dot_moi; S.dotMoiKh = kh; } catch (_) { return 1; }
+    }
+    return S.dotMoi || 1;
+  }
+  async function newDon() {
     const kh = C().byId(khId());
-    S.don = { id: 0, isNew: true, khach_hang_id: khId(), so_don: suggestSoDon(kh), ngay_giao: '', ghi_chu: '',
+    const dot = await dotMoi(khId());
+    S.don = { id: 0, isNew: true, khach_hang_id: khId(), so_don: suggestSoDon(kh), dot, ngay_giao: '', ghi_chu: '',
       lines: Array.from({ length: BLANK_ROWS }, emptyLine) };
     S.day = -1; S.sel.clear(); S.dirty = false; S.view = 'don';
     render();
@@ -117,6 +127,7 @@
       const { data } = await api(`/api/dondat/${d.id}${d.id ? '' : `?khach_hang_id=${d.khach_hang_id}`}`);
       S.don = {
         id: data.id, isNew: !data.id, khach_hang_id: data.khach_hang_id, so_don: data.so_don || suggestSoDon(C().byId(data.khach_hang_id)),
+        dot: data.id ? data.dot : await dotMoi(data.khach_hang_id),
         ngay_giao: data.ngay_giao || '', ghi_chu: data.ghi_chu || '',
         lines: data.lines.map(o => ({ id: o.id, art: o.art, po: o.po, mau: o.mau || '', don_gia: o.don_gia || '',
           sizes: Object.fromEntries(o.sizes.filter(s => s.dat).map(s => [s.size, s.dat])), info: o })),
@@ -156,12 +167,15 @@
     const kh = C().byId(D.khach_hang_id);
     const days = (kh && kh.day_size) || [];
     $('dh-view').innerHTML = `
-      <div class="ui-return-note v3-editing"><span>${D.isNew ? (D.lines.some(l => l.id) ? 'Gom các PO lẻ vào một đơn' : 'Tạo đơn mới') : `Đơn <b>${esc(D.so_don)}</b>`} · khách <b>${esc(kh?.ten_ngan || '')}</b></span>
+      <div class="ui-return-note v3-editing"><span>${D.isNew ? (D.lines.some(l => l.id) ? 'Gom các PO lẻ vào một đơn' : 'Tạo đơn mới') : `Đơn <b>${esc(D.so_don)}</b> · đợt <b>${esc(D.dot)}</b>`} · khách <b>${esc(kh?.ten_ngan || '')}</b></span>
         <button type="button" class="ui-btn ui-btn-ghost" data-act="close">← Về danh sách đơn</button></div>
       <section class="ui-panel v3-form">
         <div class="ui-fields">
           <div class="ui-field"><span class="ui-label">Khách hàng</span><div class="v3-fixed">${esc(kh?.ten_ngan || '')}</div></div>
           <label class="ui-field"><span class="ui-label">Số đơn <b class="ui-req">*</b></span><input type="text" class="ui-input ui-input-strong" data-h="so_don" value="${esc(D.so_don)}"></label>
+          <label class="ui-field"><span class="ui-label">Đơn hàng đợt <b class="ui-req">*</b> <span class="ui-label-note">phiếu xuất chỉ trừ vào đơn cùng đợt</span></span>
+            <input type="number" min="1" max="999" step="1" class="ui-input ui-input-strong" data-h="dot" value="${esc(D.dot)}"
+              title="Phiếu xuất kho chọn đợt nào thì trừ vào đơn của đợt đó. Phiếu cũ chưa ghi đợt được tính là đợt 1."></label>
           <label class="ui-field"><span class="ui-label">Ngày giao</span><input type="date" class="ui-input" data-h="ngay_giao" value="${esc(D.ngay_giao)}"></label>
           <label class="ui-field"><span class="ui-label">Ghi chú</span><input type="text" class="ui-input" data-h="ghi_chu" value="${esc(D.ghi_chu)}"></label>
         </div>
@@ -250,7 +264,7 @@
     const D = S.don;
     S.sheet?.markErrors({});
     const body = {
-      khach_hang_id: D.khach_hang_id, so_don: D.so_don, ngay_giao: D.ngay_giao, ghi_chu: D.ghi_chu,
+      khach_hang_id: D.khach_hang_id, so_don: D.so_don, dot: parseInt(D.dot, 10) || null, ngay_giao: D.ngay_giao, ghi_chu: D.ghi_chu,
       lines: D.lines.map(l => ({ id: l.id, art: l.art, po: l.po, mau: l.mau, don_gia: priceNum(l.don_gia),
         sizes: Object.entries(l.sizes).filter(([, v]) => qtyNum(v)).map(([size, v]) => ({ size, so_luong: qtyNum(v) })) })),
     };
@@ -258,6 +272,7 @@
       const r = D.id ? await api(`/api/dondat/${D.id}`, 'PUT', body) : await api('/api/dondat', 'POST', body);
       toast(r.message || 'Đã lưu đơn', 'success');
       S.dirty = false;
+      S.dotMoiKh = null; // đợt gợi ý tính lại
       await openDon({ id: r.id, khach_hang_id: D.khach_hang_id });
       if (window.Catalog) { await window.Catalog.load(); window.dispatchEvent(new Event('catalog-changed')); }
     } catch (err) {

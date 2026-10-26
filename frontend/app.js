@@ -26,6 +26,7 @@ const AppState = {
   defaultDvt: 'Đôi',       // ĐVT mặc định cho dòng mới
   kieuXuat: 'chi_tiet',    // Khách có bộ chi tiết (JiaYu): 'doi' = xuất theo đôi · 'chi_tiet' = theo chi tiết (miếng) + dòng đồng bộ đôi
   lastAutoDonHang: '',     // Giá trị "Đơn hàng" do hệ thống tự ghép (để biết người dùng đã sửa tay chưa)
+  dotDon: null,            // Đợt đơn hàng của phiếu (admin chọn ở ô "Đơn hàng đợt"); null = đợt mới nhất của khách
 };
 
 function saveSlipDraft() {
@@ -49,6 +50,7 @@ function saveSlipDraft() {
       dayIdx: AppState.dayIdx,
       lastAutoDonHang: AppState.lastAutoDonHang,
       kieuXuat: AppState.kieuXuat,
+      dotDon: AppState.dotDon,
     };
     localStorage.setItem(draftKey(AppState.khachHangId), JSON.stringify(draft));
   } catch (err) {
@@ -88,6 +90,7 @@ function restoreSlipDraft(khId) {
       AppState.dayIdx = draft.dayIdx || 0;
       AppState.lastAutoDonHang = draft.lastAutoDonHang || '';
       AppState.kieuXuat = draft.kieuXuat === 'doi' ? 'doi' : 'chi_tiet';
+      AppState.dotDon = draft.dotDon || null;
       assignBlockKeys(AppState.rows);
 
       if (draft.donvi && document.getElementById('slip-donvi')) document.getElementById('slip-donvi').value = draft.donvi;
@@ -1194,6 +1197,8 @@ async function saveSlipCore(opts = {}) {
     nguoi_lap: nguoiLap,
     nguoi_giao: document.getElementById('slip-nguoigiao')?.value.trim() || '',
     phong_ke_hoach: document.getElementById('slip-phongkh')?.value.trim() || '',
+    // Đợt đơn hàng (chỉ bản mới của admin gửi; không gửi thì máy chủ: phiếu mới lấy đợt mới nhất, sửa phiếu giữ đợt cũ)
+    dot_don: window.PoPick && PoPick.on() ? PoPick.dot() || undefined : undefined,
     dia_chi_cty: diaChiCty,
     khach_hang_id: AppState.khachHangId,
     lines: validLines,
@@ -1314,7 +1319,7 @@ function printCurrentSlip() {
   }
 
   // Bản mới đang thử (admin): cột "Còn lại" sau cột Tổng – chỉ in khi có dòng khớp đơn hàng (popick.js)
-  const clTexts = mau === 3 && window.PoPick ? PoPick.printTexts(AppState.rows, AppState.printConLai) : null;
+  const clTexts = mau === 3 && window.PoPick ? PoPick.printTexts(AppState.rows, AppState.printConLai, AppState.printDot) : null;
   const clTd = txt => (clTexts ? `<td class="p-cell-conlai">${escapeHtml(txt || '')}</td>` : '');
 
   let tableHeaderHtml = '';
@@ -1803,7 +1808,8 @@ window.reprintSlip = async function(id) {
     if (diachiInput) diachiInput.value = slip.dia_chi_cty || DEFAULT_COMPANY_ADDRESS;
 
     AppState.printConLai = conLai;
-    try { printCurrentSlip(); } finally { delete AppState.printConLai; }
+    AppState.printDot = slip.dot_don || 1; // phiếu cũ chưa ghi đợt = đợt 1
+    try { printCurrentSlip(); } finally { delete AppState.printConLai; delete AppState.printDot; }
 
     // Khôi phục state
     prevHead.forEach(([i, v]) => { const el = document.getElementById(i); if (el && v !== undefined) el.value = v; });
@@ -1833,6 +1839,7 @@ window.editSlip = async function(id) {
       if (!ok) return;
     }
     AppState.currentEditingId = slip.id;
+    AppState.dotDon = slip.dot_don || 1; // phiếu cũ chưa ghi đợt = đợt 1
     if (window.Grid) { Grid.resetHistory(); Grid.clearSelection(); }
 
     if (slip.mau_phieu === 3) {
@@ -1957,6 +1964,7 @@ function clearSlipFields() {
   const diachiInput = document.getElementById('slip-diachi-cty');
   if (diachiInput) diachiInput.value = DEFAULT_COMPANY_ADDRESS;
   AppState.lastAutoDonHang = '';
+  AppState.dotDon = null;
   if (window.Grid) { Grid.resetHistory(); Grid.clearSelection(); }
 }
 
@@ -2088,6 +2096,7 @@ function selectCustomer(id, opts = {}) {
   applyDeptFilter();
   refreshPoDatalist();
 
+  if (!opts.fromLoad) AppState.dotDon = null; // đổi khách: đợt mới nhất của khách mới
   if (!opts.fromLoad && kh) {
     document.getElementById('slip-donvi').value = kh.ten_day_du || '';
     document.getElementById('slip-lydo').value = kh.ly_do_xuat || '';

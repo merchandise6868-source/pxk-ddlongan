@@ -6,7 +6,7 @@
 import { ensureSchema, handleCatalogApi, guessKhachHangId } from './catalog.js';
 import { handleNhapKhoApi } from './nhapkho.js';
 import { authGate, handleAuthApi, handleTaiKhoanApi } from './auth.js';
-import { handleDonHangApi } from './donhang.js';
+import { handleDonHangApi, ensureDonHangSchema, latestDot } from './donhang.js';
 import { handleChiLenhApi } from './chilenh.js';
 import { handleToChatApi } from './tochat.js';
 import { handleToMayApi } from './tomay.js';
@@ -97,6 +97,24 @@ async function savePhongKeHoach(env, phieuId, ten) {
   if (!phieuId || ten === undefined) return;
   try {
     await env.DB.prepare('UPDATE phieu SET phong_ke_hoach = ? WHERE id = ?').bind(String(ten || '').trim(), phieuId).run();
+  } catch (_) { /* DB chưa có cột */ }
+}
+
+/**
+ * Ghi đợt đơn hàng của phiếu (phiếu chỉ trừ vào đơn cùng đợt).
+ * Trang không gửi đợt (người không phải admin / bản cũ): phiếu mới lấy đợt mới nhất có đơn của khách, sửa phiếu thì giữ đợt đã lưu.
+ */
+async function saveDotDon(env, phieuId, khId, dot, isNew) {
+  if (!phieuId) return;
+  try {
+    await ensureDonHangSchema(env);
+    let v = parseInt(dot, 10) > 0 ? parseInt(dot, 10) : null;
+    if (!v) {
+      if (!isNew) return;
+      v = await latestDot(env, khId);
+      if (!v) return;
+    }
+    await env.DB.prepare('UPDATE phieu SET dot_don = ? WHERE id = ?').bind(v, phieuId).run();
   } catch (_) { /* DB chưa có cột */ }
 }
 
@@ -566,6 +584,7 @@ async function handleApi(url, request, env) {
 
     await saveNguoiGiao(env, phieuId, body.nguoi_giao);
     await savePhongKeHoach(env, phieuId, body.phong_ke_hoach);
+    await saveDotDon(env, phieuId, khach_hang_id, body.dot_don, true);
 
     return Response.json({
       success: true,
@@ -673,6 +692,7 @@ async function handleApi(url, request, env) {
 
     await saveNguoiGiao(env, id, body.nguoi_giao);
     await savePhongKeHoach(env, id, body.phong_ke_hoach);
+    await saveDotDon(env, id, khach_hang_id, body.dot_don, false);
 
     return Response.json({ success: true, message: 'Cập nhật phiếu thành công' });
   }

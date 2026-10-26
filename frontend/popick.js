@@ -4,7 +4,8 @@
  *   (PO / ART / màu, gõ không dấu cũng được). Chọn xong: PO -> PO, ART -> Mã hàng, Màu -> Diễn giải.
  * - Cột "Còn lại" trên bảng nhập và trên phiếu in (sau cột Tổng), chỉ ghi 1 số tổng.
  * Còn lại = số từ /api/conlai (đặt − đã xuất − điều chỉnh, không tính phiếu đang sửa) trừ tiếp các dòng của phiếu đang lập.
- * Khớp dòng phiếu với dòng đơn giống máy chủ (src/donhang.js): PO + ART, cùng PO + ART nhiều màu thì theo màu ở Diễn giải.
+ * Khớp dòng phiếu với dòng đơn giống máy chủ (src/donhang.js): chỉ đơn cùng đợt với phiếu (ô "Đơn hàng đợt"),
+ *   PO + ART, cùng PO + ART nhiều màu thì theo màu ở Diễn giải.
  * Nạp sau app.js / grid.js (dùng AppState, renderTableBody, calculateTotals, ... của app.js).
  */
 (function () {
@@ -22,7 +23,7 @@
   /* ============================================================
      SỐ CÒN LẠI THEO DÒNG ĐƠN
      ============================================================ */
-  let data = null;    // { kh, tru, lines: [{ id, po, art, mau, don_hang, sizes: {size: còn} }] }
+  let data = null;    // { kh, tru, lines: [{ id, dot, po, art, mau, don_hang, sizes: {size: còn} }], dots: [{ dot, don: [số đơn] }], latest }
   let loading = '';
   const keyOf = (kh, tru) => `${kh || 0}|${tru || 0}`;
   const curKey = () => keyOf(AppState.khachHangId, AppState.currentEditingId);
@@ -33,7 +34,7 @@
     const res = await fetch(`/api/conlai?khach_hang_id=${kh}${tru ? `&tru_phieu=${tru}` : ''}`);
     const j = await res.json();
     if (!j.success) throw new Error(j.error || 'Lỗi tải số còn lại');
-    return { kh, tru: tru || 0, lines: j.data || [] };
+    return { kh, tru: tru || 0, lines: j.data || [], dots: j.dots || [], latest: j.latest || null };
   };
   PoPick.load = async () => {
     if (!PoPick.on()) return;
@@ -54,6 +55,37 @@
   };
   /** Số liệu đã cũ (vừa lưu phiếu / mở lại tab): lần vẽ sau tự tải lại */
   PoPick.invalidate = () => { data = null; };
+
+  /** Đợt đơn hàng của phiếu đang lập: đã chọn ở ô "Đơn hàng đợt", chưa chọn thì đợt mới nhất có đơn (giống máy chủ khi lưu) */
+  PoPick.dot = () => AppState.dotDon || (current() && current().latest) || null;
+  /** Dòng đơn cùng đợt với phiếu (đơn chưa ghi đợt = đợt 1) */
+  const ofDot = (d, dot) => (d ? { ...d, lines: d.lines.filter(l => (l.dot || 1) === (dot || d.latest || 1)) } : d);
+
+  /** Ô chọn đợt trên đầu phiếu: hiện khi khách đã có đơn hàng */
+  function renderDot() {
+    const wrap = document.getElementById('slip-dot-wrap');
+    const sel = document.getElementById('slip-dot');
+    if (!wrap || !sel) return;
+    const d = PoPick.on() ? current() : null;
+    wrap.hidden = !d || !d.dots.length;
+    if (wrap.hidden) return;
+    const cur = PoPick.dot() || 1;
+    const max = Math.max(cur, ...d.dots.map(x => x.dot));
+    const don = new Map(d.dots.map(x => [x.dot, x.don]));
+    let html = '';
+    for (let k = max; k >= 1; k--) {
+      const ds = don.get(k);
+      html += `<option value="${k}"${k === cur ? ' selected' : ''}>Đợt ${k}${ds ? (ds.length ? ` · ${esc(ds.join(', '))}` : '') : ' (chưa nhập đơn)'}</option>`;
+    }
+    if (sel.dataset.html !== html) { sel.innerHTML = html; sel.dataset.html = html; }
+    sel.value = String(cur);
+  }
+  document.addEventListener('change', e => {
+    if (e.target.id !== 'slip-dot') return;
+    AppState.dotDon = parseInt(e.target.value, 10) || null;
+    saveSlipDraft();
+    PoPick.refresh();
+  });
 
   /** Dòng đơn của 1 dòng phiếu */
   function matchLine(lines, r) {
@@ -111,8 +143,9 @@
   /** Vẽ lại cột Còn lại + số gợi ý mờ trong ô size (không đụng ô đang gõ). Gọi sau calculateTotals */
   PoPick.refresh = () => {
     if (box && !box.hidden && (!P.cell || !document.contains(P.cell))) close();
+    renderDot();
     if (!PoPick.on()) return;
-    const d = current();
+    const d = ofDot(current(), PoPick.dot());
     if (!d) { PoPick.load(); return; }
     const res = compute(AppState.rows, d);
     AppState.rows.forEach((r, i) => {
@@ -135,11 +168,11 @@
 
   /**
    * Chữ cột Còn lại khi in (theo chỉ số AppState.rows): chỉ ghi ở dòng cuối của mỗi dòng đơn.
-   * Trả null nếu không in cột (không phải admin / không dòng nào khớp đơn). d: số liệu riêng (in lại phiếu cũ)
+   * Trả null nếu không in cột (không phải admin / không dòng nào khớp đơn). d, dot: số liệu + đợt riêng (in lại phiếu cũ)
    */
-  PoPick.printTexts = (rows, d) => {
+  PoPick.printTexts = (rows, d, dot) => {
     if (!PoPick.admin()) return null;
-    const res = compute(rows, d === undefined ? current() : d);
+    const res = d === undefined ? compute(rows, ofDot(current(), PoPick.dot())) : compute(rows, ofDot(d, dot));
     if (!res.some(Boolean)) return null;
     const last = new Map();
     res.forEach((c, i) => { if (c) last.set(c.line.id, i); });
@@ -230,7 +263,7 @@
   }
   function renderList(first) {
     if (!box || box.hidden || !P.cell) return;
-    const d = current();
+    const d = ofDot(current(), PoPick.dot());
     const res = compute(AppState.rows, d);
     const remain = new Map();
     res.forEach(c => { if (c) remain.set(c.line.id, c); });
@@ -241,7 +274,7 @@
     box.querySelector('.popick-n').textContent = d ? `${P.items.length} / ${d.lines.length} dòng` : '';
     const list = box.querySelector('.popick-list');
     list.innerHTML = !d ? '<div class="popick-empty">Đang tải danh sách PO…</div>'
-      : !d.lines.length ? '<div class="popick-empty">Khách này chưa có đơn hàng nào (nhập ở tab Đơn hàng).</div>'
+      : !d.lines.length ? `<div class="popick-empty">${current().lines.length ? `Đợt ${PoPick.dot() || 1} chưa có đơn hàng (đổi ở ô “Đơn hàng đợt” trên đầu phiếu).` : 'Khách này chưa có đơn hàng nào (nhập ở tab Đơn hàng).'}</div>`
       : !P.items.length ? `<div class="popick-empty">Không có PO nào khớp “${esc(P.q)}”</div>`
       : P.items.map((l, j) => {
         const t = remain.get(l.id) || totals(l.sizes || {});

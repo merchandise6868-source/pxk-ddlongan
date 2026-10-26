@@ -71,7 +71,7 @@
     return `<section class="ui-panel v3-td-card" data-id="${o.id}">
       <div class="v3-td-head">
         <div><b class="v3-td-po">PO ${esc(o.po)}</b> <span class="v3-td-art">ART ${esc(o.art)}</span>
-          <span class="ui-muted">· ${esc(o.khach_ten)}${o.don_hang ? ' · ĐH ' + esc(o.don_hang) : ''}${o.mau ? ' · ' + esc(o.mau) : ''}${o.ngay_giao ? ' · giao ' + viDate(o.ngay_giao) : ''}</span>
+          <span class="ui-muted">· ${esc(o.khach_ten)}${o.don_hang ? ' · ĐH ' + esc(o.don_hang) : ''}${o.don_id ? ' · đợt ' + o.dot : ''}${o.mau ? ' · ' + esc(o.mau) : ''}${o.ngay_giao ? ' · giao ' + viDate(o.ngay_giao) : ''}</span>
           ${badge}${o.giao_du ? ` <span class="ui-badge ui-badge-off">Dư ${fmt0(o.giao_du)}</span>` : ''}</div>
         <div class="v3-td-btns">
           <button type="button" class="ui-btn-sm" data-act="adj" data-id="${o.id}">＋ Điều chỉnh</button>
@@ -138,22 +138,22 @@
     const list = S.unmatched;
     if (!list.length) { box.innerHTML = ''; return; }
     const khName = id => (C().byId(id) || {}).ten_ngan || '';
-    const ordersOf = kh => (S.all || []).filter(o => o.khach_hang_id === kh);
+    const ordersOf = (kh, dot) => (S.all || []).filter(o => o.khach_hang_id === kh && o.dot === dot); // gán chỉ trong cùng đợt
     box.innerHTML = `<section class="ui-panel">
       <h3 class="ui-panel-title">Dòng phiếu xuất chưa khớp đơn hàng (${list.length})</h3>
-      <p class="ui-hint v3-mb">PO / ART trên phiếu không trùng đơn hàng nào (gõ khác, gộp nhiều PO, hoặc chưa nhập đơn hàng). Chọn đúng đơn hàng rồi bấm <b>Gán</b>; các phiếu sau ghi giống vậy sẽ tự khớp.</p>
+      <p class="ui-hint v3-mb">PO / ART trên phiếu không trùng đơn hàng nào cùng đợt (gõ khác, gộp nhiều PO, hoặc chưa nhập đơn hàng của đợt đó). Chọn đúng đơn hàng rồi bấm <b>Gán</b>; các phiếu sau ghi giống vậy sẽ tự khớp.</p>
       <div class="v3-table-wrap"><table class="v3-table v3-table-mini">
-        <thead><tr><th>Ngày</th><th>Số phiếu</th><th>Khách hàng</th><th>PO trên phiếu</th><th>ART trên phiếu</th><th>Theo size</th><th class="r">Tổng</th><th>Gán vào đơn hàng</th></tr></thead>
+        <thead><tr><th>Ngày</th><th>Số phiếu</th><th>Khách hàng</th><th>Đợt</th><th>PO trên phiếu</th><th>ART trên phiếu</th><th>Theo size</th><th class="r">Tổng</th><th>Gán vào đơn hàng</th></tr></thead>
         <tbody>${list.slice().reverse().map(u => {
-          const opts = u.khach_hang_id ? ordersOf(u.khach_hang_id) : [];
+          const opts = u.khach_hang_id ? ordersOf(u.khach_hang_id, u.dot) : [];
           return `<tr><td class="nowrap">${viDate(u.ngay)}</td><td class="nowrap"><b>${esc(u.so_phieu)}</b></td><td>${esc(khName(u.khach_hang_id)) || '<span class="v3-neg">Chưa chọn khách</span>'}</td>
-            <td>${esc(u.po)}</td><td>${esc(u.art)}</td>
+            <td class="c">${u.khach_hang_id ? u.dot : ''}</td><td>${esc(u.po)}</td><td>${esc(u.art)}</td>
             <td><small>${Object.entries(u.sizes).map(([s, v]) => `${esc(s)}: ${fmt0(v)}`).join(' · ')}</small></td><td class="r"><b>${fmt0(u.tong)}</b></td>
             <td class="nowrap">${!u.khach_hang_id ? '<small class="ui-muted">Gán khách cho phiếu ở tab Danh sách phiếu</small>'
               : opts.length ? `<select class="ui-input v3-sel-sm" data-gan="${u.dong_id}"><option value="">Chọn PO</option>${opts.map(o =>
                 `<option value="${o.id}" ${S.ganSel[u.dong_id] === o.id ? 'selected' : ''}>${esc(o.po)} · ${esc(o.art)}</option>`).join('')}</select>
                 <button type="button" class="ui-btn-sm" data-act="gan" data-dong="${u.dong_id}">Gán</button>`
-              : '<small class="ui-muted">Khách chưa có đơn hàng</small>'}</td></tr>`;
+              : `<small class="ui-muted">Khách chưa có đơn hàng đợt ${u.dot}</small>`}</td></tr>`;
         }).join('')}</tbody></table></div>
     </section>`;
   }
