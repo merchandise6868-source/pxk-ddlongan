@@ -588,7 +588,7 @@ body:has(#tab-create.active) #toast-container { bottom: 110px; }
 .popick-input:focus { border-color: var(--ui-focus); box-shadow: 0 0 0 2px rgba(31, 122, 101, .18); }
 .popick-n { font-size: 12px; color: var(--ui-muted); white-space: nowrap; }
 .popick-head, .popick-it {
-  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, .8fr) 88px;
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, .8fr) 58px 88px;
   gap: 8px; padding: 7px 12px; align-items: center;
 }
 .popick-head { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--ui-muted); border-bottom: 1px solid var(--ui-line); }
@@ -603,6 +603,8 @@ body:has(#tab-create.active) #toast-container { bottom: 110px; }
 .pp-cur { color: var(--ui-brand); }
 .pp-mau { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 1px 8px; border-radius: 999px; background: #eef2f0; font-weight: 700; font-size: 12.5px; vertical-align: middle; }
 .pp-con { font-weight: 700; font-size: 13px; color: var(--ui-amber); }
+.pp-dot { display: inline-block; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--ui-line-strong); font-size: 12px; font-weight: 700; color: var(--ui-muted); white-space: nowrap; }
+.pp-dot.on { border-color: var(--ui-brand); background: var(--ui-brand-soft); color: var(--ui-brand); } /* đợt của phiếu đang lập */
 .popick-it.done .pp-con { color: #1d6b43; }
 .popick-empty { padding: 18px 12px; text-align: center; color: var(--ui-muted); }
 .popick-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 7px 12px; border-top: 1px solid var(--ui-line); background: #f8faf9; font-size: 12px; color: var(--ui-muted); }

@@ -201,7 +201,7 @@
         </div>
         <span class="popick-n"></span>
       </div>
-      <div class="popick-head"><span>PO</span><span>ART</span><span>Màu</span><span>Còn lại</span></div>
+      <div class="popick-head"><span>PO</span><span>ART</span><span>Màu</span><span>Đợt</span><span>Còn lại</span></div>
       <div class="popick-list" role="listbox"></div>
       <div class="popick-foot"></div>`;
     document.body.appendChild(box);
@@ -248,7 +248,7 @@
   function place() {
     if (!P.cell) return;
     const r = P.cell.getBoundingClientRect();
-    const w = Math.min(540, window.innerWidth - 24);
+    const w = Math.min(600, window.innerWidth - 24);
     box.style.width = w + 'px';
     box.style.left = Math.max(12, Math.min(r.left, window.innerWidth - 12 - w)) + window.scrollX + 'px';
     const h = box.offsetHeight;
@@ -256,31 +256,38 @@
     box.style.top = (up ? r.top - h - 4 : r.bottom + 4) + window.scrollY + 'px';
   }
 
-  /** Lọc: mỗi từ gõ vào phải khớp PO, ART hoặc Màu (không dấu, không phân biệt hoa thường) */
-  function items(d) {
+  /**
+   * Lọc: mỗi từ gõ vào phải khớp PO, ART, Màu hoặc đợt ("đợt 2") – không dấu, không phân biệt hoa thường.
+   * Hiện đủ các đợt (PO + ART + Màu các đợt có thể y hệt nhau, cột Đợt để phân biệt): đợt của phiếu lên trước, rồi đợt mới -> cũ.
+   */
+  function items(d, dot) {
     const toks = P.q.trim().split(/\s+/).map(normKey).filter(Boolean);
-    return d.lines.filter(l => toks.every(t => [l.po, l.art, l.mau].some(v => normKey(v).includes(t))));
+    const rank = l => ((l.dot || 1) === dot ? -1e6 : -(l.dot || 1));
+    return d.lines.filter(l => toks.every(t => [l.po, l.art, l.mau, `Đợt ${l.dot || 1}`].some(v => normKey(v).includes(t))))
+      .map((l, i) => ({ l, i })).sort((a, b) => rank(a.l) - rank(b.l) || a.i - b.i).map(x => x.l);
   }
   function renderList(first) {
     if (!box || box.hidden || !P.cell) return;
-    const d = ofDot(current(), PoPick.dot());
-    const res = compute(AppState.rows, d);
+    const all = current();
+    const dot = PoPick.dot() || 1;
+    const res = compute(AppState.rows, ofDot(all, dot));
     const remain = new Map();
     res.forEach(c => { if (c) remain.set(c.line.id, c); });
     const cur = res[P.row] ? res[P.row].line.id : null;
-    P.items = d ? items(d) : [];
+    P.items = all ? items(all, dot) : [];
     if (first) P.hi = Math.max(0, P.items.findIndex(l => l.id === cur));
     P.hi = Math.max(0, Math.min(P.hi, P.items.length - 1));
-    box.querySelector('.popick-n').textContent = d ? `${P.items.length} / ${d.lines.length} dòng` : '';
+    box.querySelector('.popick-n').textContent = all ? `${P.items.length} / ${all.lines.length} dòng` : '';
     const list = box.querySelector('.popick-list');
-    list.innerHTML = !d ? '<div class="popick-empty">Đang tải danh sách PO…</div>'
-      : !d.lines.length ? `<div class="popick-empty">${current().lines.length ? `Đợt ${PoPick.dot() || 1} chưa có đơn hàng (đổi ở ô “Đơn hàng đợt” trên đầu phiếu).` : 'Khách này chưa có đơn hàng nào (nhập ở tab Đơn hàng).'}</div>`
+    list.innerHTML = !all ? '<div class="popick-empty">Đang tải danh sách PO…</div>'
+      : !all.lines.length ? '<div class="popick-empty">Khách này chưa có đơn hàng nào (nhập ở tab Đơn hàng).</div>'
       : !P.items.length ? `<div class="popick-empty">Không có PO nào khớp “${esc(P.q)}”</div>`
       : P.items.map((l, j) => {
         const t = remain.get(l.id) || totals(l.sizes || {});
         return `<div class="popick-it${j === P.hi ? ' hi' : ''}${t.con > 0 ? '' : ' done'}" data-j="${j}" role="option" aria-selected="${j === P.hi}">
           <span class="pp-po">${l.id === cur ? '<b class="pp-cur">✓</b> ' : ''}${esc(l.po)}</span><span>${esc(l.art)}</span>
           <span><span class="pp-mau">${esc(l.mau || '—')}</span></span>
+          <span><span class="pp-dot${(l.dot || 1) === dot ? ' on' : ''}" title="${esc(l.don_hang || '')}">Đợt ${l.dot || 1}</span></span>
           <span class="pp-con">${t.con > 0 ? `còn ${n(t.con)}` : t.du ? `dư ${n(t.du)}` : 'còn 0'}</span></div>`;
       }).join('');
     const r = AppState.rows[P.row];
@@ -329,6 +336,16 @@
   }
   function choose(l) {
     if (!l) return;
+    const dot = PoPick.dot() || 1;
+    if ((l.dot || 1) !== dot) {
+      // Cả phiếu trừ vào 1 đợt (ô "Đơn hàng đợt"): dòng khác đang khớp đơn đợt hiện tại thì hỏi trước khi chuyển
+      const others = compute(AppState.rows, ofDot(current(), dot)).filter((c, i) => c && i !== P.row).length;
+      if (others && !confirm(`Phiếu đang trừ vào đơn đợt ${dot}. Chuyển cả phiếu sang đợt ${l.dot || 1}?`)) {
+        box.querySelector('.popick-input').focus();
+        return;
+      }
+      AppState.dotDon = l.dot || 1;
+    }
     apply(r => {
       r.ma_hang = l.po;
       r.mau = l.art;
