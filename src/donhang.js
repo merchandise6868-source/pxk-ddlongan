@@ -102,22 +102,8 @@ export const ensureDonHangSchema = env => ensureTables(env, 'donhang_v1', PROBE,
 /* ---------------- Tiện ích ---------------- */
 const orderKey = (kh, po, art) => `${kh}|${normKey(po)}|${normKey(art)}`;
 const colorKey = (kh, po, art, mau) => `${orderKey(kh, po, art)}|${normKey(mau)}`;
-/**
- * Khóa kiểm tra trùng dòng đơn hàng.
- * - Admin (bản mới): trùng cả PO + ART + Màu mới chặn.
- * - Người khác (bản cũ): trùng PO + ART là chặn; riêng PO + ART đã lưu nhiều màu (admin nhập) thì tách theo màu để vẫn lưu lại được đơn đó.
- */
-function dupKeyFn(theoMau, have) {
-  if (theoMau) return colorKey;
-  const maus = new Map();
-  have.forEach(r => {
-    const k = orderKey(r.khach_hang_id, r.po, r.art);
-    if (!maus.has(k)) maus.set(k, new Set());
-    maus.get(k).add(normKey(r.mau));
-  });
-  return (kh, po, art, mau) => ((maus.get(orderKey(kh, po, art))?.size || 0) > 1 ? colorKey(kh, po, art, mau) : orderKey(kh, po, art));
-}
-const dupText = (d, byColor) => `PO ${d.po} · ART ${d.art}${byColor ? ` · Màu ${d.mau || '(trống)'}` : ''}`;
+/** Dòng đơn hàng trùng = cùng khách + PO + ART + Màu (trong cùng đợt) */
+const dupText = d => `PO ${d.po} · ART ${d.art} · Màu ${d.mau || '(trống)'}`;
 /** Đợt đơn hàng (đơn / phiếu chưa ghi đợt = đợt 1) */
 export const dotOf = v => (int(v) > 0 ? int(v) : 1);
 /** Đợt mới nhất có đơn của khách (phiếu lưu từ trang không chọn đợt -> lấy đợt này); chưa có đơn -> null */
@@ -342,13 +328,11 @@ async function khachLines(env, khId) {
   return results;
 }
 /** Dòng trùng (chỉ so trong cùng đợt với dòng đang sửa; dòng mới chưa thuộc đơn = đợt 1) */
-async function findDuplicate(env, d, exceptId, theoMau) {
+async function findDuplicate(env, d, exceptId) {
   const all = await khachLines(env, d.khach_hang_id);
   const dot = all.find(r => r.id === exceptId)?.dot || 1;
-  const results = all.filter(r => r.dot === dot);
-  const key = dupKeyFn(theoMau, results);
-  const k = key(d.khach_hang_id, d.po, d.art, d.mau);
-  return results.find(r => r.id !== exceptId && key(d.khach_hang_id, r.po, r.art, r.mau) === k) || null;
+  const k = colorKey(d.khach_hang_id, d.po, d.art, d.mau);
+  return all.find(r => r.dot === dot && r.id !== exceptId && colorKey(d.khach_hang_id, r.po, r.art, r.mau) === k) || null;
 }
 async function writeSizes(env, poId, sizes) {
   await env.DB.prepare('DELETE FROM don_hang_size WHERE po_id = ?').bind(poId).run();
@@ -407,7 +391,7 @@ function tongDon(head, rows) {
  * Kiểm tra đầu đơn + các dòng PO trước khi ghi (lỗi thì không ghi gì).
  * Dòng trống bị bỏ; ART trống lấy ART dòng trên (Excel hay gộp ô ART).
  */
-async function checkDon(env, b, donId, user) {
+async function checkDon(env, b, donId) {
   const khId = int(b.khach_hang_id);
   const soDon = str(b.so_don);
   const errs = [];
@@ -424,7 +408,6 @@ async function checkDon(env, b, donId, user) {
   const all = await khachLines(env, khId);
   const haveById = new Map(all.map(r => [r.id, r]));
   const have = all.filter(r => r.dot === dot); // trùng chỉ tính trong cùng đợt (PO + ART + Màu được lặp lại ở đợt khác)
-  const key = dupKeyFn(!!user?.la_admin, have);
   const lines = [];
   const seen = new Map();
   let lastArt = '';
@@ -443,17 +426,17 @@ async function checkDon(env, b, donId, user) {
       // Dòng có id phải thuộc đơn này (hoặc PO lẻ chưa thuộc đơn nào của cùng khách)
       if (!old || (old.don_id && old.don_id !== donId)) { errs.push(`Dòng ${d.row}: PO không thuộc đơn này`); return; }
     }
-    const k = key(khId, d.po, d.art, d.mau);
-    if (seen.has(k)) { errs.push(`Dòng ${d.row}: ${dupText(d, k !== orderKey(khId, d.po, d.art))} trùng dòng ${seen.get(k)}`); return; }
+    const k = colorKey(khId, d.po, d.art, d.mau);
+    if (seen.has(k)) { errs.push(`Dòng ${d.row}: ${dupText(d)} trùng dòng ${seen.get(k)}`); return; }
     seen.set(k, d.row);
     lines.push(d);
   });
   if (!lines.length && !errs.length) errs.push('Đơn chưa có dòng PO nào');
   const ids = new Set(lines.map(l => l.id).filter(Boolean));
   lines.forEach(d => {
-    const k = key(khId, d.po, d.art, d.mau);
-    const dup = have.find(r => !ids.has(r.id) && !(donId && r.don_id === donId) && key(khId, r.po, r.art, r.mau) === k);
-    if (dup) errs.push(`Dòng ${d.row}: ${dupText(d, k !== orderKey(khId, d.po, d.art))} đã có ở đơn khác của đợt ${dot}`);
+    const k = colorKey(khId, d.po, d.art, d.mau);
+    const dup = have.find(r => !ids.has(r.id) && !(donId && r.don_id === donId) && colorKey(khId, r.po, r.art, r.mau) === k);
+    if (dup) errs.push(`Dòng ${d.row}: ${dupText(d)} đã có ở đơn khác của đợt ${dot}`);
   });
   return { errs, khId, soDon, dot, lines, ids };
 }
@@ -519,7 +502,7 @@ async function handleDonDatApi(path, method, url, request, env, user) {
   }
   if (path === '/api/dondat' && method === 'POST') {
     const body = await request.json();
-    const c = await checkDon(env, body, 0, user);
+    const c = await checkDon(env, body, 0);
     if (c.errs.length) return bad(c.errs.slice(0, 12).join('\n'));
     const r = await env.DB.prepare('INSERT INTO don_dat (khach_hang_id, so_don, ngay_giao, ghi_chu, nguoi, dot) VALUES (?, ?, ?, ?, ?, ?) RETURNING id')
       .bind(c.khId, c.soDon, str(body.ngay_giao), str(body.ghi_chu), user?.ho_ten || '', c.dot).first();
@@ -531,7 +514,7 @@ async function handleDonDatApi(path, method, url, request, env, user) {
     const head = await env.DB.prepare('SELECT * FROM don_dat WHERE id = ?').bind(id).first();
     if (!head) return bad('Không tìm thấy đơn', 404);
     const body = await request.json();
-    const c = await checkDon(env, { ...body, khach_hang_id: head.khach_hang_id }, id, user);
+    const c = await checkDon(env, { ...body, khach_hang_id: head.khach_hang_id }, id);
     // Dòng bị bỏ khỏi bảng -> xóa PO, trừ PO đã thả chuyền
     const { results: cur } = await env.DB.prepare('SELECT id, po, art FROM po_don_hang WHERE don_id = ?').bind(id).all();
     const bo = cur.filter(r => !c.ids?.has(r.id));
@@ -627,7 +610,7 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
         const d = cleanOrder({ ...it, khach_hang_id: it.khach_hang_id || b.khach_hang_id });
         const err = checkOrder(d);
         if (err) { loi.push(`Dòng ${i + 1}: ${err}`); continue; }
-        const dup = await findDuplicate(env, d, 0, !!user?.la_admin);
+        const dup = await findDuplicate(env, d, 0);
         if (dup) {
           if (b.mode === 'update') { await updateOrder(env, dup.id, d); capNhat++; } else boQua++;
           continue;
@@ -640,7 +623,7 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
     const d = cleanOrder(b);
     const err = checkOrder(d);
     if (err) return bad(err);
-    if (await findDuplicate(env, d, 0, !!user?.la_admin)) return bad(`Đã có đơn hàng ${dupText(d, !!user?.la_admin)} của khách này`);
+    if (await findDuplicate(env, d, 0)) return bad(`Đã có đơn hàng ${dupText(d)} của khách này`);
     const id = await insertOrder(env, d);
     return ok({ id, message: `Đã thêm đơn hàng PO ${d.po}` });
   }
@@ -651,7 +634,7 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
     const d = cleanOrder(b);
     const err = checkOrder(d);
     if (err) return bad(err);
-    if (await findDuplicate(env, d, id, !!user?.la_admin)) return bad(`Đã có đơn hàng ${dupText(d, !!user?.la_admin)} của khách này`);
+    if (await findDuplicate(env, d, id)) return bad(`Đã có đơn hàng ${dupText(d)} của khách này`);
     // PO đã thả chuyền: không cho đổi khách / ART (chỉ lệnh đang trỏ vào PO này)
     const cu = await env.DB.prepare('SELECT khach_hang_id, art FROM po_don_hang WHERE id = ?').bind(id).first();
     if (cu && (cu.khach_hang_id !== d.khach_hang_id || normKey(cu.art) !== normKey(d.art)) && await activeChiLenhCount(env, id)) {

@@ -1,5 +1,5 @@
 /**
- * LẬP PHIẾU – BẢN MỚI ĐANG THỬ (chỉ tài khoản admin; người khác vẫn dùng bản cũ: ô gõ PO + gợi ý)
+ * LẬP PHIẾU – CHỌN PO THEO ĐƠN HÀNG + CỘT CÒN LẠI (mọi tài khoản có quyền Lập phiếu)
  * - Ô PO (mẫu theo size) mở danh sách PO · ART · Màu theo đơn hàng của khách đang chọn, có ô tìm
  *   (PO / ART / màu, gõ không dấu cũng được). Chọn xong: PO -> PO, ART -> Mã hàng, Màu -> Diễn giải.
  * - Cột "Còn lại" trên bảng nhập và trên phiếu in (sau cột Tổng), chỉ ghi 1 số tổng.
@@ -15,10 +15,10 @@
   const PoPick = {};
   window.PoPick = PoPick;
 
-  /** Bản mới chỉ bật cho admin */
-  PoPick.admin = () => !!(window.Auth && window.Auth.user && window.Auth.user.la_admin);
+  /** Tài khoản có quyền Lập phiếu (đọc được số còn lại /api/conlai) */
+  PoPick.allowed = () => !!(window.Auth && window.Auth.can && window.Auth.can('tab-create'));
   /** Phiếu đang lập có dùng danh sách PO + cột Còn lại không (mẫu theo size, đã chọn khách) */
-  PoPick.on = () => PoPick.admin() && AppState.currentMau === 3 && !!AppState.khachHangId;
+  PoPick.on = () => PoPick.allowed() && AppState.currentMau === 3 && !!AppState.khachHangId;
 
   /* ============================================================
      SỐ CÒN LẠI THEO DÒNG ĐƠN
@@ -168,10 +168,10 @@
 
   /**
    * Chữ cột Còn lại khi in (theo chỉ số AppState.rows): chỉ ghi ở dòng cuối của mỗi dòng đơn.
-   * Trả null nếu không in cột (không phải admin / không dòng nào khớp đơn). d, dot: số liệu + đợt riêng (in lại phiếu cũ)
+   * Trả null nếu không in cột (không có quyền Lập phiếu / không dòng nào khớp đơn). d, dot: số liệu + đợt riêng (in lại phiếu cũ)
    */
   PoPick.printTexts = (rows, d, dot) => {
-    if (!PoPick.admin()) return null;
+    if (!PoPick.allowed()) return null;
     const res = d === undefined ? compute(rows, ofDot(current(), PoPick.dot())) : compute(rows, ofDot(d, dot));
     if (!res.some(Boolean)) return null;
     const last = new Map();

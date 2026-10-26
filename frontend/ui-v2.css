@@ -554,7 +554,7 @@ body:has(#tab-create.active) #toast-container { bottom: 110px; }
 .grid-menu-sep { height: 1px; background: #e3e8e6; margin: 4px 6px; }
 
 /* ============================================================
-   LẬP PHIẾU – BẢN MỚI ĐANG THỬ (admin, popick.js): ô PO chọn từ danh sách + cột Còn lại
+   LẬP PHIẾU (popick.js): ô PO chọn từ danh sách + cột Còn lại
    ============================================================ */
 #tab-create #excel-grid input.po-pick {
   cursor: pointer; padding-right: 22px;
@@ -612,4 +612,4 @@ body:has(#tab-create.active) #toast-container { bottom: 110px; }
 .popick-fill { flex: 1; }
 @media print { .popick { display: none !important; } }
 
-#slip-dot-wrap[hidden] { display: none !important; } /* ô "Đơn hàng đợt" (admin, popick.js) */
+#slip-dot-wrap[hidden] { display: none !important; } /* ô "Đơn hàng đợt" (popick.js) */

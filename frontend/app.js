@@ -26,7 +26,7 @@ const AppState = {
   defaultDvt: 'Đôi',       // ĐVT mặc định cho dòng mới
   kieuXuat: 'chi_tiet',    // Khách có bộ chi tiết (JiaYu): 'doi' = xuất theo đôi · 'chi_tiet' = theo chi tiết (miếng) + dòng đồng bộ đôi
   lastAutoDonHang: '',     // Giá trị "Đơn hàng" do hệ thống tự ghép (để biết người dùng đã sửa tay chưa)
-  dotDon: null,            // Đợt đơn hàng của phiếu (admin chọn ở ô "Đơn hàng đợt"); null = đợt mới nhất của khách
+  dotDon: null,            // Đợt đơn hàng của phiếu (chọn ở ô "Đơn hàng đợt"); null = đợt mới nhất của khách
 };
 
 function saveSlipDraft() {
@@ -617,7 +617,7 @@ function renderTableStructure() {
     thHtml += `
       <th class="th-total-col">Tổng</th>
     `;
-    // Bản mới đang thử (admin): cột Còn lại theo đơn hàng – popick.js (nhớ lại để thân bảng / dòng cộng vẽ cùng số cột)
+    // Cột Còn lại theo đơn hàng – popick.js (nhớ lại để thân bảng / dòng cộng vẽ cùng số cột)
     AppState.clCol = !!(window.PoPick && PoPick.on());
     if (AppState.clCol) thHtml += '<th class="th-conlai-col" title="Còn lại của dòng đơn hàng (PO · ART · Màu) sau phiếu này">Còn lại</th>';
   }
@@ -643,7 +643,7 @@ function renderTableBody() {
   const tbody = document.querySelector('#excel-grid tbody');
   const mau = AppState.currentMau;
   tbody.innerHTML = '';
-  // Bản mới đang thử (admin): ô PO mở danh sách PO · ART · Màu + cột Còn lại (popick.js)
+  // Ô PO mở danh sách PO · ART · Màu · Đợt + cột Còn lại (popick.js)
   const poPick = mau === 3 && !!AppState.clCol;
   const poAttrs = poPick ? 'class="excel-cell td-po-cell po-pick" title="Bấm hoặc gõ để chọn PO · ART · Màu"' : 'class="excel-cell td-po-cell" list="po-datalist"';
   const clCell = rIdx => (poPick ? `<td class="td-conlai" data-cl="${rIdx}"></td>` : '');
@@ -1318,7 +1318,7 @@ function printCurrentSlip() {
     }
   }
 
-  // Bản mới đang thử (admin): cột "Còn lại" sau cột Tổng – chỉ in khi có dòng khớp đơn hàng (popick.js)
+  // Cột "Còn lại" sau cột Tổng – chỉ in khi có dòng khớp đơn hàng (popick.js)
   const clTexts = mau === 3 && window.PoPick ? PoPick.printTexts(AppState.rows, AppState.printConLai, AppState.printDot) : null;
   const clTd = txt => (clTexts ? `<td class="p-cell-conlai">${escapeHtml(txt || '')}</td>` : '');
 
@@ -1738,8 +1738,8 @@ window.reprintSlip = async function(id) {
     }
 
     const slip = data.data;
-    // Bản mới (admin): cột Còn lại của phiếu in lại = còn lại hiện tại theo đơn hàng của khách trên phiếu
-    const conLai = window.PoPick && PoPick.admin() && slip.mau_phieu === 3 && slip.khach_hang_id
+    // Cột Còn lại của phiếu in lại = còn lại hiện tại theo đơn hàng của khách trên phiếu
+    const conLai = window.PoPick && PoPick.allowed() && slip.mau_phieu === 3 && slip.khach_hang_id
       ? await PoPick.fetch(slip.khach_hang_id, slip.id).catch(() => null) : null;
 
     // Lưu tạm state để tái sử dụng hàm in (kể cả các ô đầu phiếu đang nhập)

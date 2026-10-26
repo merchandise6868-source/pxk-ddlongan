@@ -102,7 +102,7 @@ async function savePhongKeHoach(env, phieuId, ten) {
 
 /**
  * Ghi đợt đơn hàng của phiếu (phiếu chỉ trừ vào đơn cùng đợt).
- * Trang không gửi đợt (người không phải admin / bản cũ): phiếu mới lấy đợt mới nhất có đơn của khách, sửa phiếu thì giữ đợt đã lưu.
+ * Trang không gửi đợt (trang bản cũ chưa tải lại, phiếu không theo size): phiếu mới lấy đợt mới nhất có đơn của khách, sửa phiếu thì giữ đợt đã lưu.
  */
 async function saveDotDon(env, phieuId, khId, dot, isNew) {
   if (!phieuId) return;
