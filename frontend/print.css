@@ -473,7 +473,7 @@
     font-size: 9pt !important;
     padding: 0 4px !important;
   }
-  .print-page.density-3 table.p-table th { font-size: 8.5pt !important; padding: 1px 4px !important; }
+  .print-page.density-3 table.p-table th { font-size: 9pt !important; padding: 1px 4px !important; } /* bằng chữ ô: thu nhỏ cho vừa tờ thì cả bảng cùng xuống 8pt */
   .print-page.density-3 table.p-table td.p-cell-total,
   .print-page.density-3 .p-total-row td { font-size: 10pt !important; }
 }
@@ -486,6 +486,12 @@
 
   /* Bảng lệch trái 2mm so với giữa trang */
   .print-page table.p-table { position: relative !important; left: -2mm !important; }
+
+  /* Phiếu dài sang tờ 2: tờ 2 lặp lại hàng tiêu đề (thead), dòng CỘNG chỉ in 1 lần ở cuối,
+     lề trên 7mm / lề dưới 2mm lặp lại ở mỗi tờ */
+  .print-page table.p-table thead { display: table-header-group !important; }
+  .print-page table.p-table tfoot { display: table-row-group !important; }
+  .print-page { -webkit-box-decoration-break: clone !important; box-decoration-break: clone !important; }
 
   /* Ngày căn giữa dưới chữ PHIẾU XUẤT KHO, Số vẫn bên phải */
   .print-page .p-sub-info { display: grid !important; grid-template-columns: 1fr auto 1fr !important; }

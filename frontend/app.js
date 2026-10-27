@@ -1592,23 +1592,61 @@ function printCurrentSlip() {
   }, 1000);
 }
 
-// Đo tờ phiếu ở khổ A5 ngang (210mm) ngay trên màn hình rồi thu nhỏ phần quá rộng,
-// để bảng và họ tên không lấn ra lề 2 bên (hàng lỗ kim của giấy in liên tục)
+// Giấy in kim "chia" (A5 ngang của máy in kim): 21 × 13,95cm, lề máy in 0
+const PRINT_PAPER_W_MM = 210;
+const PRINT_PAPER_H_MM = 139.5;
+const PRINT_MIN_TABLE_PT = 8; // chữ bảng nhỏ nhất khi thu nhỏ cho vừa 1 tờ
+
+// Đo tờ phiếu ở khổ giấy chia ngay trên màn hình rồi thu nhỏ phần quá khổ:
+// - bảng và họ tên không lấn ra lề 2 bên (hàng lỗ kim của giấy in liên tục)
+// - phiếu dài thu nhỏ chữ bảng (nhỏ nhất 8pt) cho vừa 1 tờ; dài quá nữa thì để sang tờ 2
 function fitPrintToMargins(printArea) {
   const page = printArea.querySelector('.print-page');
   if (!page) return;
-  printArea.style.cssText = 'display:block; position:absolute; left:-10000px; top:0; width:210mm; visibility:hidden;';
+  printArea.style.cssText = `display:block; position:absolute; left:-10000px; top:0; width:${PRINT_PAPER_W_MM}mm; visibility:hidden;`;
   try {
+    const pxPerMm = 96 / 25.4;
     const cs = getComputedStyle(page);
     const pr = page.getBoundingClientRect();
     const left = pr.left + parseFloat(cs.paddingLeft);
     const right = pr.right - parseFloat(cs.paddingRight);
 
-    // Bảng rộng hơn vùng in (nhiều size + cột Còn lại) -> thu nhỏ cả bảng cho vừa
     const table = page.querySelector('table.p-table');
     if (table) {
-      const w = table.getBoundingClientRect().width;
-      if (w > right - left + 0.5) table.style.zoom = String(Math.floor((right - left) / w * 1000) / 1000);
+      const tooTall = () => page.getBoundingClientRect().height > (PRINT_PAPER_H_MM - 1) * pxPerMm; // chừa 1mm sai số khi in
+      // Bảng rộng hơn vùng in (nhiều size + cột Còn lại) -> bắt buộc thu nhỏ cho vừa ngang
+      const widthZoom = () => {
+        table.style.zoom = '';
+        const w = table.getBoundingClientRect().width;
+        return w > right - left + 0.5 ? Math.floor((right - left) / w * 1000) / 1000 : 1;
+      };
+      const origDensity = page.className.match(/density-\d/)?.[0];
+      let zoom = widthZoom();
+      table.style.zoom = String(zoom);
+
+      if (tooTall()) {
+        // Dài hơn 1 tờ: dồn dòng (mật độ 2, 3) rồi thu nhỏ cả bảng, chữ không dưới 8pt
+        for (let d = Number(origDensity?.slice(-1) || 3) + 1; d <= 3 && tooTall(); d++) {
+          page.classList.remove('density-1', 'density-2', 'density-3');
+          page.classList.add(`density-${d}`);
+          zoom = widthZoom();
+          table.style.zoom = String(zoom);
+        }
+        table.style.zoom = '';
+        const minPt = Math.min(...[...table.querySelectorAll('th, td')].map(c => parseFloat(getComputedStyle(c).fontSize) * 0.75));
+        const minZoom = Math.min(zoom, PRINT_MIN_TABLE_PT / minPt);
+        table.style.zoom = String(zoom);
+        while (tooTall() && zoom - 0.01 >= minZoom) {
+          zoom = Math.round((zoom - 0.01) * 1000) / 1000;
+          table.style.zoom = String(zoom);
+        }
+        // Nhỏ tới 8pt vẫn không vừa -> đằng nào cũng sang tờ 2, giữ cỡ chữ ban đầu cho dễ đọc
+        if (tooTall()) {
+          page.classList.remove('density-1', 'density-2', 'density-3');
+          if (origDensity) page.classList.add(origDensity);
+          table.style.zoom = String(widthZoom());
+        }
+      }
     }
 
     // Họ tên chữ ký: không ra ngoài vùng in, không đè lên tên cột bên trái -> nhỏ chữ dần
