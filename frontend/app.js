@@ -1347,20 +1347,17 @@ function printCurrentSlip() {
       </tr>
     `;
   } else if (mau === 3) {
-    // Dãy size nằm 1 hàng riêng phía trên tiêu đề cột, in nghiêng đậm -> không nhầm với số lượng
+    // Size nằm chung hàng tiêu đề cột, in nghiêng đậm + dấu # (36#) -> không nhầm với số lượng
+    // Size dạng khoảng của Kurim (3-4, 4T-5T...) giữ nguyên, không thêm #
+    const sizeLabel = s => /^\d+([.,]\d+)?$/.test(String(s).trim()) ? `${s}#` : s;
     tableHeaderHtml = `
-      <tr class="p-size-head">
-        <th class="p-nb" colspan="5"></th>
-        ${activeSizes.map(s => `<th class="p-cell-size p-size-row">${escapeHtml(s)}</th>`).join('')}
-        <th class="p-nb"></th>${clTexts ? '<th class="p-nb"></th>' : ''}
-      </tr>
       <tr>
         <th class="p-cell-stt">STT</th>
         <th class="p-cell-po">PO</th>
         <th class="p-cell-ma">Mã hàng</th>
         <th class="p-cell-chitiet">Diễn giải</th>
         <th class="p-cell-dvt">ĐVT</th>
-        ${activeSizes.map(() => '<th class="p-cell-size"></th>').join('')}
+        ${activeSizes.map(s => `<th class="p-cell-size p-size-lbl">${escapeHtml(sizeLabel(s))}</th>`).join('')}
         <th class="p-cell-total">Tổng</th>${clTexts ? '<th class="p-cell-conlai">Còn lại</th>' : ''}
       </tr>
     `;
@@ -1555,11 +1552,11 @@ function printCurrentSlip() {
       <div class="p-signatures">
         <div class="p-sig-col">
           <div class="p-sig-title">Người lập phiếu</div><div class="p-sig-note">(Ký, họ tên)</div>
-          <div class="p-sig-name">${escapeHtml(nguoiLap)}</div>
+          <div class="p-sig-name"><span>${escapeHtml(nguoiLap)}</span></div>
         </div>
         <div class="p-sig-col">
           <div class="p-sig-title">Người giao</div><div class="p-sig-note">(Ký, họ tên)</div>
-          <div class="p-sig-name">${escapeHtml(nguoiGiao)}</div>
+          <div class="p-sig-name"><span>${escapeHtml(nguoiGiao)}</span></div>
         </div>
         <div class="p-sig-col">
           <div class="p-sig-title">Người nhận</div><div class="p-sig-note">(Ký, họ tên)</div>
@@ -1567,7 +1564,7 @@ function printCurrentSlip() {
         </div>
         <div class="p-sig-col">
           <div class="p-sig-title">Phòng kế hoạch</div><div class="p-sig-note">(Ký, họ tên)</div>
-          <div class="p-sig-name">${escapeHtml(phongKeHoach)}</div>
+          <div class="p-sig-name"><span>${escapeHtml(phongKeHoach)}</span></div>
         </div>
         <div class="p-sig-col">
           <div class="p-sig-title">Giám đốc</div><div class="p-sig-note">(Ký, họ tên)</div>
