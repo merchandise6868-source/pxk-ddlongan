@@ -60,7 +60,11 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+}
 
+/* Bố cục tờ phiếu (từ đây tới cuối file) áp cả trên màn hình để app đo trước khi in (fitPrintToMargins trong app.js).
+   #print-section vẫn ẩn trên màn hình nên giao diện web không đổi. */
+@media all {
   /* Tận dụng diện tích giấy in kim khổ A5 ngang, dời sang trái 0.5cm (lề trái 11mm, lề phải 21mm) tránh in đè lỗ bên phải */
   .print-page {
     width: 100% !important;
@@ -366,7 +370,7 @@
    Tự chọn mật độ theo số dòng & số cột size:
    density-1 (≤12 dòng): chữ 11pt, dòng rộng · density-2 (13–20): 10pt · density-3 (>20): 9pt
    ============================================================ */
-@media print {
+@media all {
   .print-page .p-title {
     font-size: 20pt !important; /* nhỏ lại 2 cỡ (10/2026) */
     letter-spacing: 0.06em !important;
@@ -477,7 +481,7 @@
 /* ============================================================
    MẪU 10/2026: size chung hàng tiêu đề (36#, in nghiêng đậm), chỗ ký rộng, họ tên to
    ============================================================ */
-@media print {
+@media all {
   .print-page table.p-table thead th.p-size-lbl { font-style: italic !important; }
 
   /* Bảng lệch trái 2mm so với giữa trang */

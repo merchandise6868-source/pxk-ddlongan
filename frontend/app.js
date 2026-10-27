@@ -1574,6 +1574,8 @@ function printCurrentSlip() {
     </div>
   `;
 
+  fitPrintToMargins(printArea);
+
   // Tạm thời xóa title trang để tránh trình duyệt in tên trang ở header góc trên bên phải
   const prevTitle = document.title;
   document.title = '';
@@ -1588,6 +1590,41 @@ function printCurrentSlip() {
   setTimeout(() => {
     document.title = prevTitle;
   }, 1000);
+}
+
+// Đo tờ phiếu ở khổ A5 ngang (210mm) ngay trên màn hình rồi thu nhỏ phần quá rộng,
+// để bảng và họ tên không lấn ra lề 2 bên (hàng lỗ kim của giấy in liên tục)
+function fitPrintToMargins(printArea) {
+  const page = printArea.querySelector('.print-page');
+  if (!page) return;
+  printArea.style.cssText = 'display:block; position:absolute; left:-10000px; top:0; width:210mm; visibility:hidden;';
+  try {
+    const cs = getComputedStyle(page);
+    const pr = page.getBoundingClientRect();
+    const left = pr.left + parseFloat(cs.paddingLeft);
+    const right = pr.right - parseFloat(cs.paddingRight);
+
+    // Bảng rộng hơn vùng in (nhiều size + cột Còn lại) -> thu nhỏ cả bảng cho vừa
+    const table = page.querySelector('table.p-table');
+    if (table) {
+      const w = table.getBoundingClientRect().width;
+      if (w > right - left + 0.5) table.style.zoom = String(Math.floor((right - left) / w * 1000) / 1000);
+    }
+
+    // Họ tên chữ ký: không ra ngoài vùng in, không đè lên tên cột bên trái -> nhỏ chữ dần
+    let prevRight = left;
+    page.querySelectorAll('.p-sig-name > span').forEach(span => {
+      if (!span.textContent) return;
+      for (let pt = 12; pt >= 8; pt -= 0.5) {
+        span.style.fontSize = pt === 12 ? '' : `${pt}pt`;
+        const r = span.getBoundingClientRect();
+        if (r.left >= prevRight + 4 && r.right <= right) break;
+      }
+      prevRight = span.getBoundingClientRect().right;
+    });
+  } finally {
+    printArea.style.cssText = '';
+  }
 }
 
 /* ============================================================
