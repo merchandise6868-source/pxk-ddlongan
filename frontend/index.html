@@ -19,7 +19,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="ui-v2.css?v=20261026f">
-  <link rel="stylesheet" href="nhapkho.css?v=20261026f">
   <link rel="stylesheet" href="v3.css?v=20261028b">
 </head>
 <body>
@@ -32,11 +31,8 @@
     <!-- Menu chữ; không đủ chỗ thì các mục cuối dồn vào "Thêm" (header.js) -->
     <nav class="nav-tabs" aria-label="Chức năng">
       <button class="tab-btn" data-target="tab-donhang" hidden>Đơn hàng</button>
-      <button class="tab-btn" data-target="tab-chilenh" hidden>Chỉ lệnh thả chuyền</button>
       <button class="tab-btn" data-target="tab-create" hidden>Lập phiếu xuất</button>
       <button class="tab-btn" data-target="tab-list" hidden>Danh sách phiếu</button>
-      <button class="tab-btn" data-target="tab-theodoi" hidden>Xuất theo đơn hàng</button>
-      <button class="tab-btn" data-target="tab-nhapkho" hidden>Nhập kho</button>
       <button class="tab-btn" data-target="tab-donhangchat" hidden>Đơn hàng tổ chặt</button>
       <button class="tab-btn" data-target="tab-xuatchat" hidden>Xuất nội bộ</button>
       <button class="tab-btn" data-target="tab-maykho" hidden>Tổ may xuất kho</button>
@@ -390,16 +386,6 @@
       <div class="ui-page" id="dh-root"></div>
     </section>
 
-    <!-- TAB CHỈ LỆNH THẢ CHUYỀN (giao diện do chilenh.js vẽ) -->
-    <section id="tab-chilenh" class="tab-content ui-scope v3-tab">
-      <div class="ui-page" id="cl-root"></div>
-    </section>
-
-    <!-- TAB XUẤT THEO ĐƠN HÀNG (giao diện do theodoi.js vẽ) -->
-    <section id="tab-theodoi" class="tab-content ui-scope v3-tab">
-      <div class="ui-page" id="td-root"></div>
-    </section>
-
     <!-- TỔ CHẶT: ĐƠN HÀNG THEO CHI TIẾT + XUẤT NỘI BỘ (tochat.js) -->
     <section id="tab-donhangchat" class="tab-content ui-scope v3-tab">
       <div class="ui-page" id="dhc-root"></div>
@@ -416,11 +402,6 @@
     <!-- TAB TÀI KHOẢN (giao diện do taikhoan.js vẽ) -->
     <section id="tab-taikhoan" class="tab-content ui-scope v3-tab">
       <div class="ui-page" id="tk-root"></div>
-    </section>
-
-    <!-- TAB NHẬP KHO (giao diện do nhapkho.js vẽ) -->
-    <section id="tab-nhapkho" class="tab-content ui-scope">
-      <div class="ui-page" id="nk-root"></div>
     </section>
 
     <!-- ==========================================
@@ -613,15 +594,12 @@
   <script src="header.js?v=20261028a"></script>
   <script src="catalog.js?v=20261021c"></script>
   <script src="khsidebar.js?v=20261021c"></script>
-  <script src="app.js?v=20261027c"></script>
+  <script src="app.js?v=20261028a"></script>
   <script src="grid.js?v=20261019telex"></script>
   <script src="popick.js?v=20261026e"></script>
   <script src="dashboard.js?v=20261026f"></script>
-  <script src="nhapkho.js?v=20261022c"></script>
   <script src="sheet.js?v=20261022d"></script>
-  <script src="donhang.js?v=20261026b"></script>
-  <script src="chilenh.js?v=20261022c"></script>
-  <script src="theodoi.js?v=20261026a"></script>
+  <script src="donhang.js?v=20261028a"></script>
   <script src="taikhoan.js?v=20261022a"></script>
   <script src="tochat.js?v=20261022c"></script>
   <script src="tomay.js?v=20261022d"></script>

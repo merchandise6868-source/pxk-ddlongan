@@ -18,7 +18,7 @@
     view: 'list',      // 'list' | 'don'
     don: null,         // { id, isNew, khach_hang_id, so_don, ngay_giao, ghi_chu, lines: [...] }
     day: -1,           // dãy size đang hiện (-1 = tất cả)
-    sel: new Set(), dirty: false,
+    dirty: false,
   };
   const emptyLine = () => ({ id: null, art: '', po: '', mau: '', don_gia: '', sizes: {}, info: null });
 
@@ -26,7 +26,7 @@
   function renderShell() {
     $('dh-root').innerHTML = `
       <header class="ui-page-head"><h2>Đơn hàng</h2>
-        <p>Mỗi đơn gồm nhiều ART, mỗi ART nhiều PO với số lượng theo size. Chỉ lệnh thả chuyền và theo dõi xuất hàng đều lấy từ đây.</p></header>
+        <p>Mỗi đơn gồm nhiều ART, mỗi ART nhiều PO với số lượng theo size. Lập phiếu xuất lấy PO · ART · Màu và số còn lại từ đây.</p></header>
       <div id="dh-view"></div>`;
   }
   function render() {
@@ -117,7 +117,7 @@
     const dot = await dotMoi(khId());
     S.don = { id: 0, isNew: true, khach_hang_id: khId(), so_don: suggestSoDon(kh), dot, ngay_giao: '', ghi_chu: '',
       lines: Array.from({ length: BLANK_ROWS }, emptyLine) };
-    S.day = -1; S.sel.clear(); S.dirty = false; S.view = 'don';
+    S.day = -1; S.dirty = false; S.view = 'don';
     render();
     S.sheet?.focus(0, 0);
   }
@@ -133,7 +133,7 @@
           sizes: Object.fromEntries(o.sizes.filter(s => s.dat).map(s => [s.size, s.dat])), info: o })),
       };
       S.don.lines.push(emptyLine(), emptyLine());
-      S.day = -1; S.sel.clear(); S.dirty = false; S.view = 'don';
+      S.day = -1; S.dirty = false; S.view = 'don';
       render();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) { toast('Không mở được đơn: ' + err.message, 'error'); }
@@ -189,9 +189,7 @@
           <kbd>Delete</kbd> xóa · <kbd>Ctrl+D</kbd> điền xuống · <kbd>Ctrl+Z</kbd> hoàn tác · <kbd>F2</kbd> sửa trong ô · chuột phải chèn / xóa dòng. Ô ART trống = cùng ART dòng trên.</p>
         <div class="sheet-wrap" id="dd-grid"></div>
         <div class="v3-actions"><button type="button" class="ui-btn ui-btn-ghost" data-act="add-rows">＋ Thêm 5 dòng</button>
-          <button type="button" class="ui-btn ui-btn-ghost" data-act="del-rows">Xóa dòng đang chọn</button>
-          <span class="ui-hint" id="dd-sel-note"></span><div class="ui-flex-fill"></div>
-          ${D.isNew ? '' : '<button type="button" class="ui-btn ui-btn-ghost" data-act="tha" id="dd-tha" disabled>🧵 Thả chuyền PO đã chọn</button>'}</div>
+          <button type="button" class="ui-btn ui-btn-ghost" data-act="del-rows">Xóa dòng đang chọn</button></div>
         <div id="dd-sum" class="dd-sum"></div>
       </section>
       <div class="ui-actionbar v3-actionbar">
@@ -203,7 +201,7 @@
     renderGrid();
   }
 
-  /** Bảng nhập kiểu Excel (sheet.js): cột ART · PO · Màu · Đơn giá · size; bên phải Tổng (+ Đã thả · Đã xuất · Còn lại · Thả khi đơn đã lưu) */
+  /** Bảng nhập kiểu Excel (sheet.js): cột ART · PO · Màu · Đơn giá · size; bên phải Tổng (+ Đã thả · Đã xuất · Còn lại khi đơn đã lưu) */
   function renderGrid() {
     const D = S.don;
     const saved = !D.isNew;
@@ -218,16 +216,14 @@
       },
       placeholder: (l, key, r) => { if (key !== 'art' || String(l.art).trim()) return ''; return effArts()[r] || ''; },
       canDelete: l => (l.info && l.info.tong_tha > 0 ? `PO ${l.po} đã thả chuyền, không bỏ khỏi đơn được` : true),
-      extraHead: () => `<th class="sheet-num">Tổng</th>${saved ? '<th class="sheet-num">Đã thả</th><th class="sheet-num">Đã xuất</th><th class="sheet-num">Còn lại</th><th class="sheet-num">Thả</th>' : ''}`,
+      extraHead: () => `<th class="sheet-num">Tổng</th>${saved ? '<th class="sheet-num">Đã thả</th><th class="sheet-num">Đã xuất</th><th class="sheet-num">Còn lại</th>' : ''}`,
       extraCells: l => `<td class="sheet-x"><b>${fmt(rowTotal(l))}</b></td>${saved ? (l.info
         ? `<td class="sheet-x">${fmt(l.info.tong_tha)}</td><td class="sheet-x">${fmt(l.info.tong_xuat + l.info.tong_dc)}</td>
            <td class="sheet-x ${l.info.con_phai_giao ? '' : 'v3-ok'}">${l.info.tong_dat ? (l.info.con_phai_giao ? fmt0(l.info.con_phai_giao) : '✓') : ''}</td>`
-        : '<td class="sheet-x"></td><td class="sheet-x"></td><td class="sheet-x"></td>')
-        + `<td class="sheet-x c">${l.id ? `<input type="checkbox" class="dd-sel" ${S.sel.has(l.id) ? 'checked' : ''} aria-label="Chọn PO ${esc(l.po)} để thả chuyền">` : ''}</td>` : ''}`,
+        : '<td class="sheet-x"></td><td class="sheet-x"></td><td class="sheet-x"></td>') : ''}`,
       onChange: () => { S.dirty = true; renderSum(); },
     });
     renderSum();
-    renderSelNote();
   }
 
   /** Tổng theo từng ART + tổng đơn (chỉ vẽ phần chữ, không đụng ô đang gõ) */
@@ -246,16 +242,6 @@
     const box = $('dd-sum');
     if (box) box.innerHTML = by.size ? [...by.values()].map(g => `<span class="v3-chip">ART <b>${esc(g.art)}</b> · ${g.po} PO · <b>${fmt0(g.sl)}</b></span>`).join('') : '';
     const gr = $('dd-grand'); if (gr) gr.textContent = fmt0(grand);
-  }
-
-  function renderSelNote() {
-    const btn = $('dd-tha');
-    if (!btn) return;
-    const rows = S.don.lines.filter(l => l.id && S.sel.has(l.id));
-    const arts = new Set(rows.map(l => normKey(l.art)));
-    btn.disabled = !rows.length || arts.size !== 1;
-    const note = $('dd-sel-note');
-    if (note) note.innerHTML = rows.length ? (arts.size === 1 ? `Đã chọn ${rows.length} PO · ART <b>${esc(rows[0].art)}</b>` : '<span class="v3-neg">Chỉ thả chuyền được các PO cùng 1 ART</span>') : '';
   }
 
 
@@ -299,11 +285,6 @@
   function onChange(e) {
     const t = e.target;
     if (t.id === 'dh-f-tt') { S.tt = t.value; loadList(); return; }
-    if (t.classList.contains('dd-sel')) {
-      const l = S.don.lines[+t.closest('tr').dataset.r];
-      if (t.checked) S.sel.add(l.id); else S.sel.delete(l.id);
-      renderSelNote(); return;
-    }
   }
   function onKeydown(e) {
     if (e.isComposing || e.keyCode === 229) return;
@@ -327,12 +308,6 @@
     if (act === 'add-rows') S.sheet?.addRows(5);
     if (act === 'del-rows') S.sheet?.deleteRows();
     if (act === 'day') { S.day = parseInt(b.dataset.day, 10); renderDon(); }
-    if (act === 'tha') {
-      if (S.dirty) { toast('Lưu đơn trước khi thả chuyền', 'error'); return; }
-      const rows = S.don.lines.filter(l => l.id && S.sel.has(l.id));
-      if (!window.ChiLenh) { toast('Chưa tải được tab Chỉ lệnh', 'error'); return; }
-      window.ChiLenh.openFromOrders(S.don.khach_hang_id, rows[0].art, rows.map(l => l.id));
-    }
   }
 
   /* ---------------- KHỞI ĐỘNG ---------------- */

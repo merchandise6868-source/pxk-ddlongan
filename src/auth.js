@@ -8,7 +8,8 @@
 import { isSqlite, ddlTypes, ensureTables, str, int, parseJson, ok, bad } from './ddl.js';
 
 /** Các tab admin có thể tick cho nhóm quyền (tab Tài khoản chỉ dành cho admin) */
-export const TABS = ['tab-donhang', 'tab-chilenh', 'tab-create', 'tab-list', 'tab-theodoi', 'tab-nhapkho', 'tab-dashboard', 'tab-catalog',
+// 28/10/2026 bỏ tab Chỉ lệnh thả chuyền, Xuất theo đơn hàng, Nhập kho (dữ liệu & API vẫn giữ; tab cũ trong nhóm quyền tự bị lọc bỏ)
+export const TABS = ['tab-donhang', 'tab-create', 'tab-list', 'tab-dashboard', 'tab-catalog',
   'tab-donhangchat', 'tab-xuatchat', 'tab-maykho'];
 
 const ID_TABLES = ['nhom_quyen', 'tai_khoan'];
@@ -228,9 +229,9 @@ export async function handleAuthApi(path, method, url, request, env) {
     const g = await env.DB.prepare(`INSERT INTO nhom_quyen (ten, tabs, la_admin, thu_tu) VALUES ('Quản trị', ?, 1, 1) RETURNING id`)
       .bind(JSON.stringify(TABS)).first();
     await env.DB.prepare(`INSERT INTO nhom_quyen (ten, tabs, la_admin, thu_tu) VALUES ('Kho', ?, 0, 2)`)
-      .bind(JSON.stringify(['tab-create', 'tab-list', 'tab-nhapkho'])).run();
+      .bind(JSON.stringify(['tab-create', 'tab-list'])).run();
     await env.DB.prepare(`INSERT INTO nhom_quyen (ten, tabs, la_admin, thu_tu) VALUES ('Kế hoạch', ?, 0, 3)`)
-      .bind(JSON.stringify(['tab-donhang', 'tab-chilenh', 'tab-theodoi', 'tab-dashboard', 'tab-catalog'])).run();
+      .bind(JSON.stringify(['tab-donhang', 'tab-dashboard', 'tab-catalog'])).run();
     const t = await env.DB.prepare('INSERT INTO tai_khoan (ten_dang_nhap, ho_ten, mat_khau, nhom_id) VALUES (?, ?, ?, ?) RETURNING id')
       .bind(ten, str(b.ho_ten) || ten, await hashPassword(env, b.mat_khau), g.id).first();
     return newSession(env, url, t.id, { message: 'Đã tạo tài khoản quản trị' });
