@@ -56,9 +56,9 @@ html.auth-pending .main-container { visibility: hidden; }
   font-family: "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
 }
 .app-header .brand {
-  flex: none; display: inline-flex; align-items: center; gap: .3em; height: 40px; padding: 0 18px;
+  flex: none; display: inline-flex; align-items: center; height: 40px; padding: 0 16px;
   border-radius: 12px; background: #f8dad0; color: #001c44;
-  font-size: 16px; font-weight: 800; letter-spacing: .2px; white-space: nowrap; cursor: default;
+  font-size: 17px; font-weight: 800; letter-spacing: .3px; white-space: nowrap; cursor: default;
 }
 /* Menu chữ */
 /* Không cắt tràn (overflow) để menu "Thêm" thả ra ngoài được – header.js luôn dồn mục thừa trước khi vẽ */
@@ -138,7 +138,6 @@ html.auth-pending .main-container { visibility: hidden; }
 @media (max-width: 680px) {
   .app-header { position: relative; padding: 10px 12px 0; }
   .app-header .brand { padding: 0 14px; font-size: 15px; }
-  .app-header .brand-name { display: none; }
   .hdr-search { max-width: none; }
   .nav-more .hdr-menu { left: 12px; right: 12px; }
 }
