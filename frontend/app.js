@@ -781,6 +781,10 @@ function handleCellInput(e) {
     if ((field === 'ma_hang' || field === 'mau') && row.bo_key) {
       propagateBlockField(rIdx, field, oldVal);
     }
+    // PO / ART gõ khác đi -> bỏ dòng đơn đã chọn trước đây (phiếu lập lúc còn danh sách chọn PO), để khớp lại theo chữ mới
+    if ((field === 'ma_hang' || field === 'mau') && row.po_id && cell.value !== oldVal) {
+      AppState.rows.forEach(r => { if (r === row || (row.bo_key && r.bo_key === row.bo_key)) r.po_id = null; });
+    }
     // Chọn PO -> tự điền ART + ghép Đơn hàng
     if (field === 'ma_hang') {
       onPoChanged(rIdx);
@@ -2097,7 +2101,7 @@ function renderCustomerPills() {
       </div>`
     : needKh
       ? `<div class="pxk-kh-warn"><b>Chọn khách hàng ở thanh bên trái để lập phiếu.</b> Khách chưa có trong danh sách thì bấm <b>+ Khách hàng mới</b>.</div>`
-      : `<div class="pxk-kh-warn">Phiếu này chưa gán khách hàng nên <b>không được trừ</b> vào số Còn lại của đơn hàng. Gán khách ở tab Danh sách phiếu (nút <b>Gán khách</b>).</div>`)
+      : `<div class="pxk-kh-warn">Phiếu này chưa gán khách hàng nên <b>không lên</b> bảng Đối chiếu giao hàng. Gán khách ở tab Danh sách phiếu (nút <b>Gán khách</b>).</div>`)
     + `<button type="button" class="pxk-kh-pill pxk-kh-none" data-new-kh="1">
       <span class="kh-name">+ Khách hàng mới</span>
       <span class="kh-sub">Thêm vào danh mục rồi quay lại</span>

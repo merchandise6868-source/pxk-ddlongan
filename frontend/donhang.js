@@ -26,7 +26,7 @@
   function renderShell() {
     $('dh-root').innerHTML = `
       <header class="ui-page-head"><h2>Đơn hàng</h2>
-        <p>Mỗi đơn gồm nhiều ART, mỗi ART nhiều PO với số lượng theo size. Lập phiếu xuất lấy PO · ART · Màu và số còn lại từ đây.</p></header>
+        <p>Mỗi đơn gồm nhiều ART, mỗi ART nhiều PO với số lượng theo size. Số đặt ở đây dùng cho tab Đối chiếu giao hàng (phiếu xuất khớp theo PO · ART · Màu).</p></header>
       <div id="dh-view"></div>`;
   }
   function render() {
