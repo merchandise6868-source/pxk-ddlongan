@@ -13,14 +13,14 @@
   <meta name="apple-mobile-web-app-title" content="Phiếu Xuất Kho">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" href="/icons/favicon-64.png">
-  <link rel="stylesheet" href="styles.css?v=20261026f">
+  <link rel="stylesheet" href="styles.css?v=20261028a">
   <link rel="stylesheet" href="print.css?v=20261027c">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="ui-v2.css?v=20261026f">
   <link rel="stylesheet" href="nhapkho.css?v=20261026f">
-  <link rel="stylesheet" href="v3.css?v=20261026f">
+  <link rel="stylesheet" href="v3.css?v=20261028a">
 </head>
 <body>
 
@@ -28,28 +28,40 @@
        HEADER & THANH ĐIỀU HƯỚNG TABS
        ========================================== -->
   <header class="app-header no-print">
-    <div class="brand-info">
-      <h1>CÔNG TY TNHH GIA CÔNG THƯƠNG MẠI D&D LONG AN</h1>
-      <p>Đơn hàng · Chỉ lệnh thả chuyền · Phiếu xuất kho · Nhập kho</p>
-    </div>
-    <button type="button" class="pwa-install-btn" id="btn-install-app" hidden>
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-      Cài ứng dụng
-    </button>
-    <nav class="nav-tabs">
-      <button class="tab-btn" data-target="tab-donhang" hidden>📦 Đơn Hàng</button>
-      <button class="tab-btn" data-target="tab-chilenh" hidden>🧵 Chỉ Lệnh Thả Chuyền</button>
-      <button class="tab-btn" data-target="tab-create" hidden>📝 Lập Phiếu Xuất</button>
-      <button class="tab-btn" data-target="tab-list" hidden>📋 Danh Sách Phiếu</button>
-      <button class="tab-btn" data-target="tab-theodoi" hidden>📈 Xuất Theo Đơn Hàng</button>
-      <button class="tab-btn" data-target="tab-nhapkho" hidden>📥 Nhập Kho</button>
-      <button class="tab-btn" data-target="tab-donhangchat" hidden>✂️ Đơn Hàng Tổ Chặt</button>
-      <button class="tab-btn" data-target="tab-xuatchat" hidden>🚚 Xuất Nội Bộ</button>
-      <button class="tab-btn" data-target="tab-maykho" hidden>🧺 Tổ May Xuất Kho</button>
-      <button class="tab-btn" data-target="tab-dashboard" hidden>📊 Dashboard</button>
-      <button class="tab-btn" data-target="tab-catalog" hidden>⚙️ Danh Mục</button>
-      <button class="tab-btn" data-target="tab-taikhoan" hidden>👤 Tài Khoản</button>
+    <div class="brand" title="Công ty TNHH Gia Công Thương Mại D&amp;D Long An">D&amp;D<span class="brand-name">Long An</span></div>
+    <!-- Menu chữ; không đủ chỗ thì các mục cuối dồn vào "Thêm" (header.js) -->
+    <nav class="nav-tabs" aria-label="Chức năng">
+      <button class="tab-btn" data-target="tab-donhang" hidden>Đơn hàng</button>
+      <button class="tab-btn" data-target="tab-chilenh" hidden>Chỉ lệnh thả chuyền</button>
+      <button class="tab-btn" data-target="tab-create" hidden>Lập phiếu xuất</button>
+      <button class="tab-btn" data-target="tab-list" hidden>Danh sách phiếu</button>
+      <button class="tab-btn" data-target="tab-theodoi" hidden>Xuất theo đơn hàng</button>
+      <button class="tab-btn" data-target="tab-nhapkho" hidden>Nhập kho</button>
+      <button class="tab-btn" data-target="tab-donhangchat" hidden>Đơn hàng tổ chặt</button>
+      <button class="tab-btn" data-target="tab-xuatchat" hidden>Xuất nội bộ</button>
+      <button class="tab-btn" data-target="tab-maykho" hidden>Tổ may xuất kho</button>
+      <button class="tab-btn" data-target="tab-dashboard" hidden>Dashboard</button>
+      <button class="tab-btn" data-target="tab-catalog" hidden>Danh mục</button>
+      <button class="tab-btn" data-target="tab-taikhoan" hidden>Tài khoản</button>
+      <div class="nav-more hdr-pop" hidden>
+        <button type="button" class="nav-more-btn" data-pop aria-haspopup="true" aria-expanded="false">Thêm<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="m3 4.5 3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="hdr-menu nav-more-menu" hidden></div>
+      </div>
     </nav>
+    <form class="hdr-search" role="search" hidden>
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <input type="search" id="hdr-search" placeholder="Tìm phiếu xuất" aria-label="Tìm phiếu xuất theo số phiếu, đơn vị nhận, đơn hàng" title="Số phiếu, đơn vị nhận, đơn hàng – Enter để tìm" autocomplete="off">
+    </form>
+    <!-- Avatar + menu người dùng (auth.js điền tên) -->
+    <div class="hdr-user hdr-pop" id="auth-user" hidden>
+      <button type="button" class="hdr-avatar" data-pop aria-haspopup="true" aria-expanded="false"></button>
+      <div class="hdr-menu" hidden>
+        <div class="hdr-menu-who"><b data-auth-name></b><small data-auth-group></small></div>
+        <button type="button" class="hdr-menu-item" id="btn-install-app" hidden>Cài ứng dụng</button>
+        <button type="button" class="hdr-menu-item" data-auth="password">Đổi mật khẩu</button>
+        <button type="button" class="hdr-menu-item" data-auth="logout">Đăng xuất</button>
+      </div>
+    </div>
   </header>
 
   <!-- ==========================================
@@ -597,7 +609,8 @@
 
   <!-- SCRIPTS -->
   <script src="common.js?v=20261022c"></script>
-  <script src="auth.js?v=20261021b"></script>
+  <script src="auth.js?v=20261028a"></script>
+  <script src="header.js?v=20261028a"></script>
   <script src="catalog.js?v=20261021c"></script>
   <script src="khsidebar.js?v=20261021c"></script>
   <script src="app.js?v=20261027c"></script>

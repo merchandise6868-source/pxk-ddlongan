@@ -79,25 +79,27 @@
     }
   }
 
+  /** Avatar trên header (chữ cái đầu 2 tiếng cuối của họ tên) + tên / nhóm trong menu người dùng (index.html) */
   function renderUserBox() {
-    const header = document.querySelector('.app-header');
-    if (!header || !Auth.user) return;
-    let box = document.getElementById('auth-user');
-    if (!box) {
-      box = document.createElement('div');
-      box.id = 'auth-user';
-      box.className = 'auth-user';
-      header.insertBefore(box, header.querySelector('.nav-tabs'));
+    const box = document.getElementById('auth-user');
+    if (!box || !Auth.user) return;
+    if (!box.dataset.bound) {
+      box.dataset.bound = '1';
       box.addEventListener('click', e => {
         const act = e.target.closest('[data-auth]')?.dataset.auth;
         if (act === 'logout') logout();
         if (act === 'password') showPasswordDialog();
       });
     }
-    box.innerHTML = `
-      <span class="auth-user-name" title="${esc(Auth.user.nhom_ten)}">👤 <b>${esc(Auth.user.ho_ten)}</b><small>${esc(Auth.user.nhom_ten)}</small></span>
-      <button type="button" class="auth-link" data-auth="password">Đổi mật khẩu</button>
-      <button type="button" class="auth-link" data-auth="logout">Đăng xuất</button>`;
+    const ten = String(Auth.user.ho_ten || '').trim();
+    const chu = ten.split(/\s+/).slice(-2).map(w => w.charAt(0)).join('').toUpperCase() || '?';
+    const avatar = box.querySelector('.hdr-avatar');
+    avatar.textContent = chu;
+    avatar.title = `${ten} · ${Auth.user.nhom_ten || ''}`;
+    avatar.setAttribute('aria-label', `Tài khoản ${ten}`);
+    box.querySelector('[data-auth-name]').textContent = ten;
+    box.querySelector('[data-auth-group]').textContent = Auth.user.nhom_ten || '';
+    box.hidden = false;
   }
 
   async function logout() {
