@@ -9,7 +9,8 @@ import { isSqlite, ddlTypes, ensureTables, str, int, parseJson, ok, bad } from '
 
 /** Các tab admin có thể tick cho nhóm quyền (tab Tài khoản chỉ dành cho admin) */
 // 28/10/2026 bỏ tab Chỉ lệnh thả chuyền, Xuất theo đơn hàng, Nhập kho (dữ liệu & API vẫn giữ; tab cũ trong nhóm quyền tự bị lọc bỏ)
-export const TABS = ['tab-donhang', 'tab-create', 'tab-list', 'tab-dashboard', 'tab-catalog',
+// tab-doichieu: Đối chiếu giao hàng (data log xuất theo PO, thay Xuất theo đơn hàng)
+export const TABS = ['tab-donhang', 'tab-create', 'tab-list', 'tab-doichieu', 'tab-dashboard', 'tab-catalog',
   'tab-donhangchat', 'tab-xuatchat', 'tab-maykho'];
 
 const ID_TABLES = ['nhom_quyen', 'tai_khoan'];
@@ -148,8 +149,8 @@ const RULES = [
   ['*', /^\/api\/dondat(\/|$)/, ['tab-donhang']], // đơn: nhiều ART · nhiều PO
   ['GET', /^\/api\/conlai$/, ['tab-create']], // lập phiếu: số còn lại theo PO · ART · Màu
   ['*', /^\/api\/chilenh(\/|$)/, ['tab-chilenh']],
-  ['*', /^\/api\/(theodoi|dieuchinh)(\/|$)/, ['tab-theodoi']],
-  ['GET', /^\/api\/phieu\/\d+$/, ['tab-create', 'tab-list', 'tab-theodoi']],
+  ['*', /^\/api\/(theodoi|dieuchinh)(\/|$)/, ['tab-doichieu']],
+  ['GET', /^\/api\/phieu\/\d+$/, ['tab-create', 'tab-list', 'tab-doichieu']],
   ['GET', /^\/api\/phieu(\/|$)/, ['tab-create', 'tab-list']],
   ['POST', /^\/api\/phieu$/, ['tab-create']],
   ['PUT', /^\/api\/phieu\/\d+$/, ['tab-create']],
@@ -231,7 +232,7 @@ export async function handleAuthApi(path, method, url, request, env) {
     await env.DB.prepare(`INSERT INTO nhom_quyen (ten, tabs, la_admin, thu_tu) VALUES ('Kho', ?, 0, 2)`)
       .bind(JSON.stringify(['tab-create', 'tab-list'])).run();
     await env.DB.prepare(`INSERT INTO nhom_quyen (ten, tabs, la_admin, thu_tu) VALUES ('Kế hoạch', ?, 0, 3)`)
-      .bind(JSON.stringify(['tab-donhang', 'tab-dashboard', 'tab-catalog'])).run();
+      .bind(JSON.stringify(['tab-donhang', 'tab-doichieu', 'tab-dashboard', 'tab-catalog'])).run();
     const t = await env.DB.prepare('INSERT INTO tai_khoan (ten_dang_nhap, ho_ten, mat_khau, nhom_id) VALUES (?, ?, ?, ?) RETURNING id')
       .bind(ten, str(b.ho_ten) || ten, await hashPassword(env, b.mat_khau), g.id).first();
     return newSession(env, url, t.id, { message: 'Đã tạo tài khoản quản trị' });

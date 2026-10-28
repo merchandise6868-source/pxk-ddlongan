@@ -423,3 +423,52 @@ body.kh-off .kh-side, body.kh-off .kh-current { display: none; }
   .kh-item-none { margin-top: 0; }
   .kh-current { display: none; }
 }
+
+/* ============================================================
+   TAB ĐỐI CHIẾU GIAO HÀNG (doichieu.js): bảng kiểu Excel theo PO
+   Đặt xám · Tổng xanh nhạt · Số thiếu vàng (âm đỏ) · nhãn PO vàng · OK đơn xanh lá
+   Ô sửa: chữ xanh dương, góc trái số chênh (tăng xanh lá, giảm đỏ); viền cam = phiếu đã đổi sau khi sửa
+   ============================================================ */
+.v3-tab .dc-block { padding: 14px 16px; }
+.v3-tab .dc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-bottom: 10px; font-size: 15px; }
+.v3-tab .dc-head b { font-size: 16px; }
+.v3-tab .dc-badge-fix { background: #e6f1fb; color: #1f5fbf; }
+.v3-tab .dc-wrap { overflow-x: auto; }
+.v3-tab .dc-table { border-collapse: collapse; min-width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+.v3-tab .dc-table th, .v3-tab .dc-table td { border: 1px solid #b9c7d2; padding: 6px 8px; text-align: center; white-space: nowrap; }
+.v3-tab .dc-table thead th { background: #e2efda; color: #001c44; font-weight: 700; }
+.v3-tab .dc-table th.dc-sz { min-width: 64px; font-style: italic; }
+.v3-tab .dc-table td.dc-fix { background: #fff; vertical-align: middle; }
+.v3-tab .dc-table .dc-b { font-weight: 700; }
+.v3-tab .dc-table .dc-lbl { text-align: left; font-weight: 700; }
+.v3-tab .dc-table .dc-sp { text-align: left; }
+.v3-tab .dc-dat td { background: #e3e6ea; font-weight: 700; }
+.v3-tab .dc-tong td { background: #ddebf7; color: #1f4e79; font-weight: 700; }
+.v3-tab .dc-thieu td { background: #fff59d; font-weight: 700; }
+.v3-tab .dc-thieu .dc-lbl { color: #c00000; }
+.v3-tab .dc-table .dc-neg { color: #c00000; }
+.v3-tab .dc-table td.dc-po { vertical-align: top; }
+.v3-tab .dc-po span { display: inline-block; background: #ffeb3b; color: #001c44; font-weight: 800; padding: 3px 10px; border-radius: 6px; }
+.v3-tab .dc-ok { display: inline-block; background: #2e9e57; color: #fff; font-weight: 800; padding: 3px 10px; border-radius: 6px; font-size: 13px; }
+/* Ô số của phiếu: sửa được như Excel */
+.v3-tab .dc-table td.dc-ed { position: relative; min-width: 64px; height: 36px; cursor: cell; }
+.v3-tab .dc-table td.dc-ed:hover { box-shadow: inset 0 0 0 2px #2d99ae; }
+.v3-tab .dc-table td.dc-chg { color: #1f5fbf; font-weight: 800; }
+.v3-tab .dc-d { position: absolute; left: 3px; top: 2px; font-size: 9px; line-height: 1; font-weight: 600; }
+.v3-tab .dc-d.up, .v3-tab .dc-up { color: #1e8e3e; }
+.v3-tab .dc-d.dn, .v3-tab .dc-dn { color: #c00000; }
+.v3-tab .dc-table td.dc-lech { box-shadow: inset 0 0 0 2px #e08a1e; }
+.v3-tab .dc-warn { color: #b35c00; }
+.v3-tab .dc-table td.dc-editing { padding: 2px; box-shadow: inset 0 0 0 2px #0c5776; }
+.v3-tab .dc-in { width: 100%; min-width: 56px; height: 30px; border: 0; outline: none; text-align: center; font: inherit; font-weight: 700; color: #1f5fbf; background: #fff; }
+.v3-tab .dc-in-err { background: #fdecea; color: #c00000; }
+/* Dòng ĐC: điều chỉnh không gắn phiếu (kiểu cũ) */
+.v3-tab .dc-adj td { background: #fff4ec; font-style: italic; color: #6b4a2f; }
+.v3-tab .dc-tag { display: inline-block; font-style: normal; font-size: 11px; font-weight: 700; background: #f8dad0; color: #8a2d12; padding: 1px 6px; border-radius: 5px; }
+.v3-tab .dc-x { border: 0; background: none; color: #c00000; font-size: 17px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.v3-tab .dc-link { border: 0; background: none; padding: 0; color: #0c5776; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline dotted; }
+@media (max-width: 680px) {
+  .v3-tab .dc-block { padding: 12px 10px; }
+  .v3-tab .dc-table { font-size: 13px; }
+  .v3-tab .dc-table th.dc-sz, .v3-tab .dc-table td.dc-ed { min-width: 52px; }
+}

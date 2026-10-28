@@ -95,9 +95,12 @@ export function schemaFor(sqlite) {
     sqlite ? `ALTER TABLE phieu ADD COLUMN dot_don ${T.INT}` : `ALTER TABLE phieu ADD COLUMN IF NOT EXISTS dot_don ${T.INT}`,
     // Dòng đơn đã chọn ở danh sách PO (Lập phiếu): Diễn giải ghi thêm chữ (Hàng mẫu, Bù thành hình...) vẫn trừ vào dòng này
     sqlite ? `ALTER TABLE phieu_dong ADD COLUMN po_id ${T.INT}` : `ALTER TABLE phieu_dong ADD COLUMN IF NOT EXISTS po_id ${T.INT}`,
+    // Sửa ô trên tab Đối chiếu giao hàng: phần chênh gắn với 1 phiếu (phieu_id) + số trên phiếu lúc sửa (goc)
+    sqlite ? `ALTER TABLE dieu_chinh_xuat ADD COLUMN phieu_id ${T.INT}` : `ALTER TABLE dieu_chinh_xuat ADD COLUMN IF NOT EXISTS phieu_id ${T.INT}`,
+    sqlite ? `ALTER TABLE dieu_chinh_xuat ADD COLUMN goc ${T.REAL}` : `ALTER TABLE dieu_chinh_xuat ADD COLUMN IF NOT EXISTS goc ${T.REAL}`,
   ];
 }
-const PROBE = `SELECT p.ngay_giao, p.don_id, dd.dot, ph.dot_don, pd.po_id FROM po_don_hang p, don_hang_size s, don_hang_alias a, dieu_chinh_xuat d,
+const PROBE = `SELECT p.ngay_giao, p.don_id, dd.dot, ph.dot_don, pd.po_id, d.phieu_id, d.goc FROM po_don_hang p, don_hang_size s, don_hang_alias a, dieu_chinh_xuat d,
   chi_lenh c, chi_lenh_dong cd, chi_lenh_dong_size cs, don_dat dd, phieu ph, phieu_dong pd WHERE 1 = 0`;
 export const ensureDonHangSchema = env => ensureTables(env, 'donhang_v1', PROBE, schemaFor(isSqlite(env)));
 
@@ -717,6 +720,29 @@ export async function handleDonHangApi(path, method, url, request, env, user) {
         .bind(poId, size, v, str(b.ly_do) || 'Khác', str(b.ghi_chu), str(b.so_phieu), nguoi, ngay, nhom).first();
     }
     return ok({ message: 'Đã ghi điều chỉnh' });
+  }
+  // Sửa thẳng ô trên tab Đối chiếu giao hàng: lưu phần chênh (số mới − số trên phiếu) của 1 phiếu + PO + size, phiếu gốc giữ nguyên.
+  // Gõ lại đúng số trên phiếu = bỏ sửa. Số trên phiếu do máy chủ tự tính, không lấy từ trình duyệt.
+  if (path === '/api/dieuchinh/o' && method === 'PUT') {
+    const b = await request.json();
+    const poId = int(b.po_id), phieuId = int(b.phieu_id), size = normSize(b.size);
+    const v = num(b.gia_tri);
+    if (!poId || !phieuId || !size) return bad('Thiếu PO, phiếu hoặc size');
+    if (v < 0) return bad('Số lượng không được âm');
+    const po = await env.DB.prepare('SELECT khach_hang_id FROM po_don_hang WHERE id = ?').bind(poId).first();
+    if (!po) return bad('Không tìm thấy đơn hàng', 404);
+    const { orders } = await tienDo(env, { khId: po.khach_hang_id, poIds: [poId], withEntries: true });
+    const e = orders[0]?.entries.find(x => x.phieu_id === phieuId);
+    if (!e) return bad('Phiếu này không tính vào PO này');
+    const goc = e.sizes[size] || 0;
+    const chenh = Math.round((v - goc) * 1000) / 1000;
+    await env.DB.prepare('DELETE FROM dieu_chinh_xuat WHERE po_id = ? AND phieu_id = ? AND size = ?').bind(poId, phieuId, size).run();
+    if (chenh) {
+      await env.DB.prepare(`INSERT INTO dieu_chinh_xuat (po_id, size, so_luong, ly_do, ghi_chu, so_phieu, nguoi, ngay, nhom, phieu_id, goc)
+        VALUES (?, ?, ?, 'Sửa trên log', '', ?, ?, ?, '', ?, ?) RETURNING id`)
+        .bind(poId, size, chenh, str(e.so_phieu), nguoi, todayVN(), phieuId, goc).first();
+    }
+    return ok({ chenh, goc, message: chenh ? 'Đã lưu số sửa' : 'Đã bỏ sửa, về số trên phiếu' });
   }
   const dcM = path.match(/^\/api\/dieuchinh\/(\d+)$/);
   if (dcM && method === 'DELETE') {

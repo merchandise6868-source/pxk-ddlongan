@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="ui-v2.css?v=20261026f">
-  <link rel="stylesheet" href="v3.css?v=20261028b">
+  <link rel="stylesheet" href="v3.css?v=20261028c">
 </head>
 <body>
 
@@ -33,6 +33,7 @@
       <button class="tab-btn" data-target="tab-donhang" hidden>Đơn hàng</button>
       <button class="tab-btn" data-target="tab-create" hidden>Lập phiếu xuất</button>
       <button class="tab-btn" data-target="tab-list" hidden>Danh sách phiếu</button>
+      <button class="tab-btn" data-target="tab-doichieu" hidden>Đối chiếu giao hàng</button>
       <button class="tab-btn" data-target="tab-donhangchat" hidden>Đơn hàng tổ chặt</button>
       <button class="tab-btn" data-target="tab-xuatchat" hidden>Xuất nội bộ</button>
       <button class="tab-btn" data-target="tab-maykho" hidden>Tổ may xuất kho</button>
@@ -386,6 +387,11 @@
       <div class="ui-page" id="dh-root"></div>
     </section>
 
+    <!-- TAB ĐỐI CHIẾU GIAO HÀNG: data log xuất theo PO (doichieu.js vẽ) -->
+    <section id="tab-doichieu" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="dc-root"></div>
+    </section>
+
     <!-- TỔ CHẶT: ĐƠN HÀNG THEO CHI TIẾT + XUẤT NỘI BỘ (tochat.js) -->
     <section id="tab-donhangchat" class="tab-content ui-scope v3-tab">
       <div class="ui-page" id="dhc-root"></div>
@@ -600,6 +606,7 @@
   <script src="dashboard.js?v=20261026f"></script>
   <script src="sheet.js?v=20261022d"></script>
   <script src="donhang.js?v=20261028a"></script>
+  <script src="doichieu.js?v=20261028a"></script>
   <script src="taikhoan.js?v=20261022a"></script>
   <script src="tochat.js?v=20261022c"></script>
   <script src="tomay.js?v=20261022d"></script>
