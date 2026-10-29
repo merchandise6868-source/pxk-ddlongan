@@ -2,8 +2,9 @@
  * TAB 🏷️ IN TEM QR (tab-intem) – đang thử, chỉ admin thấy
  * - Đơn của khách đang chọn (thanh bên) -> bảng PO/ART × size: Đặt · đã in · ô In thêm -> chia mỗi tem N đôi (29, 10 -> 10·10·9).
  * - Loại May (tổ CMA/CMB/CMC) hoặc Chặt (TC). QR chỉ chứa mã tem; quét tem ở tab Lập phiếu xuất.
- * - 2 chế độ in (nhớ theo từng máy): máy in tem 50×30 (mỗi tem 1 trang) hoặc giấy A4 (giấy thường cắt tay / decal chia ô, tự chỉnh,
- *   bắt đầu từ ô số, in thử khung căn chỉnh).
+ * - Mẫu tem 50×40 (chốt 29/10/2026): ô kẻ song ngữ Trung – Việt (Tổ, ART, PO, Chi tiết, Ngày ĐG, Size, SL, Người ĐG, Ghi chú) + QR góc phải.
+ * - 2 chế độ in (nhớ theo từng máy): máy in tem 50×40 (mỗi tem 1 trang, đen trắng) hoặc giấy A4 (giấy thường cắt tay / decal chia ô,
+ *   tự chỉnh, bắt đầu từ ô số, in thử khung căn chỉnh; in màu như thiết kế hoặc đen trắng).
  * - Danh sách tem: lọc đơn / trạng thái / loại, tick chọn nhiều tem in lại (giữ nguyên mã), in lại tất cả tem chưa xuất, hủy tem chưa xuất.
  */
 (function () {
@@ -12,36 +13,57 @@
   const khId = () => (window.KH ? window.KH.one() : null);
   const qty = v => parseInt(String(v ?? '').replace(/[^\d]/g, ''), 10) || 0;
 
-  const S = { data: null, donId: null, loai: 'may', to: '', moi: 10, list: [], sel: new Set(), f: { don: '', tt: 'moi', loai: '' } };
+  const OKEY = 'DD_TEM_OPT_V1'; // Chi tiết / Người đóng gói gõ lần trước (nhớ theo máy)
+  const opt = store.get(OKEY, {}) || {};
+  const S = { data: null, donId: null, loai: 'may', to: '', moi: 10, chiTiet: opt.chiTiet || 'Đồng bộ', nguoiDg: opt.nguoiDg || '',
+    list: [], sel: new Set(), f: { don: '', tt: 'moi', loai: '' } };
+  const saveOpt = () => store.set(OKEY, { chiTiet: S.chiTiet, nguoiDg: S.nguoiDg });
 
   /* ---------------- Chế độ in (nhớ theo máy) ---------------- */
+  const TW = 50, TH = 40; // khổ tem (mm)
   const PRESETS = {
-    a4_4x9: { ten: 'Giấy A4 thường · 4×9 = 36 tem 50×30 (in rồi cắt tay)', cot: 4, hang: 9, w: 50, h: 30, top: 13.5, left: 5, gx: 0, gy: 0, cat: true },
-    dc_3x8: { ten: 'Decal A4 chia sẵn · 3×8 = 24 tem 70×37 mm', cot: 3, hang: 8, w: 70, h: 37, top: 0.5, left: 0, gx: 0, gy: 0, cat: false },
-    dc_4x10: { ten: 'Decal A4 chia sẵn · 4×10 = 40 tem 52,5×29,7 mm', cot: 4, hang: 10, w: 52.5, h: 29.7, top: 0, left: 0, gx: 0, gy: 0, cat: false },
+    a4_4x7: { ten: 'Giấy A4 thường · 4×7 = 28 tem 50×40 (in rồi cắt tay)', cot: 4, hang: 7, w: 50, h: 40, top: 8.5, left: 5, gx: 0, gy: 0, cat: true },
+    dc_3x7: { ten: 'Decal A4 chia sẵn · 3×7 = 21 tem 70×42,3 mm', cot: 3, hang: 7, w: 70, h: 42.3, top: 0.5, left: 0, gx: 0, gy: 0, cat: false },
+    dc_3x8: { ten: 'Decal A4 chia sẵn · 3×8 = 24 tem 70×37 mm (tem thu nhỏ một chút)', cot: 3, hang: 8, w: 70, h: 37, top: 0.5, left: 0, gx: 0, gy: 0, cat: false },
     tu_chinh: { ten: 'Tự chỉnh (đo tờ decal của bạn)' },
   };
   const PKEY = 'DD_TEM_IN_V1';
   let P = store.get(PKEY, null);
-  if (!P || !P.cot) P = { mode: 'a4', preset: 'a4_4x9', batDau: 1, ...PRESETS.a4_4x9 };
+  // Cài đặt của mẫu tem 50×30 cũ -> về mặc định mẫu 50×40
+  if (!P || !P.cot || P.ver !== 2) P = { ver: 2, mode: 'a4', preset: 'a4_4x7', batDau: 1, den: false, ...PRESETS.a4_4x7 };
   const saveP = () => store.set(PKEY, P);
   const perSheet = () => P.cot * P.hang;
   const startCell = () => Math.min(perSheet(), Math.max(1, parseInt(P.batDau, 10) || 1));
   const soTo = n => (n ? 1 + Math.floor((startCell() - 1 + n - 1) / perSheet()) : 0);
   const presetTen = () => (PRESETS[P.preset] || PRESETS.tu_chinh).ten.split(' · ')[0];
 
-  /* ---------------- Tem 50×30 ---------------- */
+  /* ---------------- Tem 50×40 ---------------- */
   const TEM_CSS = `
-    .tem { width: 50mm; height: 30mm; padding: 1.5mm; display: flex; gap: 1.5mm; font-family: Arial, sans-serif; color: #000; background: #fff; overflow: hidden; box-sizing: border-box; }
-    .tem-q { width: 21mm; flex: none; display: flex; flex-direction: column; align-items: center; }
-    .tem-q svg { width: 21mm; height: 21mm; display: block; }
-    .tem-m { font-size: 6pt; font-weight: 700; margin-top: .6mm; font-family: Consolas, monospace; white-space: nowrap; }
-    .tem-i { flex: 1; min-width: 0; font-size: 6.5pt; line-height: 1.25; display: flex; flex-direction: column; }
-    .tem-i div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tem-k { font-weight: 700; }
-    .tem-sz { font-size: 8pt; margin-top: auto; border-top: .3mm solid #000; padding-top: .4mm; }
-    .tem-sz b { font-size: 11pt; }
-    .tem-f { font-size: 5.5pt; }
+    .tem { width: 50mm; height: 40mm; padding: .8mm; box-sizing: border-box; background: #fff; overflow: hidden;
+      --ink: #1f2d5c; --lab: #5a6478; --tick: #9aa6ba; --acc: #c2185b; --stamp: #5b3fa0; --tw: .07mm; }
+    .tem.den { --ink: #000; --lab: #000; --tick: #000; --acc: #000; --stamp: #000; }
+    .tem-b { height: 100%; box-sizing: border-box; border: .35mm solid var(--ink); border-radius: 2mm; padding: 1mm 1.4mm 1.1mm;
+      display: flex; flex-direction: column; justify-content: space-between; color: var(--ink); font-family: Arial, "Microsoft YaHei", "SimHei", "PingFang SC", sans-serif; }
+    .tem-f { display: flex; align-items: flex-end; gap: .8mm; flex: 1; min-width: 0; }
+    .tem-l { flex: none; width: 7.2mm; line-height: 1.05; }
+    .tem-l.n { width: 6.8mm; }
+    .tem-l i { display: block; font-style: normal; font-size: 1.3mm; color: var(--lab); white-space: nowrap; }
+    .tem-l b { display: block; font-size: 1.5mm; white-space: nowrap; }
+    .tem-v { flex: 1; min-width: 0; font-weight: 700; font-size: 2.3mm; line-height: 1.1; padding: 0 .4mm .1mm; white-space: nowrap; overflow: hidden;
+      border-bottom: .22mm solid var(--ink); min-height: 2.5mm;
+      background: repeating-linear-gradient(90deg, transparent 0 2.7mm, var(--tick) 2.7mm calc(2.7mm + var(--tw))) left bottom / 100% 1mm no-repeat; }
+    .tem.den .tem-v { --tw: .15mm; }
+    .tem-row { display: flex; gap: 1.4mm; flex: 1; align-items: flex-end; }
+    .tem-top { display: flex; gap: 1.1mm; align-items: flex-start; }
+    .tem-top > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1mm; }
+    .tem-q { flex: none; width: 10.5mm; height: 10.5mm; }
+    .tem-q svg { width: 10.5mm; height: 10.5mm; display: block; }
+    .tem-date { font-family: "Courier New", monospace; font-size: 1.7mm; letter-spacing: .08mm; color: var(--stamp); padding-bottom: .35mm; }
+    .tem-sl { border-bottom-color: var(--acc); }
+    .tem-br { flex: none; text-align: right; line-height: 1.15; padding-bottom: .3mm; }
+    .tem-br b { display: block; font-size: 1.6mm; }
+    .tem-br span { display: block; font-family: "Courier New", monospace; font-weight: 700; font-size: 1.15mm; color: var(--acc); white-space: nowrap; }
+    .tem-gc { font-size: 1.9mm; }
     .tsheet { width: 210mm; height: 297mm; position: relative; background: #fff; overflow: hidden; page-break-after: always; break-after: page; }
     .tsheet:last-child { page-break-after: auto; break-after: auto; }
     .tcel { position: absolute; overflow: hidden; box-sizing: border-box; }
@@ -51,19 +73,29 @@
     .truler { position: absolute; left: 55mm; top: 141mm; width: 100mm; background: #fff; font: 8pt Arial, sans-serif; color: #000; text-align: center; padding: 1mm 0; }
     .truler i { display: block; height: 3mm; border: .3mm solid #000; border-top: 0; margin-bottom: .8mm; }`;
   function qrSvg(text) {
-    if (!window.qrcode) return `<div style="width:21mm;height:21mm;border:.3mm solid #000;font-size:5pt;display:flex;align-items:center;justify-content:center">${esc(text)}</div>`;
+    if (!window.qrcode) return `<div style="width:10.5mm;height:10.5mm;border:.3mm solid #000;font-size:1.2mm;display:flex;align-items:center;justify-content:center">${esc(text)}</div>`;
     const q = window.qrcode(0, 'M');
     q.addData(text);
     q.make();
     return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
   }
-  const ngayIn = ms => { const d = new Date(ms || Date.now()); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`; };
+  const THANG = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  /** Ngày đóng gói = ngày in tem, kiểu "29 OCT 2026" */
+  const ngayDg = ms => { const d = new Date(ms || Date.now()); return `${String(d.getDate()).padStart(2, '0')} ${THANG[d.getMonth()]} ${d.getFullYear()}`; };
+  /** Máy in tem nhiệt chỉ in đen; giấy A4 in màu như thiết kế trừ khi chọn đen trắng */
+  const temDen = () => P.mode !== 'a4' || !!P.den;
+  const field = (cn, vn, val, cls = '', n = false) => `<div class="tem-f"><div class="tem-l${n ? ' n' : ''}"><i>${cn}</i><b>${vn}</b></div><div class="tem-v ${cls}">${val}</div></div>`;
   function temHtml(t) {
-    const kh = t.khach_ten || (C().byId(t.khach_hang_id) || {}).ten_ngan || '';
-    return `<div class="tem"><div class="tem-q">${qrSvg(t.ma_tem)}<div class="tem-m">${esc(t.ma_tem)}</div></div>
-      <div class="tem-i"><div class="tem-k">${esc(kh)}</div><div>ART <b>${esc(t.art)}</b></div><div>PO ${esc(t.po)}</div><div>${esc(t.mau || '')}</div>
-      <div class="tem-sz">SIZE <b>${esc(t.size)}</b> · <b>${fmt0(t.so_luong_in)}</b> đôi</div>
-      <div class="tem-f">Tem ${t.stt}/${t.tong} · ${esc(t.ma_bo_phan)} · ${ngayIn(t.in_luc)}</div></div></div>`;
+    const ghiChu = [String(t.mau || '').toLocaleUpperCase('vi'), `Tem ${t.stt}/${t.tong}`].filter(Boolean).join(' · ');
+    return `<div class="tem${temDen() ? ' den' : ''}"><div class="tem-b">
+      <div class="tem-top"><div>${field('组别', 'TỔ', esc(t.ma_bo_phan))}${field('款号', 'ART', esc(t.art))}</div><div class="tem-q">${qrSvg(t.ma_tem)}</div></div>
+      ${field('PO号', 'PO', esc(t.po))}
+      <div class="tem-row">${field('明细', 'CHI TIẾT', esc(t.chi_tiet || 'Đồng bộ'))}${field('包装日期', 'NGÀY ĐG', ngayDg(t.in_luc), 'tem-date', true)}</div>
+      <div class="tem-row">${field('尺码', 'SIZE', `${esc(t.size)}#`)}${field('数量', 'SL', fmt0(t.so_luong_in), 'tem-sl', true)}
+        <div class="tem-br"><b>D&amp;D</b><span>${esc(t.ma_tem)}</span></div></div>
+      ${field('包装人', 'NGƯỜI ĐG', esc(t.nguoi_dg || ''))}
+      ${field('备注', 'GHI CHÚ', esc(ghiChu), 'tem-gc')}
+    </div></div>`;
   }
 
   /** Chia tem vào các tờ A4: tờ đầu bỏ qua các ô trước "Bắt đầu từ ô số"; test = khung trống đánh số ô */
@@ -80,7 +112,7 @@
   }
   const cellBox = pos => { const c = pos % P.cot, r = Math.floor(pos / P.cot); return { x: P.left + c * (P.w + P.gx), y: P.top + r * (P.h + P.gy) }; };
   function sheetHtml(list, test) {
-    const s = Math.min(P.w / 50, P.h / 30), ox = (P.w - 50 * s) / 2, oy = (P.h - 30 * s) / 2;
+    const s = Math.min(P.w / TW, P.h / TH), ox = (P.w - TW * s) / 2, oy = (P.h - TH * s) / 2;
     const ruler = '<div class="truler"><i></i>Đoạn trên phải dài đúng 10 cm – nếu không, chọn Tỉ lệ 100% / Kích thước thực</div>';
     return sheets(list, test).map(pg => `<div class="tsheet">${pg.map(x => {
       const b = cellBox(x.pos);
@@ -102,7 +134,7 @@
   const A4_PAGE = '@page { size: A4 portrait; margin: 0; }';
   function printTems(list) {
     if (P.mode === 'a4') printHtml(doc(A4_PAGE, sheetHtml(list)));
-    else printHtml(doc('@page { size: 50mm 30mm; margin: 0; } .tem { page-break-after: always; break-after: page; } .tem:last-child { page-break-after: auto; break-after: auto; }', list.map(temHtml).join('')));
+    else printHtml(doc(`@page { size: ${TW}mm ${TH}mm; margin: 0; } .tem { page-break-after: always; break-after: page; } .tem:last-child { page-break-after: auto; break-after: auto; }`, list.map(temHtml).join('')));
   }
 
   /* ---------------- Hộp xem trước ---------------- */
@@ -137,7 +169,7 @@
     const body = P.mode === 'a4'
       ? `<p class="ui-hint">${list.length} tem trên <b>${soTo(list.length)}</b> tờ A4 (${esc(presetTen())}, bắt đầu ô ${startCell()}). Bấm <b>In</b>: khổ A4, Lề <b>Không có</b>, Tỉ lệ <b>100%</b>.</p>
          <div class="tem-a4prev">${sheetHtml(list)}</div>`
-      : `<p class="ui-hint">${list.length} tem · xem trước (phóng to). Bấm <b>In</b> để in ra máy in tem 50×30, mỗi tem 1 trang.</p>
+      : `<p class="ui-hint">${list.length} tem · xem trước (phóng to). Bấm <b>In</b> để in ra máy in tem ${TW}×${TH}, mỗi tem 1 trang (đen trắng).</p>
          <div class="tem-prev">${list.map(temHtml).join('')}</div>`;
     modal(title, body, () => printTems(list));
   }
@@ -159,6 +191,8 @@
             <button type="button" class="ui-seg-btn ${S.loai === 'chat' ? 'active' : ''}" data-loai="chat">Chặt (TC)</button></div></div>
           <label class="ui-field"><span class="ui-label">Tổ may</span><select class="ui-input" id="tem-to"></select></label>
           <label class="ui-field tem-moi"><span class="ui-label">Mỗi tem (đôi)</span><input type="text" inputmode="numeric" class="ui-input" id="tem-moi" value="${S.moi}"></label>
+          <label class="ui-field"><span class="ui-label">Chi tiết <span class="ui-label-note">in ô 明细</span></span><input type="text" class="ui-input" id="tem-chitiet" maxlength="40" value="${esc(S.chiTiet)}"></label>
+          <label class="ui-field"><span class="ui-label">Người đóng gói <span class="ui-label-note">trống = viết tay</span></span><input type="text" class="ui-input" id="tem-nguoidg" maxlength="40" value="${esc(S.nguoiDg)}" placeholder="Để trống"></label>
         </div>
         <div class="v3-table-wrap"><table class="v3-table tem-don" id="tem-don-tbl"><tbody><tr><td class="v3-empty">Đang tải đơn hàng…</td></tr></tbody></table></div>
         <p class="ui-hint tem-mb">Ô số = <b>In thêm</b> (mặc định = đặt − đã in tem cùng loại). Ví dụ 29 đôi, mỗi tem 10 → 3 tem 10 · 10 · 9.</p>
@@ -171,7 +205,7 @@
         <h3 class="ui-panel-title">2. Chế độ in <span class="ui-label-note">nhớ riêng trên máy này</span></h3>
         <div class="tem-mode-row"><div class="ui-seg ui-seg-lg" role="group" aria-label="Chế độ in" id="tem-mode">
           <button type="button" class="ui-seg-btn" data-mode="a4">📄 Giấy A4</button>
-          <button type="button" class="ui-seg-btn" data-mode="nhiet">🏷️ Máy in tem 50×30</button></div>
+          <button type="button" class="ui-seg-btn" data-mode="nhiet">🏷️ Máy in tem 50×40</button></div>
           <span class="ui-hint" id="tem-mode-hint"></span></div>
         <div class="tem-a4" id="tem-a4" hidden>
           <div>
@@ -179,6 +213,7 @@
               <label class="ui-field tem-a4-preset"><span class="ui-label">Khổ giấy / mẫu decal</span><select class="ui-input" id="tem-preset"></select></label>
               <label class="ui-field tem-a4-start"><span class="ui-label">Bắt đầu từ ô số</span><input type="number" min="1" class="ui-input" id="tem-batdau"></label>
               <label class="tem-check"><input type="checkbox" id="tem-cat"> In đường cắt</label>
+              <label class="tem-check"><input type="checkbox" id="tem-den"> In đen trắng</label>
             </div>
             <div class="tem-a4-nums">
               ${[['cot', 'Số cột'], ['hang', 'Số hàng'], ['w', 'Rộng ô (mm)'], ['h', 'Cao ô (mm)'], ['top', 'Lề trên (mm)'], ['left', 'Lề trái (mm)'], ['gx', 'Cách ngang (mm)'], ['gy', 'Cách dọc (mm)']]
@@ -317,7 +352,7 @@
     const n = lines.reduce((a, l) => a + Math.ceil(l.so_luong / moi()), 0);
     if (!confirm(`Tạo ${n} tem ${S.loai === 'chat' ? 'Chặt (TC)' : 'May ' + to}, mỗi tem ${moi()} đôi?`)) return;
     try {
-      const r = await api('/api/tem/in', 'POST', { khach_hang_id: khId(), loai: S.loai, ma_bo_phan: to, moi_tem: moi(), lines });
+      const r = await api('/api/tem/in', 'POST', { khach_hang_id: khId(), loai: S.loai, ma_bo_phan: to, moi_tem: moi(), chi_tiet: S.chiTiet, nguoi_dg: S.nguoiDg, lines });
       toast(r.message, 'success');
       showTems(r.data, `Đã tạo ${r.data.length} tem – ${S.loai === 'chat' ? 'Chặt (TC)' : 'May ' + to}`);
       await loadData();
@@ -331,7 +366,7 @@
     seg.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === P.mode));
     $('tem-a4').hidden = P.mode !== 'a4';
     $('tem-mode-hint').innerHTML = P.mode === 'nhiet'
-      ? 'Mỗi tem 1 trang. Trong driver máy in chọn khổ <b>50 × 30 mm</b>, Lề: Không, Tỉ lệ 100%.'
+      ? `Mỗi tem 1 trang, in đen trắng. Trong driver máy in chọn khổ <b>${TW} × ${TH} mm</b>, Lề: Không, Tỉ lệ 100%.`
       : `${esc(presetTen())} · ${perSheet()} ô/tờ · bắt đầu ô ${startCell()}`;
     updateSel();
     if (P.mode !== 'a4') return;
@@ -340,6 +375,7 @@
     if (document.activeElement !== bd) bd.value = P.batDau;
     bd.max = perSheet();
     $('tem-cat').checked = !!P.cat;
+    $('tem-den').checked = !!P.den;
     document.querySelectorAll('#tem-a4 [data-a4]').forEach(i => { if (document.activeElement !== i) i.value = P[i.dataset.a4]; });
     $('tem-a4-warn').textContent = a4Overflow();
     updateCount();
@@ -438,6 +474,9 @@
     if (t.id === 'tem-moi') { S.moi = moi(); t.value = S.moi; updateCount(); return; }
     if (t.id === 'tem-preset') { P.preset = t.value; if (P.preset !== 'tu_chinh') Object.assign(P, PRESETS[P.preset]); delete P.ten; P.batDau = 1; saveP(); renderMode(); return; }
     if (t.id === 'tem-cat') { P.cat = t.checked; saveP(); return; }
+    if (t.id === 'tem-den') { P.den = t.checked; saveP(); return; }
+    if (t.id === 'tem-chitiet') { S.chiTiet = t.value.trim() || 'Đồng bộ'; t.value = S.chiTiet; saveOpt(); return; }
+    if (t.id === 'tem-nguoidg') { S.nguoiDg = t.value.trim(); t.value = S.nguoiDg; saveOpt(); return; }
     if (t.id === 'tem-f-don') { S.f.don = t.value; loadList(); return; }
     if (t.id === 'tem-f-tt') { S.f.tt = t.value; loadList(); return; }
     if (t.id === 'tem-f-loai') { S.f.loai = t.value; loadList(); return; }

@@ -38,6 +38,9 @@ export function schemaFor(sqlite) {
       nguoi_quet TEXT DEFAULT '',
       quet_luc ${T.INT}
     )`,
+    // Mẫu tem 50×40 (29/10/2026): ô Chi tiết (mặc định "Đồng bộ") + Người đóng gói (trống = viết tay)
+    sqlite ? `ALTER TABLE tem ADD COLUMN chi_tiet TEXT DEFAULT ''` : `ALTER TABLE tem ADD COLUMN IF NOT EXISTS chi_tiet TEXT DEFAULT ''`,
+    sqlite ? `ALTER TABLE tem ADD COLUMN nguoi_dg TEXT DEFAULT ''` : `ALTER TABLE tem ADD COLUMN IF NOT EXISTS nguoi_dg TEXT DEFAULT ''`,
     `CREATE INDEX IF NOT EXISTS idx_tem_po ON tem(po_id, size)`,
     `CREATE INDEX IF NOT EXISTS idx_tem_phieu ON tem(phieu_id)`,
     `CREATE INDEX IF NOT EXISTS idx_tem_kh ON tem(khach_hang_id, trang_thai)`,
@@ -55,7 +58,7 @@ export function schemaFor(sqlite) {
     `CREATE INDEX IF NOT EXISTS idx_teml_tem ON tem_lich_su(tem_id)`,
   ];
 }
-export const ensureTemSchema = env => ensureTables(env, 'tem_v1', 'SELECT t.id, t.quet_luc, l.id FROM tem t, tem_lich_su l WHERE 1 = 0', schemaFor(isSqlite(env)));
+export const ensureTemSchema = env => ensureTables(env, 'tem_v2', 'SELECT t.id, t.chi_tiet, t.nguoi_dg, l.id FROM tem t, tem_lich_su l WHERE 1 = 0', schemaFor(isSqlite(env)));
 
 /** Tài khoản được dùng tem (in tem + quét vào phiếu). Đang thử: chỉ admin (tab-intem chưa cấp được cho nhóm) */
 export const temOn = user => !!user && (user.la_admin || (user.tabs || []).includes('tab-intem'));
@@ -229,6 +232,8 @@ export async function handleTemApi(path, method, url, request, env, user) {
       if (!to) return bad('Chưa chọn tổ may');
     }
     const moi = Math.min(1000, Math.max(1, int(b.moi_tem) || 10));
+    const chiTiet = str(b.chi_tiet).slice(0, 40) || 'Đồng bộ';
+    const nguoiDg = str(b.nguoi_dg).slice(0, 40);
     const { results: pos } = await env.DB.prepare('SELECT id, po, art, mau FROM po_don_hang WHERE khach_hang_id = ?').bind(khId).all();
     const poById = new Map(pos.map(r => [r.id, r]));
     const plan = [];
@@ -250,9 +255,10 @@ export async function handleTemApi(path, method, url, request, env, user) {
     for (let lan = 0; lan < 3 && !done; lan++) {
       const start = await nextSeq(env, prefix);
       const stmts = plan.map((x, i) => env.DB.prepare(`
-        INSERT INTO tem (ma_tem, loai, khach_hang_id, po_id, po, art, mau, size, so_luong_in, so_luong, stt, tong, ma_bo_phan, lo_in, trang_thai, nguoi_in, in_luc)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'moi', ?, ?)`)
-        .bind(prefix + String(start + i).padStart(5, '0'), loai, khId, x.po.id, x.po.po, x.po.art, x.po.mau || '', x.size, x.sl, x.sl, x.stt, x.tong, bp, lo, nguoi, now));
+        INSERT INTO tem (ma_tem, loai, khach_hang_id, po_id, po, art, mau, size, so_luong_in, so_luong, stt, tong, ma_bo_phan, lo_in, trang_thai, nguoi_in, in_luc, chi_tiet, nguoi_dg)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'moi', ?, ?, ?, ?)`)
+        .bind(prefix + String(start + i).padStart(5, '0'), loai, khId, x.po.id, x.po.po, x.po.art, x.po.mau || '', x.size, x.sl, x.sl, x.stt, x.tong, bp, lo, nguoi, now,
+          chiTiet, nguoiDg));
       try {
         // Lô nhỏ (≤ 200 tem) ghi trong 1 lần gọi; lô lớn hơn chia nhiều lần
         await runBatch(env, stmts);

@@ -115,8 +115,8 @@
 .tem-modal-head { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--ui-line); }
 .tem-modal-head h3 { flex: 1; font-size: 17px; margin: 0; }
 .tem-modal-body { padding: 14px 16px; overflow: auto; }
-.tem-prev { display: flex; flex-wrap: wrap; gap: 10px; zoom: 1.45; margin-top: 8px; }
-.tem-prev .tem { border: 1px solid #999; border-radius: 1mm; }
+.tem-prev { display: flex; flex-wrap: wrap; gap: 10px; zoom: 1.7; margin-top: 8px; }
+.tem-prev .tem { outline: 1px dashed #b5c4d0; }
 .tem-a4prev { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
 .tem-a4prev .tsheet { zoom: .5; box-shadow: 0 1px 8px rgba(0, 0, 0, .3); }
 
@@ -129,6 +129,6 @@
   .tem-a4 { grid-template-columns: 1fr; }
   .tem-a4-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tem-opts .ui-field { min-width: 0; flex: 1 1 140px; }
-  .tem-prev { zoom: 1.1; }
+  .tem-prev { zoom: 1.2; }
   .tem-a4prev .tsheet { zoom: .38; }
 }
