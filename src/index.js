@@ -10,6 +10,7 @@ import { handleDonHangApi, ensureDonHangSchema, latestDot } from './donhang.js';
 import { handleChiLenhApi } from './chilenh.js';
 import { handleToChatApi } from './tochat.js';
 import { handleToMayApi } from './tomay.js';
+import { handleTemApi, temOn, checkTems, linkTems, releaseTems, temsOfPhieu, temCounts } from './tem.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -159,6 +160,10 @@ async function handleApi(url, request, env) {
   if (toChatRes) return toChatRes;
   const toMayRes = await handleToMayApi(path, method, url, request, env, user);
   if (toMayRes) return toMayRes;
+
+  // Tem QR theo đơn (in tem, tra tem khi quét)
+  const temRes = await handleTemApi(path, method, url, request, env, user);
+  if (temRes) return temRes;
 
   // -------------------------------------------------------------
   // GET /api/bophan: Danh sách bộ phận/chuyền
@@ -434,6 +439,14 @@ async function handleApi(url, request, env) {
     const stmt = env.DB.prepare(sql);
     const { results } = await (params.length > 0 ? stmt.bind(...params) : stmt).all();
 
+    // Số tem đã quét vào từng phiếu (cột "N tem")
+    if (temOn(user) && results.length) {
+      try {
+        const cnt = await temCounts(env, results.map(r => r.id));
+        results.forEach(r => { r.so_tem = cnt.get(r.id) || 0; });
+      } catch (e) { console.error('Đếm tem:', e); }
+    }
+
     return Response.json({ success: true, data: results });
   }
 
@@ -463,7 +476,13 @@ async function handleApi(url, request, env) {
       line.sizes = sizes;
     }
 
-    return Response.json({ success: true, data: { ...phieu, lines } });
+    // Tem đã quét vào phiếu (Sửa phiếu -> quét nối thêm tem)
+    let tems;
+    if (temOn(user)) {
+      try { tems = await temsOfPhieu(env, id); } catch (e) { console.error('Tem của phiếu:', e); }
+    }
+
+    return Response.json({ success: true, data: { ...phieu, lines, tems } });
   }
 
   // -------------------------------------------------------------
@@ -504,6 +523,14 @@ async function handleApi(url, request, env) {
         { success: false, error: `Số phiếu ${so_phieu} đã tồn tại trong hệ thống` },
         { status: 400 }
       );
+    }
+
+    // Tem quét vào phiếu: kiểm trước khi ghi (tem đã xuất ở phiếu khác / đã hủy -> chặn)
+    let temList = null;
+    if (temOn(user) && Array.isArray(body.tems)) {
+      const c = await checkTems(env, khach_hang_id, null, body.tems);
+      if (c.err) return Response.json({ success: false, error: c.err }, { status: 400 });
+      temList = c.list;
     }
 
     // Kiểm tra chênh lệch size trên các dòng
@@ -587,6 +614,7 @@ async function handleApi(url, request, env) {
     await saveNguoiGiao(env, phieuId, body.nguoi_giao);
     await savePhongKeHoach(env, phieuId, body.phong_ke_hoach);
     await saveDotDon(env, phieuId, khach_hang_id, body.dot_don, true);
+    if (temList && temList.length) await linkTems(env, phieuId, temList, user);
 
     return Response.json({
       success: true,
@@ -626,6 +654,13 @@ async function handleApi(url, request, env) {
     }
     const trung = await env.DB.prepare('SELECT id FROM phieu WHERE so_phieu = ? AND id <> ?').bind(so_phieu, id).first();
     if (trung) return Response.json({ success: false, error: `Số phiếu ${so_phieu} đã tồn tại trong hệ thống` }, { status: 400 });
+    // Trang gửi kèm danh sách tem (kể cả rỗng) -> tem bỏ ra trở về "chưa xuất"; không gửi -> giữ nguyên tem của phiếu
+    let temList = null;
+    if (temOn(user) && Array.isArray(body.tems)) {
+      const c = await checkTems(env, khach_hang_id, id, body.tems);
+      if (c.err) return Response.json({ success: false, error: c.err }, { status: 400 });
+      temList = c.list;
+    }
     const trang_thai = body.trang_thai || old.trang_thai || 'saved';
 
     let canh_bao_lech_size = 0;
@@ -695,6 +730,7 @@ async function handleApi(url, request, env) {
     await saveNguoiGiao(env, id, body.nguoi_giao);
     await savePhongKeHoach(env, id, body.phong_ke_hoach);
     await saveDotDon(env, id, khach_hang_id, body.dot_don, false);
+    if (temList) await linkTems(env, id, temList, user);
 
     return Response.json({ success: true, message: 'Cập nhật phiếu thành công' });
   }
@@ -711,6 +747,10 @@ async function handleApi(url, request, env) {
     await env.DB.prepare('UPDATE phieu SET trang_thai = ? WHERE id = ?')
       .bind(trang_thai, id)
       .run();
+    // Hủy phiếu -> tem của phiếu trở về "chưa xuất" (quét lại vào phiếu khác được)
+    if (trang_thai === 'cancelled') {
+      try { await releaseTems(env, id, user); } catch (e) { console.error('Nhả tem:', e); }
+    }
 
     return Response.json({ success: true, message: 'Đã cập nhật trạng thái phiếu' });
   }

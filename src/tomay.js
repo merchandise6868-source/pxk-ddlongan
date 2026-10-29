@@ -38,7 +38,7 @@ const ensureToMaySchema = env => ensureTables(env, 'tomay_v1', 'SELECT x.id, d.i
 
 const isToMay = ma => /^CM/i.test(str(ma));
 /** Tài khoản gắn tổ may -> bị ép đúng tổ đó; admin / không gắn tổ -> theo yêu cầu */
-const forcedTo = user => (!user?.la_admin && isToMay(user?.ma_bo_phan) ? user.ma_bo_phan.toUpperCase() : '');
+export const forcedTo = user => (!user?.la_admin && isToMay(user?.ma_bo_phan) ? user.ma_bo_phan.toUpperCase() : '');
 const okDate = s => /^\d{4}-\d{2}-\d{2}$/.test(str(s));
 
 /** Làm sạch các dòng nhập (ART trống = ART dòng trên); trả { err } hoặc { lines } */

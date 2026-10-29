@@ -27,6 +27,7 @@ const AppState = {
   kieuXuat: 'chi_tiet',    // Khách có bộ chi tiết (JiaYu): 'doi' = xuất theo đôi · 'chi_tiet' = theo chi tiết (miếng) + dòng đồng bộ đôi
   lastAutoDonHang: '',     // Giá trị "Đơn hàng" do hệ thống tự ghép (để biết người dùng đã sửa tay chưa)
   dotDon: null,            // Đợt đơn hàng của phiếu (chọn ở ô "Đơn hàng đợt"); null = đợt mới nhất của khách
+  tems: [],                // Tem QR đã quét vào phiếu (temscan.js): [{ id, ma_tem, po, art, size, so_luong_in, so_luong, ... }]
 };
 
 function saveSlipDraft() {
@@ -51,6 +52,7 @@ function saveSlipDraft() {
       lastAutoDonHang: AppState.lastAutoDonHang,
       kieuXuat: AppState.kieuXuat,
       dotDon: AppState.dotDon,
+      tems: AppState.tems || [],
     };
     localStorage.setItem(draftKey(AppState.khachHangId), JSON.stringify(draft));
   } catch (err) {
@@ -91,6 +93,7 @@ function restoreSlipDraft(khId) {
       AppState.lastAutoDonHang = draft.lastAutoDonHang || '';
       AppState.kieuXuat = draft.kieuXuat === 'doi' ? 'doi' : 'chi_tiet';
       AppState.dotDon = draft.dotDon || null;
+      AppState.tems = Array.isArray(draft.tems) ? draft.tems : [];
       assignBlockKeys(AppState.rows);
 
       if (draft.donvi && document.getElementById('slip-donvi')) document.getElementById('slip-donvi').value = draft.donvi;
@@ -531,7 +534,9 @@ async function fetchNextSlipNumber() {
   try {
     const res = await fetch(`/api/phieu/next-number?bo_phan=${boPhan}&date=${dateStr}`);
     const data = await res.json();
-    if (data.success && data.nextNumber) {
+    // Bỏ kết quả về muộn của bộ phận cũ (đổi khách / quét tem đổi bộ phận liên tiếp)
+    const still = document.getElementById('slip-bophan').value === boPhan && !AppState.currentEditingId;
+    if (data.success && data.nextNumber && still) {
       document.getElementById('slip-so').value = data.nextNumber;
     }
   } catch (err) {
@@ -1087,6 +1092,7 @@ function calculateTotals() {
   footHtml += '</tr>';
   tfoot.innerHTML = footHtml;
   if (window.PoPick) PoPick.refresh(); // cột Còn lại + số gợi ý (bản mới – admin)
+  if (window.TemScan) TemScan.paint(); // tô ô có số từ tem / lệch tổng tem
 
   // Tổng cộng hiển thị ở thanh thao tác phía dưới
   const sumEl = document.getElementById('slip-total-summary');
@@ -1207,6 +1213,8 @@ async function saveSlipCore(opts = {}) {
     dia_chi_cty: diaChiCty,
     khach_hang_id: AppState.khachHangId,
     lines: validLines,
+    // Tem đã quét (chỉ tài khoản dùng tem gửi; không gửi thì máy chủ giữ nguyên tem của phiếu)
+    tems: window.TemScan ? TemScan.payload() : undefined,
   };
 
   try {
@@ -1786,7 +1794,7 @@ function renderSlipListTable(slips) {
     return `
       <tr class="${cancelled ? 'is-cancelled' : ''}">
         <td class="c ui-muted">${idx + 1}</td>
-        <td><span class="ui-slip-no">${escapeHtml(s.so_phieu)}</span> ${warn}</td>
+        <td><span class="ui-slip-no">${escapeHtml(s.so_phieu)}</span> ${warn}${s.so_tem ? ` <span class="ui-badge ui-badge-ok" title="Phiếu lập bằng quét tem">🏷 ${s.so_tem} tem</span>` : ''}</td>
         <td class="nowrap">${formatDateVn(s.ngay)}</td>
         <td>${escapeHtml(khach)}${s.khach_hang_id ? '' : ' <span class="ui-badge ui-badge-warn">chưa gán khách</span>'}${s.don_hang ? `<div class="ui-sub">ĐH ${escapeHtml(s.don_hang)}</div>` : ''}</td>
         <td class="c"><span class="ui-tag">${escapeHtml(s.ma_bo_phan)}</span></td>
@@ -1989,6 +1997,9 @@ window.editSlip = async function(id) {
       };
     });
     assignBlockKeys(AppState.rows);
+    // Tem đã quét vào phiếu: sửa phiếu rồi quét nối thêm tem
+    AppState.tems = (slip.tems || []).map(t => (window.TemScan ? TemScan.pick(t) : t));
+    if (window.TemScan) TemScan.reset();
 
     if (slip.mau_phieu !== 3) AppState.rows.forEach((_, i) => parseSizesFromText(i));
     renderTableStructure();
@@ -2044,6 +2055,8 @@ function clearSlipFields() {
   if (diachiInput) diachiInput.value = DEFAULT_COMPANY_ADDRESS;
   AppState.lastAutoDonHang = '';
   AppState.dotDon = null;
+  AppState.tems = [];
+  if (window.TemScan) TemScan.reset();
   if (window.Grid) { Grid.resetHistory(); Grid.clearSelection(); }
 }
 

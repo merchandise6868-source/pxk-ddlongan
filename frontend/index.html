@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="ui-v2.css?v=20261026f">
   <link rel="stylesheet" href="v3.css?v=20261028c">
+  <link rel="stylesheet" href="tem.css?v=20261029a">
 </head>
 <body>
 
@@ -32,6 +33,7 @@
     <nav class="nav-tabs" aria-label="Chức năng">
       <button class="tab-btn" data-target="tab-donhang" hidden>Đơn hàng</button>
       <button class="tab-btn" data-target="tab-create" hidden>Lập phiếu xuất</button>
+      <button class="tab-btn" data-target="tab-intem" hidden>In tem</button>
       <button class="tab-btn" data-target="tab-list" hidden>Danh sách phiếu</button>
       <button class="tab-btn" data-target="tab-doichieu" hidden>Đối chiếu giao hàng</button>
       <button class="tab-btn" data-target="tab-donhangchat" hidden>Đơn hàng tổ chặt</button>
@@ -400,6 +402,11 @@
       <div class="ui-page" id="xnb-root"></div>
     </section>
 
+    <!-- IN TEM QR THEO ĐƠN (tem.js) – đang thử, chỉ admin -->
+    <section id="tab-intem" class="tab-content ui-scope v3-tab">
+      <div class="ui-page" id="tem-root"></div>
+    </section>
+
     <!-- TỔ MAY XUẤT KHO + ĐỐI CHIẾU CUỐI NGÀY (tomay.js) -->
     <section id="tab-maykho" class="tab-content ui-scope v3-tab">
       <div class="ui-page" id="tmk-root"></div>
@@ -600,7 +607,9 @@
   <script src="header.js?v=20261028a"></script>
   <script src="catalog.js?v=20261021c"></script>
   <script src="khsidebar.js?v=20261021c"></script>
-  <script src="app.js?v=20261028b"></script>
+  <script src="app.js?v=20261029b"></script>
+  <script src="vendor/qrcode.js?v=1.4.4"></script>
+  <script src="temscan.js?v=20261029a"></script>
   <script src="grid.js?v=20261019telex"></script>
   <script src="dashboard.js?v=20261026f"></script>
   <script src="sheet.js?v=20261022d"></script>
@@ -609,6 +618,7 @@
   <script src="taikhoan.js?v=20261022a"></script>
   <script src="tochat.js?v=20261022c"></script>
   <script src="tomay.js?v=20261022d"></script>
+  <script src="tem.js?v=20261029a"></script>
   <script src="pwa.js?v=20261026f"></script>
 </body>
 </html>
